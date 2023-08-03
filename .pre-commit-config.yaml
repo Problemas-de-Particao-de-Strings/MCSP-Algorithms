@@ -28,3 +28,11 @@ repos:
     hooks:
       # Haskell linter
       - id: hlint
+  - repo: local
+    hooks:
+      # Haskell formatter
+      - id: fourmolu
+        name: fourmolu
+        entry: fourmolu --mode=inplace
+        language: system
+        files: '\.hs$'

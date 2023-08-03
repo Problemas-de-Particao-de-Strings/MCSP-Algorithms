@@ -5,6 +5,13 @@
 
 packages:
   - completed:
+      hackage: fourmolu-0.13.1.0@sha256:bb4428d6069e4d09475e613cf8c0a1d8ce442bd1aef4aa0e069b21ce7c8f0f4b,6999
+      pantry-tree:
+        sha256: e5085af775945c2fc456ced07428da5f02873a4503fc11f562524403bb1f7cac
+        size: 155362
+    original:
+      hackage: fourmolu-0.13.1.0
+  - completed:
       hackage: hlint-3.6.1@sha256:c77340770bfc5c9b2fc3f77e58181f1ebce2825afcf2b925860751814130914e,4435
       pantry-tree:
         sha256: 03a1279139f88722d7bd284b3cad1b24dbcd98dd165e6fe7422ffc60d1c59ccd

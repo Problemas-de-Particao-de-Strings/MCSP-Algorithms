@@ -22,6 +22,7 @@ This project is set up to work with [Visual Studio Code](https://code.visualstud
 
 - [pre-commit](https://pre-commit.com/)
 - [HLint](https://github.com/ndmitchell/hlint#readme)
+- [Fourmolu](https://fourmolu.github.io/)
 
 ### Setup
 
