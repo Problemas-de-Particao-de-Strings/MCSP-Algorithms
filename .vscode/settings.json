@@ -1,6 +1,7 @@
 {
     "diffEditor.ignoreTrimWhitespace": false,
     "editor.detectIndentation": false,
+    "editor.formatOnSave": true,
     "editor.insertSpaces": true,
     "editor.rulers": [
         120
@@ -12,5 +13,10 @@
     "files.trimFinalNewlines": true,
     "files.trimTrailingWhitespace": true,
     "git.inputValidationSubjectLength": 50,
-    "git.inputValidationLength": 72
+    "git.inputValidationLength": 72,
+    "yaml.format.enable": true,
+    "yaml.format.printWidth": 120,
+    "[yaml]": {
+        "editor.tabSize": 2
+    }
 }

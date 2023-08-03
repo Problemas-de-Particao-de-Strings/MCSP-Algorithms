@@ -9,6 +9,10 @@ repos:
       - id: fix-byte-order-marker
       - id: mixed-line-ending
         args: [--fix, lf]
+      # config syntax checkers
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
       # filesystems checkers
       - id: check-symlinks
       - id: check-added-large-files
