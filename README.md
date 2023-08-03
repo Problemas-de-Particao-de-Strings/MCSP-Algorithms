@@ -9,5 +9,5 @@ This project is set up to work with [Visual Studio Code](https://code.visualstud
 Plase, install [pre-commit](https://pre-commit.com/) hooks:
 
 ```sh
-pre-commit install
+pre-commit install --hook-type commit-msg
 ```

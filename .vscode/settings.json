@@ -10,5 +10,7 @@
     "editor.unicodeHighlight.nonBasicASCII": true,
     "files.insertFinalNewline": true,
     "files.trimFinalNewlines": true,
-    "files.trimTrailingWhitespace": true
+    "files.trimTrailingWhitespace": true,
+    "git.inputValidationSubjectLength": 50,
+    "git.inputValidationLength": 72
 }
