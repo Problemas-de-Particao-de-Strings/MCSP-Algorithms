@@ -1,0 +1,65 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           playground
+version:        0.0.1
+synopsis:       Discovering Haskell
+description:    Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/playground#readme>
+category:       College
+homepage:       https://github.com/Problemas-de-Particao-de-Strings/playground#readme
+bug-reports:    https://github.com/Problemas-de-Particao-de-Strings/playground/issues
+author:         Leonardo Rodrigues <leonardosrodrigues1@gmail.com>,
+                Tiago de Paula <tiagodepalves@gmail.com>
+maintainer:     Leonardo Rodrigues <leonardosrodrigues1@gmail.com>,
+                Tiago de Paula <tiagodepalves@gmail.com>
+copyright:      (c) 2023 Leonardo de Sousa Rodrigues,
+                (c) 2023 Tiago de Paula Alves
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/Problemas-de-Particao-de-Strings/playground
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_playground
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+
+executable playground-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_playground
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , playground
+  default-language: Haskell2010
+
+test-suite playground-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_playground
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , playground
+  default-language: Haskell2010
