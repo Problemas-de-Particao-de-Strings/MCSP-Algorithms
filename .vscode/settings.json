@@ -1,4 +1,9 @@
 {
+    "diffEditor.diffAlgorithm": "advanced",
+    "diffEditor.experimental.collapseUnchangedRegions": true,
+    "diffEditor.experimental.useVersion2": true,
+    "diffEditor.experimental.showEmptyDecorations": true,
+    "diffEditor.experimental.showMoves": true,
     "diffEditor.ignoreTrimWhitespace": false,
     "editor.detectIndentation": false,
     "editor.formatOnSave": true,
@@ -26,6 +31,7 @@
         "hls": "latest",
         "stack": "latest"
     },
+    "mergeEditor.diffAlgorithm": "advanced",
     "yaml.format.enable": true,
     "yaml.format.printWidth": 120,
     "[yaml]": {
