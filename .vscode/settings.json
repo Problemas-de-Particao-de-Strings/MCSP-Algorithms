@@ -14,6 +14,12 @@
     "files.trimTrailingWhitespace": true,
     "git.inputValidationSubjectLength": 50,
     "git.inputValidationLength": 72,
+    "haskell.toolchain": {
+        "cabal": "latest",
+        "ghc": "latest",
+        "hls": "latest",
+        "stack": "latest"
+    },
     "yaml.format.enable": true,
     "yaml.format.printWidth": 120,
     "[yaml]": {
