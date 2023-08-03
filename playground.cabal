@@ -34,10 +34,13 @@ library
       Paths_playground
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  default-extensions:
+      DerivingStrategies
+  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
-  default-language: Haskell2010
+      base >=4.14 && <5
+    , extra >=1.7 && <2
+  default-language: GHC2021
 
 executable playground-exe
   main-is: Main.hs
@@ -45,11 +48,14 @@ executable playground-exe
       Paths_playground
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+      DerivingStrategies
+  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      base >=4.14 && <5
+    , extra >=1.7 && <2
     , playground
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite playground-test
   type: exitcode-stdio-1.0
@@ -58,8 +64,11 @@ test-suite playground-test
       Paths_playground
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+      DerivingStrategies
+  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      base >=4.14 && <5
+    , extra >=1.7 && <2
     , playground
-  default-language: Haskell2010
+  default-language: GHC2021

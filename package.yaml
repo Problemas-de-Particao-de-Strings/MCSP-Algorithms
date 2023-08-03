@@ -21,17 +21,40 @@ category: College
 # common to point users to the README.md file.
 description: Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/playground#readme>
 
+# Using modern Haskell features
+language: GHC2021
+default-extensions:
+  - DerivingStrategies
+
 dependencies:
-  - base >= 4.7 && < 5
+  - base >= 4.14 && < 5
+  - extra >= 1.7 && < 2
 
 ghc-options:
+  # Optimization flags
+  - -O2
+  - -fasm-shortcutting
+  - -fdicts-strict
+  - -fexpose-all-unfoldings
+  - -flate-dmd-anal
+  - -flate-specialise
+  - -fpedantic-bottoms
+  - -fregs-iterative
+  # Additional warnings
   - -Wall
   - -Wcompat
+  - -Wderiving-defaults
   - -Widentities
+  - -Winaccessible-code
+  - -Wincomplete-patterns
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
+  - -Wmissed-specialisations
+  - -Wmissing-deriving-strategies
+  - -Wmissing-signatures
   - -Wmissing-export-lists
   - -Wmissing-home-modules
+  - -Woverflowed-literals
   - -Wpartial-fields
   - -Wredundant-constraints
 
@@ -44,6 +67,7 @@ executables:
     source-dirs: app
     ghc-options:
       - -threaded
+      - -feager-blackholing
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
@@ -55,6 +79,7 @@ tests:
     source-dirs: test
     ghc-options:
       - -threaded
+      - -feager-blackholing
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
