@@ -23,3 +23,8 @@ repos:
     hooks:
       # check git messages
       - id: gitlint
+  - repo: https://github.com/bwbaugh/haskell-pre-commit-hooks
+    rev: v0.2.1
+    hooks:
+      # Haskell linter
+      - id: hlint

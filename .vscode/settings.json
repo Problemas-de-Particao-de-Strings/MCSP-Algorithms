@@ -14,9 +14,13 @@
     "files.trimTrailingWhitespace": true,
     "git.inputValidationSubjectLength": 50,
     "git.inputValidationLength": 72,
+    "haskell.hlint.hints": [],
+    "haskell.hlint.logLevel": "info",
+    "haskell.hlint.run": "onType",
     "haskell.toolchain": {
         "cabal": "latest",
         "ghc": "latest",
+        "hlint": "latest",
         "hls": "latest",
         "stack": "latest"
     },

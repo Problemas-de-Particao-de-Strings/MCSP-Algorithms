@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "haskell.haskell",
+        "hoovercj.haskell-linter",
         "redhat.vscode-yaml"
     ]
 }

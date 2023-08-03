@@ -18,7 +18,14 @@ stack exec playground-exe
 
 This project is set up to work with [Visual Studio Code](https://code.visualstudio.com/).
 
-Plase, install [pre-commit](https://pre-commit.com/) hooks:
+### Dev Dependencies
+
+- [pre-commit](https://pre-commit.com/)
+- [HLint](https://github.com/ndmitchell/hlint#readme)
+
+### Setup
+
+Install [pre-commit](https://pre-commit.com/) hooks:
 
 ```sh
 pre-commit install --hook-type commit-msg
