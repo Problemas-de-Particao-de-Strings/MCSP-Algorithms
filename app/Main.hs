@@ -13,8 +13,11 @@ data Letter = A | C | G | T
 
 derivingUnbox "Letter" [t|Letter -> Word8|] [|safeCast|] [|clampCast|]
 
-gen :: IO (String Letter)
-gen = generate 10
+gen :: IO (Pair Letter)
+gen = generate $ shuffledPartitions 200
 
 main :: IO ()
-main = gen >>= print
+main = do
+    (s1, s2) <- gen
+    print s1
+    print s2

@@ -32,6 +32,7 @@ library
       Strings
   other-modules:
       Strings.Data.String
+      Strings.Utils.Random
       Paths_playground
   hs-source-dirs:
       src
@@ -41,6 +42,8 @@ library
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.14 && <5
+    , pcg-random >=0.1.4 && <1
+    , random-shuffle >=0.0.4 && <1
     , vector >=0.13 && <1
     , vector-th-unbox >=0.2.2 && <1
   default-language: GHC2021
@@ -57,7 +60,9 @@ executable playground-exe
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.14 && <5
+    , pcg-random >=0.1.4 && <1
     , playground
+    , random-shuffle >=0.0.4 && <1
     , vector >=0.13 && <1
     , vector-th-unbox >=0.2.2 && <1
   default-language: GHC2021
@@ -75,7 +80,9 @@ test-suite playground-test
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.14 && <5
+    , pcg-random >=0.1.4 && <1
     , playground
+    , random-shuffle >=0.0.4 && <1
     , vector >=0.13 && <1
     , vector-th-unbox >=0.2.2 && <1
   default-language: GHC2021

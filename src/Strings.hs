@@ -1,14 +1,17 @@
 module Strings (
     String (..),
+    Pair,
     generate,
     safeCast,
     clampCast,
+    shuffledGenes,
+    shuffledPartitions,
 ) where
 
-import Data.Vector.Unboxed (Unbox, replicate)
 import Prelude hiding (String, replicate)
 
 import Strings.Data.String
+import Strings.Utils.Random
 
 -- | Cast `a` to `b` if the range `[minBound, maxBound]` is not smaller for `a`.
 safeCast :: forall a b. (Enum a, Bounded a, Enum b, Bounded b) => a -> b
@@ -28,7 +31,3 @@ clampCast = toEnum . max minValue . min maxValue . fromEnum
     minValue = fromEnum (minBound :: b)
     maxValue = fromEnum (maxBound :: b)
 {-# INLINE clampCast #-}
-
--- | Some random `String`.
-generate :: (Bounded a, Unbox a) => Int -> IO (String a)
-generate n = pure $ String $ replicate n minBound
