@@ -44,6 +44,7 @@ ghc-options:
   - -flate-specialise
   - -fpedantic-bottoms
   - -fregs-iterative
+  - -fspecialise-aggressively
   # Additional warnings
   - -Wall
   - -Wcompat

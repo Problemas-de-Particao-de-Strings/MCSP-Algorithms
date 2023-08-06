@@ -40,7 +40,7 @@ library
   default-extensions:
       DerivingStrategies
       TemplateHaskell
-  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
+  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.14 && <5
     , pcg-random >=0.1.4 && <1
@@ -58,7 +58,7 @@ executable playground-exe
   default-extensions:
       DerivingStrategies
       TemplateHaskell
-  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
+  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.14 && <5
     , pcg-random >=0.1.4 && <1
@@ -78,7 +78,7 @@ test-suite playground-test
   default-extensions:
       DerivingStrategies
       TemplateHaskell
-  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
+  ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.14 && <5
     , pcg-random >=0.1.4 && <1

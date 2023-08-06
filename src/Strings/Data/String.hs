@@ -4,10 +4,11 @@ module Strings.Data.String (
     String (..),
 ) where
 
+import Prelude hiding (String)
+
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed qualified as U
-import Prelude hiding (String)
 
 -- | A string of genes `a`.
 --

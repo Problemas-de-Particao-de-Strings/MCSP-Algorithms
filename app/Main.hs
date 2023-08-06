@@ -2,9 +2,10 @@
 
 module Main (main) where
 
+import Prelude hiding (String)
+
 import Data.Vector.Unboxed.Deriving (derivingUnbox)
 import Data.Word (Word8)
-import Prelude hiding (String)
 
 import Strings
 

@@ -7,11 +7,12 @@ module Strings.Utils.Random (
     generate,
 ) where
 
+import Prelude hiding (splitAt)
+
 import Data.Vector.Generic (Vector, basicLength, fromListN, replicateM, splitAt, toList)
 import System.Random.PCG.Class (Generator)
 import System.Random.PCG.Fast (GenIO, Variate (uniformB, uniformR), withSystemRandom)
 import System.Random.Shuffle qualified as S
-import Prelude hiding (splitAt)
 
 -- | Generates a rangom `a` in the inclusive range `enumFromTo`.
 uniformFromTo :: (Generator g m, Enum a) => a -> a -> g -> m a

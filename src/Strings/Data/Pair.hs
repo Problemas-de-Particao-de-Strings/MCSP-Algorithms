@@ -5,10 +5,11 @@ module Strings.Data.Pair (
     shuffledPartitions,
 ) where
 
+import Prelude hiding (String, concat)
+
 import Data.Vector.Generic (concat)
 import Data.Vector.Unboxed (Unbox, Vector)
 import System.Random.PCG.Class (Generator)
-import Prelude hiding (String, concat)
 
 import Strings.Data.String (String (..))
 import Strings.Utils.Random (partitions, shuffle, shuffleV, uniformN)

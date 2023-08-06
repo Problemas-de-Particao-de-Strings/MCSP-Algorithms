@@ -8,7 +8,7 @@ module Strings (
     String (..),
 ) where
 
-import Prelude hiding (String, replicate)
+import Prelude hiding (String)
 
 import Strings.Data.Pair
 import Strings.Data.String
