@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib
+import Strings
 
 main :: IO ()
-main = someFunc
+main = pure doNothing
