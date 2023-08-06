@@ -2,6 +2,7 @@
 
 [![Visual Studio Code](https://img.shields.io/badge/vscode-%23007ACC?logo=visualstudiocode)](https://code.visualstudio.com/)
 [![Haskell](https://img.shields.io/badge/haskell-%235D4F85?logo=haskell)](https://www.haskell.org/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
 ## Building
 
@@ -29,5 +30,10 @@ This project is set up to work with [Visual Studio Code](https://code.visualstud
 Install [pre-commit](https://pre-commit.com/) hooks:
 
 ```sh
-pre-commit install --hook-type commit-msg
+pre-commit install
 ```
+
+### Commit Message
+
+Commits should follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. Types in use can
+be found at [pvdlg/conventional-commit-types](https://github.com/pvdlg/conventional-commit-types).
