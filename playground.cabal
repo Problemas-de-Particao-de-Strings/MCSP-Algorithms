@@ -29,10 +29,10 @@ source-repository head
 
 library
   exposed-modules:
-      Strings
-  other-modules:
-      Strings.Data.Pair
       Strings.Data.String
+      Strings.Data.String.Deriving
+      Strings.Data.Pair
+  other-modules:
       Strings.Utils.Random
       Paths_playground
   hs-source-dirs:
@@ -40,6 +40,7 @@ library
   default-extensions:
       DerivingStrategies
       TemplateHaskell
+      TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.14 && <5
@@ -58,6 +59,7 @@ executable playground-exe
   default-extensions:
       DerivingStrategies
       TemplateHaskell
+      TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.14 && <5
@@ -78,6 +80,7 @@ test-suite playground-test
   default-extensions:
       DerivingStrategies
       TemplateHaskell
+      TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.14 && <5

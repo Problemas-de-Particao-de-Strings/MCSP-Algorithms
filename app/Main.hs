@@ -1,21 +1,24 @@
-{-# LANGUAGE TypeFamilies #-}
-
 module Main (main) where
 
 import Prelude hiding (String)
 
-import Data.Vector.Unboxed.Deriving (derivingUnbox)
 import Data.Word (Word8)
+import System.Random.PCG.Fast (withSystemRandom)
 
-import Strings
+import Strings.Data.Pair (Pair, shuffledPartitions)
+import Strings.Data.String.Deriving (derivingUnbox, safeCasts)
 
 data Letter = A | C | G | T
     deriving stock (Show, Eq, Ord, Enum, Bounded)
 
-derivingUnbox "Letter" [t|Letter -> Word8|] [|safeCast|] [|clampCast|]
+letterToByte :: Letter -> Word8
+byteToLetter :: Word8 -> Letter
+(letterToByte, byteToLetter) = safeCasts
+
+derivingUnbox "Letter" [t|Letter -> Word8|] [|letterToByte|] [|byteToLetter|]
 
 gen :: IO (Pair Letter)
-gen = generate $ shuffledPartitions 200
+gen = withSystemRandom $ shuffledPartitions 200
 
 main :: IO ()
 main = do

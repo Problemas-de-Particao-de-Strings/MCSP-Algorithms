@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-
 module Strings.Data.String (
     String (..),
 ) where
