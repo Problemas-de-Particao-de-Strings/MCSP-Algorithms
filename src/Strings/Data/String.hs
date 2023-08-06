@@ -1,55 +1,49 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Strings.Data.String (
     String (..),
-    Pair,
-    length,
-    splitAt,
-    shuffledGenes,
-    shuffledPartitions,
 ) where
 
 import Data.Vector.Generic qualified as G
-import Data.Vector.Unboxed (Unbox, Vector, foldMap)
-import System.Random.PCG.Class (Generator)
-import Prelude hiding (String, foldMap, length, splitAt)
-
-import Strings.Utils.Random (partitions, shuffle, shuffleV, uniformN)
+import Data.Vector.Generic.Mutable qualified as M
+import Data.Vector.Unboxed qualified as U
+import Prelude hiding (String)
 
 -- | A string of genes `a`.
 --
 -- Implemented as a unboxed vector.
-newtype String a = String {contents :: Vector a}
+newtype String a = String {contents :: U.Vector a}
     deriving newtype (Eq, Ord)
 
-instance (Show a, Unbox a) => Show (String a) where
-    showsPrec d = foldMap (showsPrec d) . contents
-    show s = foldMap show (contents s)
+instance (Show a, U.Unbox a) => Show (String a) where
+    showsPrec d = U.foldMap (showsPrec d) . contents
+    show s = U.foldMap show (contents s)
 
--- | The number of genes in a `String`.
-length :: Unbox a => String a -> Int
-length = G.basicLength . contents
+-- | Mutable variant of `String`.
+newtype MString s a = MString {mContents :: U.MVector s a}
 
--- | Yield the first `n` elements paired with the remainder.
-splitAt :: Unbox a => Int -> String a -> (String a, String a)
-splitAt n = uncheckedPair . G.splitAt n . contents
+instance U.Unbox a => M.MVector MString a where
+    basicLength = M.basicLength . mContents
+    basicUnsafeSlice s n = MString . M.basicUnsafeSlice s n . mContents
+    basicOverlaps lhs rhs = M.basicOverlaps (mContents lhs) (mContents rhs)
+    basicUnsafeNew n = MString <$> M.basicUnsafeNew n
+    basicInitialize = M.basicInitialize . mContents
+    basicUnsafeReplicate n x = MString <$> M.basicUnsafeReplicate n x
+    basicUnsafeRead = M.basicUnsafeRead . mContents
+    basicUnsafeWrite = M.basicUnsafeWrite . mContents
+    basicClear = M.basicClear . mContents
+    basicSet = M.basicSet . mContents
+    basicUnsafeCopy tgt src = M.basicUnsafeCopy (mContents tgt) (mContents src)
+    basicUnsafeMove tgt src = M.basicUnsafeMove (mContents tgt) (mContents src)
+    basicUnsafeGrow v n = MString <$> M.basicUnsafeGrow (mContents v) n
 
--- | A pair of strings. No restrictiong applied.
-type Pair a = (String a, String a)
+type instance G.Mutable String = MString
 
--- | Creates a pair of strings from contents, no checking is made.
-uncheckedPair :: (Vector a, Vector a) -> Pair a
-uncheckedPair (x, y) = (String x, String y)
-
--- | Random pair with shuffled genes.
-shuffledGenes :: (Generator g m, Unbox a, Enum a, Bounded a) => Int -> g -> m (Pair a)
-shuffledGenes n gen = do
-    s1 <- uniformN n gen
-    s2 <- shuffleV s1 gen
-    pure $ uncheckedPair (s1, s2)
-
--- | Random pair with shuffled partitons of genes.
-shuffledPartitions :: (Generator g m, Unbox a, Enum a, Bounded a) => Int -> g -> m (Pair a)
-shuffledPartitions n gen = do
-    s0 <- uniformN n gen
-    p1 <- partitions s0 gen
-    p2 <- shuffle p1 gen
-    pure $ uncheckedPair (G.concat p1, G.concat p2)
+instance U.Unbox a => G.Vector String a where
+    basicUnsafeFreeze ms = String <$> G.basicUnsafeFreeze (mContents ms)
+    basicUnsafeThaw s = MString <$> G.basicUnsafeThaw (contents s)
+    basicLength = G.basicLength . contents
+    basicUnsafeSlice s n = String . G.basicUnsafeSlice s n . contents
+    basicUnsafeIndexM = G.basicUnsafeIndexM . contents
+    basicUnsafeCopy ms s = G.basicUnsafeCopy (mContents ms) (contents s)
+    elemseq = G.elemseq . contents

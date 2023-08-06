@@ -1,15 +1,16 @@
 module Strings (
-    String (..),
-    Pair,
-    generate,
-    safeCast,
     clampCast,
+    safeCast,
+    generate,
     shuffledGenes,
     shuffledPartitions,
+    Pair,
+    String (..),
 ) where
 
 import Prelude hiding (String, replicate)
 
+import Strings.Data.Pair
 import Strings.Data.String
 import Strings.Utils.Random
 
