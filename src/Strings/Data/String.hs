@@ -4,6 +4,7 @@ module Strings.Data.String (
 
 import Prelude hiding (String)
 
+import Data.Foldable (Foldable (..))
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed qualified as U
@@ -11,12 +12,44 @@ import Data.Vector.Unboxed qualified as U
 -- | A string of genes `a`.
 --
 -- Implemented as a unboxed vector.
-newtype String a = String {contents :: U.Vector a}
-    deriving newtype (Eq, Ord)
+data String a where
+    String :: U.Unbox a => !(U.Vector a) -> String a
 
-instance (Show a, U.Unbox a) => Show (String a) where
-    showsPrec d = U.foldMap (showsPrec d) . contents
-    show s = U.foldMap show (contents s)
+instance Eq a => Eq (String a) where
+    (String lhs) == (String rhs) = lhs == rhs
+    (String lhs) /= (String rhs) = lhs /= rhs
+
+instance Ord a => Ord (String a) where
+    (String lhs) `compare` (String rhs) = lhs `compare` rhs
+    (String lhs) < (String rhs) = lhs < rhs
+    (String lhs) <= (String rhs) = lhs <= rhs
+    (String lhs) > (String rhs) = lhs > rhs
+    (String lhs) >= (String rhs) = lhs >= rhs
+    max (String lhs) (String rhs) = String (max lhs rhs)
+    min (String lhs) (String rhs) = String (min lhs rhs)
+
+instance Show a => Show (String a) where
+    showsPrec d = foldMap (showsPrec d)
+    show = foldMap show
+
+instance Foldable String where
+    fold (String v) = U.foldMap id v
+    foldMap f (String v) = U.foldMap f v
+    foldMap' f (String v) = U.foldMap' f v
+    foldr f x (String v) = U.foldr f x v
+    foldr' f x (String v) = U.foldr' f x v
+    foldl f x (String v) = U.foldl f x v
+    foldl' f x (String v) = U.foldl' f x v
+    foldr1 f (String v) = U.foldr1 f v
+    foldl1 f (String v) = U.foldl1 f v
+    toList (String v) = U.toList v
+    null (String v) = U.null v
+    length (String v) = U.length v
+    elem x (String v) = U.elem x v
+    maximum (String v) = U.maximum v
+    minimum (String v) = U.minimum v
+    sum (String v) = U.sum v
+    product (String v) = U.product v
 
 -- | Mutable variant of `String`.
 newtype MString s a = MString {mContents :: U.MVector s a}
@@ -39,10 +72,10 @@ instance U.Unbox a => M.MVector MString a where
 type instance G.Mutable String = MString
 
 instance U.Unbox a => G.Vector String a where
-    basicUnsafeFreeze ms = String <$> G.basicUnsafeFreeze (mContents ms)
-    basicUnsafeThaw s = MString <$> G.basicUnsafeThaw (contents s)
-    basicLength = G.basicLength . contents
-    basicUnsafeSlice s n = String . G.basicUnsafeSlice s n . contents
-    basicUnsafeIndexM = G.basicUnsafeIndexM . contents
-    basicUnsafeCopy ms s = G.basicUnsafeCopy (mContents ms) (contents s)
-    elemseq = G.elemseq . contents
+    basicUnsafeFreeze (MString v) = String <$> G.basicUnsafeFreeze v
+    basicUnsafeThaw (String v) = MString <$> G.basicUnsafeThaw v
+    basicLength (String v) = G.basicLength v
+    basicUnsafeSlice s n (String v) = String $ G.basicUnsafeSlice s n v
+    basicUnsafeIndexM (String v) = G.basicUnsafeIndexM v
+    basicUnsafeCopy (MString mv) (String v) = G.basicUnsafeCopy mv v
+    elemseq (String v) = G.elemseq v

@@ -18,7 +18,7 @@ import Strings.Utils.Random (partitions, shuffle, shuffleV, uniformN)
 type Pair a = (String a, String a)
 
 -- | Creates a pair of strings from contents, no checking is made.
-uncheckedPair :: (Vector a, Vector a) -> Pair a
+uncheckedPair :: Unbox a => (Vector a, Vector a) -> Pair a
 uncheckedPair (x, y) = (String x, String y)
 
 -- | Random pair with shuffled genes.
