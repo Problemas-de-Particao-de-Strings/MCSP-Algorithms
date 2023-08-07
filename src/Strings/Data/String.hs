@@ -8,7 +8,8 @@ import Prelude hiding (String)
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Semigroup (Semigroup (..))
+import Data.Semigroup (Semigroup (..), Sum (..))
+import Data.Store (Size (..), Store (..))
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed qualified as U
@@ -80,6 +81,21 @@ instance U.Unbox a => IsList (String a) where
 
 instance a ~ Char => IsString (String a) where
     fromString = fromList
+
+instance (Store a, U.Unbox a) => Store (String a) where
+    size = VarSize calcSize
+      where
+        calcSize s = sizeOf size (G.length s) + sizeSum s
+        sizeOf (ConstSize n) _ = n
+        sizeOf (VarSize f) x = f x
+        sizeSum v = getSum $ foldMap (Sum . sizeOf size) v
+    poke (String v) = do
+        poke $ U.length v
+        U.forM_ v poke
+    peek = do
+        n <- peek
+        v <- U.replicateM n peek
+        pure $ String v
 
 -- | Mutable variant of `String`.
 newtype MString s a = MString {mContents :: U.MVector s a}

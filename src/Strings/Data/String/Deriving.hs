@@ -1,10 +1,14 @@
 module Strings.Data.String.Deriving (
+    Generic,
+    Store,
     derivingUnbox,
     safeCasts,
 ) where
 
 import Data.Data (Proxy (Proxy), Typeable, typeRep)
+import Data.Store (Store)
 import Data.Vector.Unboxed.Deriving (derivingUnbox)
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
 -- | Cast `a` to `b` via their integer representations.
