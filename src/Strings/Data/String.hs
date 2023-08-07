@@ -10,10 +10,11 @@ import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
+import Data.String (IsString (..))
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed qualified as U
-import GHC.Exts (IsList (..), IsString (..))
+import GHC.Exts (IsList (..))
 
 -- | Common constraints for a gene.
 type Gene a = (Enum a, Bounded a, U.Unbox a)

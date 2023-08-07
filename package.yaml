@@ -25,6 +25,8 @@ description: Please see the README on GitHub at <https://github.com/Problemas-de
 language: GHC2021
 default-extensions:
   - DerivingStrategies
+  - OverloadedLists
+  - OverloadedStrings
   - TemplateHaskell
   - TypeFamilies
 

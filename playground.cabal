@@ -39,6 +39,8 @@ library
       src
   default-extensions:
       DerivingStrategies
+      OverloadedLists
+      OverloadedStrings
       TemplateHaskell
       TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
@@ -59,6 +61,8 @@ executable playground-exe
       app
   default-extensions:
       DerivingStrategies
+      OverloadedLists
+      OverloadedStrings
       TemplateHaskell
       TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
@@ -81,6 +85,8 @@ test-suite playground-test
       test
   default-extensions:
       DerivingStrategies
+      OverloadedLists
+      OverloadedStrings
       TemplateHaskell
       TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
