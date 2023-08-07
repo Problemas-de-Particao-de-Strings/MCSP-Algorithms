@@ -115,6 +115,9 @@ min-length = 20
 # Ignore certain rules, you can reference them by their id or by their full name
 # Use 'all' to ignore all rules
 # ignore=T1,body-min-length
+[ignore-by-body]
+regex = ^(https?:\/\/)?([\w\-])+\.{1}([a-zA-Z]{2,63})([\/\w-]*)*\/?\??([^#\n\r]*)?#?([^\n\r]*)$
+ignore = body-max-line-length
 
 # [ignore-body-lines]
 # Ignore certain lines in a commit body that match a regex.
