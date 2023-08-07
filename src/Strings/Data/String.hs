@@ -125,4 +125,4 @@ instance U.Unbox a => G.Vector String a where
     basicUnsafeSlice s n (String v) = String $ G.basicUnsafeSlice s n v
     basicUnsafeIndexM (String v) = G.basicUnsafeIndexM v
     basicUnsafeCopy (MString mv) (String v) = G.basicUnsafeCopy mv v
-    elemseq (String v) = G.elemseq v
+    elemseq _ = G.elemseq (undefined :: U.Vector a)
