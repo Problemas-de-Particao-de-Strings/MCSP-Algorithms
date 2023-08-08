@@ -32,8 +32,8 @@ library
       Strings.Data.String
       Strings.Data.String.Deriving
       Strings.Data.Pair
+      Strings.System.Random
   other-modules:
-      Strings.Utils.Random
       Paths_playground
   hs-source-dirs:
       src
@@ -45,7 +45,8 @@ library
       TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.14 && <5
+      MonadRandom >=0.6 && <1
+    , base >=4.18 && <5
     , pcg-random >=0.1.4 && <1
     , random-shuffle >=0.0.4 && <1
     , store >=0.7.16 && <1
@@ -67,7 +68,8 @@ executable playground-exe
       TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.14 && <5
+      MonadRandom >=0.6 && <1
+    , base >=4.18 && <5
     , pcg-random >=0.1.4 && <1
     , playground
     , random-shuffle >=0.0.4 && <1
@@ -91,7 +93,8 @@ test-suite playground-test
       TypeFamilies
   ghc-options: -O2 -fasm-shortcutting -fdicts-strict -fexpose-all-unfoldings -flate-dmd-anal -flate-specialise -fpedantic-bottoms -fregs-iterative -fspecialise-aggressively -Wall -Wcompat -Wderiving-defaults -Widentities -Winaccessible-code -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissed-specialisations -Wmissing-deriving-strategies -Wmissing-signatures -Wmissing-export-lists -Wmissing-home-modules -Woverflowed-literals -Wpartial-fields -Wredundant-constraints -threaded -feager-blackholing -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.14 && <5
+      MonadRandom >=0.6 && <1
+    , base >=4.18 && <5
     , pcg-random >=0.1.4 && <1
     , playground
     , random-shuffle >=0.0.4 && <1

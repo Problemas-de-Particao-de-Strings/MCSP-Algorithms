@@ -7,12 +7,11 @@ module Strings.Data.Pair (
 
 import Prelude hiding (String, concat)
 
-import Data.Vector.Generic (concat)
+import Data.Vector.Generic (concat, replicateM)
 import Data.Vector.Unboxed (Unbox, Vector)
-import System.Random.PCG.Class (Generator)
 
 import Strings.Data.String (Gene, String (..))
-import Strings.Utils.Random (partitions, shuffle, shuffleV, uniformN)
+import Strings.System.Random (Random, partitions, shuffle, uniformE)
 
 -- | A pair of strings. No restrictiong applied.
 type Pair a = (String a, String a)
@@ -22,16 +21,16 @@ uncheckedPair :: Unbox a => (Vector a, Vector a) -> Pair a
 uncheckedPair (x, y) = (String x, String y)
 
 -- | Random pair with shuffled genes.
-shuffledGenes :: (Generator g m, Gene a) => Int -> g -> m (Pair a)
-shuffledGenes n gen = do
-    s1 <- uniformN n gen
-    s2 <- shuffleV s1 gen
-    pure $ uncheckedPair (s1, s2)
+shuffledGenes :: Gene a => Int -> Random (Pair a)
+shuffledGenes n = do
+    s1 <- replicateM n uniformE
+    s2 <- shuffle s1
+    pure (s1, s2)
 
 -- | Random pair with shuffled partitons of genes.
-shuffledPartitions :: (Generator g m, Gene a) => Int -> g -> m (Pair a)
-shuffledPartitions n gen = do
-    s0 <- uniformN n gen
-    p1 <- partitions s0 gen
-    p2 <- shuffle p1 gen
-    pure $ uncheckedPair (concat p1, concat p2)
+shuffledPartitions :: Gene a => Int -> Random (Pair a)
+shuffledPartitions n = do
+    str <- replicateM n uniformE
+    p1 <- partitions str
+    p2 <- shuffle p1
+    pure (concat p1, concat p2)

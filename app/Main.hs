@@ -4,10 +4,10 @@ import Prelude hiding (String)
 
 import Data.Store (Size (ConstSize), Store (size), decodeIO, encode)
 import Data.Word (Word8)
-import System.Random.PCG.Fast (withSystemRandom)
 
 import Strings.Data.Pair (Pair, shuffledPartitions)
 import Strings.Data.String.Deriving (Generic, derivingUnbox, safeCasts)
+import Strings.System.Random (generate)
 
 data Letter = A | C | G | T
     deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
@@ -22,7 +22,7 @@ byteToLetter :: Word8 -> Letter
 derivingUnbox "Letter" [t|Letter -> Word8|] [|letterToByte|] [|byteToLetter|]
 
 gen :: IO (Pair Letter)
-gen = withSystemRandom $ shuffledPartitions 200
+gen = generate $ shuffledPartitions 200
 
 roundTrip :: Store a => a -> IO a
 roundTrip = decodeIO . encode
