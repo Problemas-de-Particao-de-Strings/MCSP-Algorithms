@@ -1,5 +1,8 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Strings.Data.String (
     Gene,
+    ShowSimple (..),
     String (..),
 ) where
 
@@ -39,9 +42,21 @@ instance Ord a => Ord (String a) where
     max (String lhs) (String rhs) = String (max lhs rhs)
     min (String lhs) (String rhs) = String (min lhs rhs)
 
-instance Show a => Show (String a) where
-    showsPrec d = foldMap (showsPrec d)
-    show = foldMap show
+-- | Show value without extra decorators.
+--
+-- Useful for showing list of characters.
+class ShowSimple a where
+    -- | Similar to `showsPrec`.
+    showSimple :: Int -> a -> ShowS
+
+instance {-# OVERLAPPABLE #-} Show a => ShowSimple a where
+    showSimple = showsPrec
+
+instance ShowSimple Char where
+    showSimple _ = showChar
+
+instance ShowSimple a => Show (String a) where
+    showsPrec d s t = foldr' (showSimple d) t s
 
 -- | Extract the inner contents of a `String`.
 contents :: String a -> U.Vector a
