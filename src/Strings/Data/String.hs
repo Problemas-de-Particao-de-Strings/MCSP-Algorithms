@@ -18,6 +18,8 @@ import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed qualified as U
 import GHC.Exts (IsList (..))
+import GHC.Read (Read (readPrec))
+import Text.ParserCombinators.ReadPrec (ReadPrec, get, (<++))
 
 -- | Common constraints for a gene.
 type Gene a = (Enum a, Bounded a, U.Unbox a)
@@ -57,6 +59,30 @@ instance ShowSimple Char where
 
 instance ShowSimple a => Show (String a) where
     showsPrec d s t = foldr' (showSimple d) t s
+
+-- | Read value without extra decorators.
+--
+-- Useful for reading list of characters.
+class ReadSimple a where
+    -- | Similar to `readPrec`.
+    readSimple :: ReadPrec a
+
+instance {-# OVERLAPPABLE #-} Read a => ReadSimple a where
+    readSimple = readPrec
+
+instance ReadSimple Char where
+    readSimple = get
+
+-- | Read values and insert them into the given `String`.
+readInto :: ReadSimple a => String a -> ReadPrec (String a)
+readInto s = appendNext s <++ pure s
+  where
+    appendNext (String v) = do
+        x <- readSimple
+        readInto $ String (U.snoc v x)
+
+instance (ReadSimple a, U.Unbox a) => Read (String a) where
+    readPrec = readInto G.empty
 
 -- | Extract the inner contents of a `String`.
 contents :: String a -> U.Vector a

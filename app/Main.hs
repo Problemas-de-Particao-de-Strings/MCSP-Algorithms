@@ -10,7 +10,7 @@ import Strings.Data.Pair (Pair, shuffledPartitions)
 import Strings.Data.String.Deriving (Generic, derivingUnbox, safeCasts)
 
 data Letter = A | C | G | T
-    deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+    deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
 
 instance Store Letter where
     size = ConstSize 1
