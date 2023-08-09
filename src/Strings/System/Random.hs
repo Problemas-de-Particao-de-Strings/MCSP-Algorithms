@@ -1,9 +1,9 @@
 module Strings.System.Random (
-    staticSeed,
     Random,
-    generateWithSeed,
-    generateStatic,
+    Seed,
+    staticSeed,
     generate,
+    generateWith,
     R.Variate,
     uniform,
     uniformR,
@@ -26,31 +26,32 @@ import System.Random.PCG qualified as R
 import System.Random.PCG.Class (Generator)
 import System.Random.Shuffle qualified as S
 
-import Strings.System.Random.Static (mkStaticSeed)
-
--- | A random seed regenerated for every compilation.
-mkStaticSeed "staticSeed"
+import Strings.System.Random.Static (mkWord64)
 
 -- | A monad capable of producing random values of `a`.
 type Random a = forall g m. Generator g m => RandT g m a
 
+-- | Values used to seed a random number generator.
+type Seed = (Word64, Word64)
+
+-- | A random seed regenerated for every compilation.
+staticSeed :: Seed
+staticSeed = ($$mkWord64, $$mkWord64)
+
 -- | Use given seed to generate value.
 --
--- >>> generateWithSeed 100 200 uniform :: Int
--- -8529848114442733943
-generateWithSeed :: Word64 -> Word64 -> Random a -> a
-generateWithSeed s1 s2 r = fst $ R.withFrozen seed (evalRandT r)
+-- >>> generateWith (100,200) uniform :: Int
+-- 3081816684322452293
+generateWith :: Seed -> Random a -> a
+generateWith (s1, s2) r = fst $ R.withFrozen seed (evalRandT r)
   where
-    seed = R.initFrozen (complement s1) (bitReverse64 s2)
-{-# INLINE generateWithSeed #-}
+    seed = R.initFrozen (complement s2) (bitReverse64 s1)
+{-# INLINE generateWith #-}
 
 -- | Use `staticSeed` to generate a random value.
 --
 -- >>> generateStatic uniform :: Double
 -- 0.9943416107068436  -- Changes in every compilation
-generateStatic :: Random a -> a
-generateStatic = let (s1, s2) = staticSeed in generateWithSeed s1 s2
-{-# INLINE generateStatic #-}
 
 -- | Use random seed to generate value in IO.
 --
@@ -74,8 +75,8 @@ liftRandom gen = liftRandT genAndReturn
 -- * Use entire range for integral types.
 -- * Use (0,1] range for floating types.
 --
--- >>> generateWithSeed 1 2 uniform :: Double
--- 0.7673711397211634
+-- >>> generateWith (1,2) uniform :: Double
+-- 0.6502342391751404
 uniform :: R.Variate a => Random a
 uniform = liftRandom R.uniform
 {-# INLINE uniform #-}
@@ -85,8 +86,8 @@ uniform = liftRandom R.uniform
 -- * Use inclusive range for integral types.
 -- * Use (a,b] range for floating types.
 --
--- >>> generateWithSeed 1 2 $ uniformR 0 10 :: Int
--- 2
+-- >>> generateWith (1,2) $ uniformR 10 50 :: Int
+-- 16
 uniformR :: R.Variate a => a -> a -> Random a
 uniformR lo hi = liftRandom $ R.uniformR (lo, hi)
 {-# INLINE uniformR #-}
@@ -96,8 +97,8 @@ uniformR lo hi = liftRandom $ R.uniformR (lo, hi)
 -- * For integral types the bound must be less than the max bound of 'Word32' (4294967295). Behaviour is undefined for
 --   negative bounds.
 --
--- >>> generateWithSeed 1 2 $ uniformB 200 :: Int
--- 100
+-- >>> generateWith (1,2) $ uniformB 200 :: Int
+-- 143
 uniformB :: R.Variate a => a -> Random a
 uniformB b = liftRandom $ R.uniformB b
 {-# INLINE uniformB #-}
@@ -107,8 +108,8 @@ uniformB b = liftRandom $ R.uniformB b
 -- It should be equivalent to `uniformR (minBound, maxBound)`, but for non-`Variate`.
 --
 -- >>> data T = A | B | C | D deriving (Enum, Bounded, Show)
--- >>> generateWithSeed 1 2 uniformE :: T
--- B
+-- >>> generateWith (1,3) uniformE :: T
+-- C
 uniformE :: (Enum a, Bounded a) => Random a
 uniformE = uniformRE minBound maxBound
 {-# INLINE uniformE #-}
@@ -132,7 +133,7 @@ uniformRE lo hi = do
 -- | Choose a single random value from a vector.
 --
 -- >>> import Data.Vector as V
--- >>> generateWithSeed 1 2 $ choose (V.fromList ["hi", "hello", "ola"])
+-- >>> generateWith (1,2) $ choose (V.fromList ["hi", "hello", "ola"])
 -- "hello"
 choose :: Vector v a => v a -> Random a
 choose v = do
@@ -147,37 +148,43 @@ choose v = do
 treeIndices :: Int -> Random [Int]
 treeIndices n = mapM sample bounds
   where
-    bounds = reverse [2 .. n]
+    bounds = [n, n - 1 .. 2]
     sample (i :: Int) = uniformB i
 {-# INLINEABLE treeIndices #-}
 
--- | Shuffles a list randomly.
+-- | Shuffles a non-empty list.
 --
--- >>> generateWithSeed 1 2 $ shuffle [1..5] :: [Int]
--- [1,2,5,4,3]
-shuffle :: IsList l => l -> Random l
-shuffle list = do
-    let xs = toList list
+-- The list is not checked for emptiness, in which case this function may run forever.
+shuffleNonEmpty :: IsList l => [Item l] -> Random l
+shuffleNonEmpty xs = do
     let n = length xs
     idx <- treeIndices n
     let ys = S.shuffle xs idx
     pure $ fromListN n ys
+{-# INLINEABLE shuffleNonEmpty #-}
+
+-- | Shuffles a list randomly.
+--
+-- >>> generateWith (1,2) $ shuffle [1..5] :: [Int]
+-- [4,1,2,3,5]
+shuffle :: IsList l => l -> Random l
+shuffle values = case toList values of
+    [] -> pure values
+    xs -> shuffleNonEmpty xs
 {-# INLINEABLE shuffle #-}
 
 -- | Generate random partitions of a vector.
 --
 -- >>> import Data.Vector as V
--- >>> generateWithSeed 1 2 $ partitions (V.fromList [1..10])
--- [[1],[2,3,4,5],[6,7,8],[9,10]]
+-- >>> generateWith (1,4) $ partitions (V.fromList [1..10])
+-- [[1,2,3],[4,5,6,7,8],[9],[10]]
 partitions :: Vector v a => v a -> Random [v a]
-partitions xs
-    | n == 0 = pure []
-    | n == 1 = pure [xs]
-    | otherwise = do
+partitions xs = case G.length xs of
+    0 -> pure []
+    1 -> pure [xs]
+    n -> do
         idx <- uniformB n
         let (part, rest) = splitAt (idx + 1) xs
         parts <- partitions rest
         pure (part : parts)
-  where
-    n = G.length xs
 {-# INLINEABLE partitions #-}

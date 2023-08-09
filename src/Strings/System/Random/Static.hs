@@ -1,32 +1,33 @@
-module Strings.System.Random.Static (mkStaticSeed) where
+module Strings.System.Random.Static (
+    mkWord64,
+    Random,
+    mkRandomQ,
+    mkRandom,
+    mkRandomE,
+) where
 
 import Data.Word (Word64)
-import System.Random.PCG (withSystemRandom)
+import System.Random.PCG (GenIO, withSystemRandom)
 import System.Random.PCG.Class (uniformW64)
 
-import Language.Haskell.TH (
-    DecsQ,
-    ExpQ,
-    Lit (IntegerL),
-    Quote (newName),
-    litE,
-    runIO,
-    sigD,
-    varP,
- )
+import Language.Haskell.TH (CodeQ, ExpQ, Q, bindCode, runIO)
+import Language.Haskell.TH.Syntax (Lift (liftTyped), unTypeCode)
 
--- | Generates a randomized literal `Word64`.
-mkWord64 :: ExpQ
-mkWord64 = do
-    seed <- runIO $ withSystemRandom uniformW64
-    litE $ IntegerL (toInteger seed)
+-- | A random value generator .
+type Random a = GenIO -> IO a
 
--- | Defines a random seed at compile time.
---
--- The seed is stored in a variable with the given name.
-mkStaticSeed :: String -> DecsQ
-mkStaticSeed varName = do
-    seedN <- newName varName
-    seedDecl <- sigD seedN [t|(Word64, Word64)|]
-    seedDef <- [d|$(varP seedN) = ($(mkWord64), $(mkWord64))|]
-    pure (seedDecl : seedDef)
+-- | Yields a random `a` in the quotation monad.
+mkRandomQ :: Random a -> Q a
+mkRandomQ = runIO . withSystemRandom
+
+-- | Generates a random `a` in compile-time.
+mkRandom :: Lift a => Random a -> CodeQ a
+mkRandom r = bindCode (mkRandomQ r) liftTyped
+
+-- | Generates an untyped random `a` in compile-time.
+mkRandomE :: Lift a => Random a -> ExpQ
+mkRandomE = unTypeCode . mkRandom
+
+-- | Generates a randomized literal `Word64` at compile time.
+mkWord64 :: CodeQ Word64
+mkWord64 = mkRandom uniformW64
