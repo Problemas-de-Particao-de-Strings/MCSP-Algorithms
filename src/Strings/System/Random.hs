@@ -1,6 +1,8 @@
 module Strings.System.Random (
+    staticSeed,
     Random,
     generateWithSeed,
+    generateStatic,
     generate,
     R.Variate,
     uniform,
@@ -23,6 +25,11 @@ import System.Random.PCG.Class (Generator)
 import System.Random.PCG.Fast qualified as R
 import System.Random.Shuffle qualified as S
 
+import Strings.System.Random.Static (mkStaticSeed)
+
+-- | A random seed regenerated for every compilation.
+mkStaticSeed "staticSeed"
+
 -- | A monad capable of producing random values of `a`.
 type Random a = forall g m. Generator g m => RandT g m a
 
@@ -34,6 +41,14 @@ type Random a = forall g m. Generator g m => RandT g m a
 generateWithSeed :: Word64 -> Random a -> a
 generateWithSeed seed r = fst $ R.withFrozen (R.initFrozen seed) (evalRandT r)
 {-# INLINE generateWithSeed #-}
+
+-- | Use `staticSeed` to generate a random value.
+--
+-- >>> generateStatic uniform :: Double
+-- 0.6423704608252171  -- Changes in every compilation
+generateStatic :: Random a -> a
+generateStatic = generateWithSeed staticSeed
+{-# INLINE generateStatic #-}
 
 -- | Use random seed to generate value in IO.
 --

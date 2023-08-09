@@ -36,6 +36,7 @@ dependencies:
   - random-shuffle >= 0.0.4 && < 1
   - MonadRandom >= 0.6 && < 1
   - store >= 0.7.16 && < 1
+  - template-haskell > 2.20 && < 3
   - vector >= 0.13 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
 
