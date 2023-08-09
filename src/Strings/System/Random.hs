@@ -17,12 +17,13 @@ module Strings.System.Random (
 import Prelude hiding (splitAt)
 
 import Control.Monad.Random.Strict (RandT, evalRandT, liftRandT)
+import Data.Bits (Bits (complement))
 import Data.Vector.Generic (Vector, indexM, splitAt)
 import Data.Vector.Generic qualified as G (length)
-import Data.Word (Word64)
+import Data.Word (Word64, bitReverse64)
 import GHC.Exts (IsList (..))
+import System.Random.PCG qualified as R
 import System.Random.PCG.Class (Generator)
-import System.Random.PCG.Fast qualified as R
 import System.Random.Shuffle qualified as S
 
 import Strings.System.Random.Static (mkStaticSeed)
@@ -38,8 +39,10 @@ type Random a = forall g m. Generator g m => RandT g m a
 -- @
 --   generateWithSeed 100 uniform :: Int  -- 2236967910
 -- @
-generateWithSeed :: Word64 -> Random a -> a
-generateWithSeed seed r = fst $ R.withFrozen (R.initFrozen seed) (evalRandT r)
+generateWithSeed :: Word64 -> Word64 -> Random a -> a
+generateWithSeed s1 s2 r = fst $ R.withFrozen seed (evalRandT r)
+  where
+    seed = R.initFrozen (complement s1) (bitReverse64 s2)
 {-# INLINE generateWithSeed #-}
 
 -- | Use `staticSeed` to generate a random value.

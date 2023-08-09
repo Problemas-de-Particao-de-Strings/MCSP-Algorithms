@@ -1,29 +1,32 @@
 module Strings.System.Random.Static (mkStaticSeed) where
 
-import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Word (Word64)
 import System.Random.PCG (withSystemRandom)
 import System.Random.PCG.Class (uniformW64)
 
 import Language.Haskell.TH (
-    Body (NormalB),
-    Dec (SigD, ValD),
-    Exp (LitE),
+    DecsQ,
+    ExpQ,
     Lit (IntegerL),
-    Pat (VarP),
-    Q,
     Quote (newName),
-    Type (ConT),
+    litE,
+    runIO,
+    sigD,
+    varP,
  )
 
--- | Generates a random seed at compile time.
+-- | Generates a randomized literal `Word64`.
+mkWord64 :: ExpQ
+mkWord64 = do
+    seed <- runIO $ withSystemRandom uniformW64
+    litE $ IntegerL (toInteger seed)
+
+-- | Defines a random seed at compile time.
 --
 -- The seed is stored in a variable with the given name.
-mkStaticSeed :: String -> Q [Dec]
+mkStaticSeed :: String -> DecsQ
 mkStaticSeed varName = do
     seedN <- newName varName
-    seed <- liftIO $ withSystemRandom uniformW64
-    let litSeed = LitE $ IntegerL $ toInteger seed
-    let seedDecl = SigD seedN (ConT ''Word64)
-    let seedDef = ValD (VarP seedN) (NormalB litSeed) []
-    pure [seedDecl, seedDef]
+    seedDecl <- sigD seedN [t|(Word64, Word64)|]
+    seedDef <- [d|$(varP seedN) = ($(mkWord64), $(mkWord64))|]
+    pure (seedDecl : seedDef)
