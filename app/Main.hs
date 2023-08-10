@@ -4,9 +4,10 @@ import Prelude hiding (String)
 
 import Data.Store (Size (ConstSize), Store (size), decodeIO, encode)
 import Data.Word (Word8)
+import GHC.Generics (Generic)
 
 import Strings.Data.Pair (Pair, shuffledPartitions)
-import Strings.Data.String.Deriving (Generic, derivingUnbox, safeCasts)
+import Strings.Data.String.Deriving (derivingUnboxVia)
 import Strings.System.Random (generate)
 
 data Letter = A | C | G | T
@@ -15,11 +16,7 @@ data Letter = A | C | G | T
 instance Store Letter where
     size = ConstSize 1
 
-letterToByte :: Letter -> Word8
-byteToLetter :: Word8 -> Letter
-(letterToByte, byteToLetter) = safeCasts
-
-derivingUnbox "Letter" [t|Letter -> Word8|] [|letterToByte|] [|byteToLetter|]
+derivingUnboxVia [t|Letter -> Word8|]
 
 gen :: IO (Pair Letter)
 gen = generate $ shuffledPartitions 200

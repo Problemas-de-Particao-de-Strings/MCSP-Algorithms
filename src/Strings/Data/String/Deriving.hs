@@ -1,46 +1,104 @@
 module Strings.Data.String.Deriving (
-    Generic,
-    Store,
-    derivingUnbox,
-    safeCasts,
+    derivingUnboxVia,
 ) where
 
+import Data.Char (toLower)
 import Data.Data (Proxy (Proxy), Typeable, typeRep)
-import Data.Store (Store)
 import Data.Vector.Unboxed.Deriving (derivingUnbox)
-import GHC.Generics (Generic)
-import GHC.Stack (HasCallStack)
+
+import Language.Haskell.TH (
+    Dec,
+    DecsQ,
+    Name,
+    Q,
+    Type (..),
+    TypeQ,
+    nameBase,
+    newName,
+    sigD,
+    varE,
+    varP,
+ )
+
+-- | Makes the first character lowercase.
+uncapitalize :: String -> String
+uncapitalize [] = []
+uncapitalize (ch : rest) = toLower ch : rest
+
+-- | Extract the name of a data type.
+getName :: Type -> Q String
+getName (ConT name) = pure $ nameBase name
+getName typ = fail $ "invalid type " ++ show typ
+
+--- | Defines the signature and name for a cast function from `src` to `dst`
+mkCastFn :: Type -> Type -> Q (Dec, Name)
+mkCastFn src dst = do
+    srcName <- getName src
+    dstName <- getName dst
+    fnName <- newName (uncapitalize srcName ++ "To" ++ dstName)
+    fnSig <- sigD fnName [t|$(pure src) -> $(pure dst)|]
+    pure (fnSig, fnName)
+
+-- | Creates a prefix name for deriving `Unbox`.
+mkPrefix :: Type -> Type -> Q String
+mkPrefix typ rep = do
+    typName <- getName typ
+    repName <- getName rep
+    pure $ typName ++ "Via" ++ repName
+
+-- | `T` and `U` from `T -> U`.
+splitTypRep :: Type -> Q (Type, Type)
+splitTypRep (ArrowT `AppT` typ `AppT` rep) = pure (typ, rep)
+splitTypRep typ = fail $ "invalid deriving rule " ++ show typ
+
+-- | Given `T -> U`, derives `Unbox T` by casting it to `U`.
+--
+-- >>> data DNA = A | C | G | T
+-- >>> derivingUnboxVia [t|DNA -> Word8]
+derivingUnboxVia :: TypeQ -> DecsQ
+derivingUnboxVia rule = do
+    (typ, rep) <- rule >>= splitTypRep
+    (abSig, aToB) <- mkCastFn typ rep
+    (baSig, bToA) <- mkCastFn rep typ
+    decs <- [d|($(varP aToB), $(varP bToA)) = safeCasts|]
+    prefix <- mkPrefix typ rep
+    derive <- derivingUnbox prefix [t|$(pure typ) -> $(pure rep)|] (varE aToB) (varE bToA)
+    pure $ [abSig, baSig] ++ decs ++ derive
+
+-- | Types convertible to a bounded integer.
+type EnumLike a = (Enum a, Bounded a, Typeable a)
 
 -- | Cast `a` to `b` via their integer representations.
-cast :: (Enum a, Enum b) => a -> b
+cast :: (EnumLike a, EnumLike b) => a -> b
 cast = toEnum . fromEnum
 {-# INLINE cast #-}
 
--- | Cast `a` to `b`, clamping to valid values of `b`.
-castClamped :: forall a b. (Enum a, Enum b, Bounded b) => a -> b
-castClamped = toEnum . max minB . min maxB . fromEnum
-  where
-    minB = fromEnum (minBound :: b)
-    maxB = fromEnum (maxBound :: b)
-{-# INLINE castClamped #-}
-
--- | Types convertible to a bounded integer.
-type IntConvertible a = (Enum a, Bounded a, Typeable a)
-
--- | Error message for non convertible types.
-invalidCast :: HasCallStack => String -> String -> never
-invalidCast typeA typeB = error (typeA ++ " is larger than " ++ typeB ++ " and cannot be safely converted")
-
--- | Cast `a` to `b` if the range `[minBound, maxBound]` is not smaller for `a`.
-safeCasts :: forall a b. (HasCallStack, IntConvertible a, IntConvertible b) => (a -> b, b -> a)
-safeCasts =
-    if safelyConvertible
-        then (cast, castClamped)
-        else invalidCast (show $ typeRep (Proxy :: Proxy a)) (show $ typeRep (Proxy :: Proxy b))
+-- | Cast `b` to `a`, clamping to valid values of `a`.
+clamp :: forall a b. (EnumLike a, EnumLike b) => b -> a
+clamp = toEnum . max minA . min maxA . fromEnum
   where
     minA = fromEnum (minBound :: a)
     maxA = fromEnum (maxBound :: a)
-    minB = fromEnum (minBound :: b)
-    maxB = fromEnum (maxBound :: b)
-    safelyConvertible = minB <= minA && maxA <= maxB
-{-# INLINE safeCasts #-}
+{-# INLINE clamp #-}
+
+-- | Holds information about an `EnumLike a`.
+data Info a = Info {minV :: !Int, maxV :: !Int, name :: !String}
+
+-- | Extracts information about an `EnumLike a`.
+info :: forall a. EnumLike a => Info a
+info =
+    Info
+        { minV = fromEnum (minBound :: a)
+        , maxV = fromEnum (maxBound :: a)
+        , name = show $ typeRep (Proxy :: Proxy a)
+        }
+
+-- | Checks if `a` is safely convertible to `b` via `Enum` and `Bounded`, then returns the casts.
+safeCasts :: forall a b. (EnumLike a, EnumLike b) => (a -> b, b -> a)
+safeCasts =
+    if minV rep <= minV typ && maxV typ <= maxV rep
+        then (cast, clamp)
+        else error $ name typ ++ " is larger than " ++ name rep ++ " and cannot be safely converted"
+  where
+    typ = info :: Info a
+    rep = info :: Info b
