@@ -48,11 +48,6 @@ generateWith (s1, s2) r = fst $ R.withFrozen seed (evalRandT r)
     seed = R.initFrozen (complement s2) (bitReverse64 s1)
 {-# INLINE generateWith #-}
 
--- | Use `staticSeed` to generate a random value.
---
--- >>> generateStatic uniform :: Double
--- 0.9943416107068436  -- Changes in every compilation
-
 -- | Use random seed to generate value in IO.
 --
 -- >>> generate uniform :: IO Int
