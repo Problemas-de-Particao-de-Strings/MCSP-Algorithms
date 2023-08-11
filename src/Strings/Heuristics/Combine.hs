@@ -5,7 +5,7 @@ import Prelude hiding (String, (++))
 import Data.Bifunctor (first, second)
 import Data.Vector.Generic ((++))
 
-import Strings.Data.String (String (..), splitGenes)
+import Strings.Data.String (String (..), chars)
 
 -- | Applies a function until the result converges.
 converge :: Eq a => (a -> a) -> a -> a
@@ -34,4 +34,4 @@ combineAll (x : xs, ys) =
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
 combineHeuristic :: Eq a => String a -> String a -> ([String a], [String a])
-combineHeuristic x y = converge combineAll (splitGenes x, splitGenes y)
+combineHeuristic x y = converge combineAll (chars x, chars y)

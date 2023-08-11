@@ -1,9 +1,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Strings.Data.String (
-    Gene,
+    Character,
     String (..),
-    splitGenes,
+    chars,
 ) where
 
 import Prelude hiding (String)
@@ -21,23 +21,23 @@ import GHC.Exts (IsList (..))
 import GHC.Read (Read (readPrec))
 import Text.ParserCombinators.ReadPrec (ReadPrec, get, (<++))
 
--- | Common constraints for a gene.
-type Gene a = (Enum a, Bounded a, U.Unbox a)
+-- | Common constraints for a character.
+type Character a = (Enum a, Bounded a, U.Unbox a)
 
--- | A string of genes `a`.
+-- | A string of chars `a`.
 --
 -- Implemented as a unboxed vector.
 data String a where
     String :: U.Unbox a => !(U.Vector a) -> String a
     deriving newtype (Typeable)
 
--- | Split the `String` in substrings of 1 gene each.
-splitGenes :: String a -> [String a]
-splitGenes s@(String _)
-    | null gene = []
-    | otherwise = gene : splitGenes rest
+-- | Split the `String` in substrings of 1 char each.
+chars :: String a -> [String a]
+chars s@(String _)
+    | null char = []
+    | otherwise = char : chars rest
   where
-    (gene, rest) = G.splitAt 1 s
+    (char, rest) = G.splitAt 1 s
 
 instance Eq a => Eq (String a) where
     (String lhs) == (String rhs) = lhs == rhs
