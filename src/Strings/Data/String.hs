@@ -53,7 +53,7 @@ module Strings.Data.String (
     convert,
 ) where
 
-import Prelude hiding (String, concat, drop, head, init, last, reverse, splitAt, tail, take, (++))
+import Prelude hiding (String, concat, drop, head, init, last, readList, reverse, splitAt, tail, take, (++))
 
 import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Data (Typeable)
@@ -75,6 +75,10 @@ import Data.Vector.Unboxed qualified as U
 -- | Common constraints for a character.
 type Character a = (Enum a, Bounded a, Unbox a)
 
+-- --------------- --
+-- Data definition --
+-- --------------- --
+
 -- | An unboxed string of characters `a`.
 --
 -- Implemented as a unboxed vector.
@@ -89,6 +93,124 @@ data String a where
 -- | Extract the inner contents of a `String`.
 contents :: String a -> U.Vector a
 contents (String v) = v
+
+instance Eq a => Eq (String a) where
+    (String lhs) == (String rhs) = lhs == rhs
+    (String lhs) /= (String rhs) = lhs /= rhs
+
+instance Ord a => Ord (String a) where
+    (String lhs) `compare` (String rhs) = lhs `compare` rhs
+    (String lhs) < (String rhs) = lhs < rhs
+    (String lhs) <= (String rhs) = lhs <= rhs
+    (String lhs) > (String rhs) = lhs > rhs
+    (String lhs) >= (String rhs) = lhs >= rhs
+    max (String lhs) (String rhs) = String (max lhs rhs)
+    min (String lhs) (String rhs) = String (min lhs rhs)
+
+-- ----------------------------------- --
+-- List-like and String-like instances --
+-- ----------------------------------- --
+
+instance Unbox a => IsList (String a) where
+    type Item (String a) = a
+    fromList = String . U.fromList
+    fromListN n = String . U.fromListN n
+    toList (String v) = U.toList v
+
+instance a ~ Char => IsString (String a) where
+    fromString = fromList
+
+instance Foldable String where
+    fold (String v) = U.foldMap id v
+    foldMap f (String v) = U.foldMap f v
+    foldMap' f (String v) = U.foldMap' f v
+    foldr f x (String v) = U.foldr f x v
+    foldr' f x (String v) = U.foldr' f x v
+    foldl f x (String v) = U.foldl f x v
+    foldl' f x (String v) = U.foldl' f x v
+    foldr1 f (String v) = U.foldr1 f v
+    foldl1 f (String v) = U.foldl1 f v
+    toList (String v) = U.toList v
+    null (String v) = U.null v
+    length (String v) = U.length v
+    elem x (String v) = U.elem x v
+    maximum (String v) = U.maximum v
+    minimum (String v) = U.minimum v
+    sum (String v) = U.sum v
+    product (String v) = U.product v
+
+instance Semigroup (String a) where
+    (<>) = (++)
+    sconcat = concatNE
+
+instance Unbox a => Monoid (String a) where
+    mempty = String U.empty
+
+-- ---------------------------------------------- --
+-- Input and Output instances, Textual and Binary --
+-- ---------------------------------------------- --
+
+-- | Show value without extra decorators.
+--
+-- Useful for showing list of characters.
+class ShowSimple a where
+    -- | Similar to `showsPrec`.
+    showSimple :: Int -> a -> ShowS
+
+instance {-# OVERLAPPABLE #-} Show a => ShowSimple a where
+    showSimple = showsPrec
+
+instance ShowSimple Char where
+    showSimple _ = showChar
+
+instance ShowSimple a => Show (String a) where
+    showsPrec d s t = foldr' (showSimple d) t s
+
+-- | Read value without extra decorators.
+--
+-- Useful for reading list of characters.
+class ReadSimple a where
+    -- | Similar to `readPrec`.
+    readSimple :: ReadPrec a
+
+instance {-# OVERLAPPABLE #-} Read a => ReadSimple a where
+    readSimple = readPrec
+
+instance ReadSimple Char where
+    readSimple = get
+
+-- | Reads a list of unquoted and unseparated items.
+--
+-- Note that this function will never return an error. If no item is parseable, an empty list is returned.
+readList :: ReadSimple a => ReadPrec [a]
+readList = tryReadList <++ pure []
+  where
+    tryReadList = do
+        value <- readSimple
+        rest <- readList
+        pure (value : rest)
+
+instance (ReadSimple a, Unbox a) => Read (String a) where
+    readPrec = fromList <$> readList
+
+instance (Store a, Unbox a) => Store (String a) where
+    size = VarSize calcSize
+      where
+        calcSize s = sizeOf size (length s) + sizeSum s
+        sizeOf (ConstSize n) _ = n
+        sizeOf (VarSize f) x = f x
+        sizeSum v = getSum $ foldMap (Sum . sizeOf size) v
+    poke (String v) = do
+        poke $ U.length v
+        U.forM_ v poke
+    peek = do
+        n <- peek
+        v <- U.replicateM n peek
+        pure $ String v
+
+-- --------------------------------------- --
+-- Operations with lifted Unbox constraint --
+-- --------------------------------------- --
 
 -- Indexing
 -- --------
@@ -142,7 +264,7 @@ lastM :: Monad m => String a -> m a
 lastM (String v) = U.lastM v
 
 -- Substrings (slicing)
--- -------------------------------
+-- --------------------
 
 -- | /O(1)/ Yield the slice `s[i:i+n]` of the string without copying it.
 --
@@ -263,7 +385,7 @@ force (String v) = String $ U.force v
 -- Permutations
 -- ------------
 
--- | /O(n)/ Reverse a vector.
+-- | /O(n)/ Reverse a string.
 --
 -- >>> reverse "abc123"
 -- 321cba
@@ -320,108 +442,9 @@ chars str
   where
     (ch, rest) = splitAt 1 str
 
-instance Eq a => Eq (String a) where
-    (String lhs) == (String rhs) = lhs == rhs
-    (String lhs) /= (String rhs) = lhs /= rhs
-
-instance Ord a => Ord (String a) where
-    (String lhs) `compare` (String rhs) = lhs `compare` rhs
-    (String lhs) < (String rhs) = lhs < rhs
-    (String lhs) <= (String rhs) = lhs <= rhs
-    (String lhs) > (String rhs) = lhs > rhs
-    (String lhs) >= (String rhs) = lhs >= rhs
-    max (String lhs) (String rhs) = String (max lhs rhs)
-    min (String lhs) (String rhs) = String (min lhs rhs)
-
--- | Show value without extra decorators.
---
--- Useful for showing list of characters.
-class ShowSimple a where
-    -- | Similar to `showsPrec`.
-    showSimple :: Int -> a -> ShowS
-
-instance {-# OVERLAPPABLE #-} Show a => ShowSimple a where
-    showSimple = showsPrec
-
-instance ShowSimple Char where
-    showSimple _ = showChar
-
-instance ShowSimple a => Show (String a) where
-    showsPrec d s t = foldr' (showSimple d) t s
-
--- | Read value without extra decorators.
---
--- Useful for reading list of characters.
-class ReadSimple a where
-    -- | Similar to `readPrec`.
-    readSimple :: ReadPrec a
-
-instance {-# OVERLAPPABLE #-} Read a => ReadSimple a where
-    readSimple = readPrec
-
-instance ReadSimple Char where
-    readSimple = get
-
--- | Read values and insert them into the given `String`.
-readInto :: ReadSimple a => String a -> ReadPrec (String a)
-readInto s = appendNext s <++ pure s
-  where
-    appendNext (String v) = do
-        x <- readSimple
-        readInto $ String (U.snoc v x)
-
-instance (ReadSimple a, Unbox a) => Read (String a) where
-    readPrec = readInto G.empty
-
-instance Semigroup (String a) where
-    (<>) = (++)
-    sconcat = concatNE
-
-instance Unbox a => Monoid (String a) where
-    mempty = String U.empty
-
-instance Foldable String where
-    fold (String v) = U.foldMap id v
-    foldMap f (String v) = U.foldMap f v
-    foldMap' f (String v) = U.foldMap' f v
-    foldr f x (String v) = U.foldr f x v
-    foldr' f x (String v) = U.foldr' f x v
-    foldl f x (String v) = U.foldl f x v
-    foldl' f x (String v) = U.foldl' f x v
-    foldr1 f (String v) = U.foldr1 f v
-    foldl1 f (String v) = U.foldl1 f v
-    toList (String v) = U.toList v
-    null (String v) = U.null v
-    length (String v) = U.length v
-    elem x (String v) = U.elem x v
-    maximum (String v) = U.maximum v
-    minimum (String v) = U.minimum v
-    sum (String v) = U.sum v
-    product (String v) = U.product v
-
-instance Unbox a => IsList (String a) where
-    type Item (String a) = a
-    fromList = String . U.fromList
-    fromListN n = String . U.fromListN n
-    toList (String v) = U.toList v
-
-instance a ~ Char => IsString (String a) where
-    fromString = fromList
-
-instance (Store a, Unbox a) => Store (String a) where
-    size = VarSize calcSize
-      where
-        calcSize s = sizeOf size (length s) + sizeSum s
-        sizeOf (ConstSize n) _ = n
-        sizeOf (VarSize f) x = f x
-        sizeSum v = getSum $ foldMap (Sum . sizeOf size) v
-    poke (String v) = do
-        poke $ U.length v
-        U.forM_ v poke
-    peek = do
-        n <- peek
-        v <- U.replicateM n peek
-        pure $ String v
+-- --------------------------------- --
+-- Generic Vector instance and types --
+-- --------------------------------- --
 
 -- | Mutable variant of `String`, so that it can implement the `Generic Vector` interface.
 newtype MString s a = MString {mContents :: U.MVector s a}
