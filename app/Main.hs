@@ -6,7 +6,8 @@ import Data.Store (Size (ConstSize), Store (size), decodeIO, encode)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 
-import Strings.Data.Pair (Pair, shuffledPartitions)
+import Strings.Data.Partition (shuffledPartitions)
+import Strings.Data.String (String)
 import Strings.Data.String.Deriving (derivingUnboxVia)
 import Strings.System.Random (generate)
 
@@ -18,7 +19,7 @@ instance Store Letter where
 
 derivingUnboxVia [t|Letter -> Word8|]
 
-gen :: IO (Pair Letter)
+gen :: IO (String Letter, String Letter)
 gen = generate $ shuffledPartitions 200
 
 roundTrip :: Store a => a -> IO a

@@ -1,11 +1,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Strings.Data.String (
-    Character,
-    chars,
-
     -- * Unboxed string
     String (..),
+    Unbox,
 
     -- * Accessors
 
@@ -28,14 +26,18 @@ module Strings.Data.String (
     uncons,
     unsnoc,
 
+    -- * Creation
+    replicateM,
+
     -- * Modification
 
     -- ** Concatenation
     cons,
     snoc,
     (++),
-    concatNE,
     concat,
+    concatNE,
+    maybeConcat,
 
     -- ** Restricting memory usage
     force,
@@ -58,7 +60,7 @@ import Prelude hiding (String, concat, drop, head, init, last, readList, reverse
 import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
-import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
@@ -71,9 +73,6 @@ import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed (Unbox)
 import Data.Vector.Unboxed qualified as U
-
--- | Common constraints for a character.
-type Character a = (Enum a, Bounded a, Unbox a)
 
 -- --------------- --
 -- Data definition --
@@ -362,16 +361,34 @@ snoc (String v) ch = String $ U.snoc v ch
 (++) :: String a -> String a -> String a
 (String v1) ++ (String v2) = String (v1 U.++ v2)
 
+-- | /O(n)/ Concatenate all strings in the list.
+--
+-- This is the simplest variant, but requires `Unbox a`.
+--
+-- >>> concat ["abc", "123", "def"]
+-- abc123def
+-- >>> concat ([] :: [String Char])
+-- <BLANKLINE>
+concat :: Unbox a => [String a] -> String a
+concat str = String $ U.concat (map contents str)
+
 -- | /O(n)/ Concatenate all strings in the non-empty list.
+--
+-- >>> concatNE ("abc" :| ["123", "def"])
+-- abc123def
 concatNE :: NonEmpty (String a) -> String a
-concatNE (String v0 :| rest) = String $ U.concat (v0 : map contents rest)
+concatNE (str@(String _) :| rest) = concat (str : rest)
 
 -- | /O(n)/ Concatenate all strings in the list, if non-empty.
 --
 -- Returns `Nothing` if the list is empty.
-concat :: [String a] -> Maybe (String a)
-concat [] = Nothing
-concat (str : rest) = Just $ concatNE (str :| rest)
+--
+-- >>> maybeConcat ["abc", "123", "def"]
+-- Just abc123def
+-- >>> maybeConcat ([] :: [String Char])
+-- Nothing
+maybeConcat :: [String a] -> Maybe (String a)
+maybeConcat strs = concatNE <$> nonEmpty strs
 
 -- Restricting memory usage
 -- ------------------------
@@ -434,13 +451,13 @@ cmpBy f (String va) (String vb) = U.cmpBy f va vb
 convert :: G.Vector v a => String a -> v a
 convert (String vs) = U.convert vs
 
--- | Split the `String` in substrings of 1 char each.
-chars :: String a -> [String a]
-chars str
-    | null str = []
-    | otherwise = ch : chars rest
-  where
-    (ch, rest) = splitAt 1 str
+-- --------------------------- --
+-- Other reexported operations --
+-- --------------------------- --
+
+-- | /O(n)/ Execute the monadic action the given number of times and store the results in a string.
+replicateM :: (Unbox a, Monad m) => Int -> m a -> m (String a)
+replicateM n m = String <$> U.replicateM n m
 
 -- --------------------------------- --
 -- Generic Vector instance and types --
