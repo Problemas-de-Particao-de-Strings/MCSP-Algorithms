@@ -75,6 +75,7 @@ library:
     - Strings.Data.String
     - Strings.Data.String.Deriving
     - Strings.Data.Pair
+    - Strings.Heuristics.Combine
     - Strings.System.Random
 
 executables:
