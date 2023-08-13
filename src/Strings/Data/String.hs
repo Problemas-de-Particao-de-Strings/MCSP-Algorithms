@@ -5,6 +5,10 @@ module Strings.Data.String (
     String (..),
     Unbox,
 
+    -- ** Text IO
+    ShowString (..),
+    ReadString (..),
+
     -- * Accessors
 
     -- ** Indexing
@@ -57,6 +61,7 @@ module Strings.Data.String (
 
 import Prelude hiding (String, concat, drop, head, init, last, readList, reverse, splitAt, tail, take, (++))
 
+import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
@@ -64,11 +69,11 @@ import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
-import GHC.Exts (IsList (..))
-import GHC.Read (Read (readPrec))
-import Text.ParserCombinators.ReadPrec (ReadPrec, get, (<++))
+import GHC.IsList (IsList (..))
+import Text.ParserCombinators.ReadP (ReadP, get, (<++))
+import Text.ParserCombinators.ReadPrec (lift, readPrec_to_P)
+import Text.Read (Read (..))
 
-import Control.Monad.ST (ST)
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed (Unbox)
@@ -145,52 +150,79 @@ instance Semigroup (String a) where
 instance Unbox a => Monoid (String a) where
     mempty = String U.empty
 
--- ---------------------------------------------- --
--- Input and Output instances, Textual and Binary --
--- ---------------------------------------------- --
+-- ------------------------ --
+-- Textual Output instances --
+-- ------------------------ --
 
--- | Show value without extra decorators.
+-- | Specializable String to text conversion.
 --
--- Useful for showing list of characters.
-class ShowSimple a where
-    -- | Similar to `showsPrec`.
-    showSimple :: Int -> a -> ShowS
+-- Used for showing a string of the given character `a`.
+class ShowString a where
+    {-# MINIMAL showStr #-}
 
-instance {-# OVERLAPPABLE #-} Show a => ShowSimple a where
-    showSimple = showsPrec
+    -- | Shows a `String a`.
+    --
+    -- `Show (String a)` uses this specialized implementation.
+    showStr :: String a -> ShowS
 
-instance ShowSimple Char where
-    showSimple _ = showChar
+instance ShowString a => Show (String a) where
+    showsPrec _ = showStr
 
-instance ShowSimple a => Show (String a) where
-    showsPrec d s t = foldr' (showSimple d) t s
-
--- | Read value without extra decorators.
+-- | Shows all characters without quoting or separation.
 --
--- Useful for reading list of characters.
-class ReadSimple a where
-    -- | Similar to `readPrec`.
-    readSimple :: ReadPrec a
+-- >>> showMany shows [1, 2, 12 :: Int] ""
+-- "1212"
+showMany :: (a -> ShowS) -> String a -> ShowS
+showMany showItem str text = foldr' showItem text str
 
-instance {-# OVERLAPPABLE #-} Read a => ReadSimple a where
-    readSimple = readPrec
+-- | The default, shows all characters without separators.
+instance {-# OVERLAPPABLE #-} Show a => ShowString a where
+    showStr = showMany shows
 
-instance ReadSimple Char where
-    readSimple = get
+-- | Specialized Char version, removing quotes.
+instance ShowString Char where
+    showStr = showMany showChar
+
+-- ----------------------- --
+-- Textual Input instances --
+-- ----------------------- --
+
+-- | Specializable text to String conversion.
+--
+-- Used for reading a string of the given character `a`.
+class ReadString a where
+    {-# MINIMAL readChars #-}
+
+    -- | Read characters of a `String a`.
+    --
+    -- `Read (String a)` uses this specialized implementation.
+    readChars :: ReadP [a]
+
+instance (ReadString a, Unbox a) => Read (String a) where
+    readPrec = fromList <$> lift readChars
+
+-- | Tries to read a list of elements, returning an empty list in case of errors.
+readOrEmpty :: ReadP [a] -> ReadP [a]
+readOrEmpty r = r <++ pure []
 
 -- | Reads a list of unquoted and unseparated items.
---
--- Note that this function will never return an error. If no item is parseable, an empty list is returned.
-readList :: ReadSimple a => ReadPrec [a]
-readList = tryReadList <++ pure []
-  where
-    tryReadList = do
-        value <- readSimple
-        rest <- readList
-        pure (value : rest)
+readMany :: ReadP a -> ReadP [a]
+readMany readItem = readOrEmpty $ do
+    value <- readItem
+    rest <- readMany readItem
+    pure (value : rest)
 
-instance (ReadSimple a, Unbox a) => Read (String a) where
-    readPrec = fromList <$> readList
+-- | The default, reads all characters without separators.
+instance {-# OVERLAPPABLE #-} Read a => ReadString a where
+    readChars = readMany $ readPrec_to_P readPrec minPrec
+
+-- | Specialized Char version, reading unquoted characters.
+instance ReadString Char where
+    readChars = readMany get
+
+-- --------------------------------- --
+-- Binary Input and Output instances --
+-- --------------------------------- --
 
 instance (Store a, Unbox a) => Store (String a) where
     size = VarSize calcSize
