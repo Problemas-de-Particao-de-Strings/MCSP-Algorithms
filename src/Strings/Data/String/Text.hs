@@ -1,6 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Strings.Data.String.Parse (
+module Strings.Data.String.Text (
+    ShowString (..),
     ReadString (..),
     readCharsPrec,
 ) where
@@ -8,9 +9,85 @@ module Strings.Data.String.Parse (
 import Data.Char (isSpace)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.Extra (firstJust, snoc)
+import Data.Vector.Generic (Vector, foldr', uncons)
 import Text.ParserCombinators.ReadP (ReadP, gather, pfail, readP_to_S, satisfy, (<++))
 import Text.ParserCombinators.ReadPrec (ReadPrec, lift, minPrec, readPrec_to_P)
 import Text.Read (Read (readPrec))
+
+-- ---------------------- --
+-- Textual Output classes --
+-- ---------------------- --
+
+-- | Specializable String to text conversion.
+--
+-- Used for showing a string of the given character `a`.
+class ShowString a where
+    {-# MINIMAL showStr #-}
+
+    -- | Shows characters of a `String a`.
+    --
+    -- `Show (String a)` uses this specialized implementation.
+    showStr :: Vector v a => v a -> ShowS
+
+-- | Shows all characters without quoting or separation.
+--
+-- >>> import Data.Vector (fromList)
+-- >>> showMany shows (fromList [1, 2, 12 :: Int]) ""
+-- "1212"
+showMany :: Vector v a => (a -> ShowS) -> v a -> ShowS
+showMany showItem str text = foldr' showItem text str
+
+-- | The default, shows all characters without separators.
+instance {-# OVERLAPPABLE #-} Show a => ShowString a where
+    showStr = showMany shows
+
+-- | Specialized Char version, removing quotes.
+instance ShowString Char where
+    showStr = showMany showChar
+
+-- | Shows characters of a string separated by `sep`.
+--
+-- >>> import Data.Vector (fromList)
+-- >>> showSeparated (showString ", ") shows (fromList [1, 2, 12 :: Int]) ""
+-- "1, 2, 12"
+showSeparated :: Vector v a => ShowS -> (a -> ShowS) -> v a -> ShowS
+showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
+  where
+    showEmpty = id
+    showWithSep (ch, str) = showItem ch . showMany showItemThenSep str
+    showItemThenSep ch = showSep . showItem ch
+
+-- | Shows characters of a string separated by spaces.
+--
+-- This implementation uses the default converter for `Show a`.
+--
+-- >>> import Data.Vector (fromList)
+-- >>> showSpaced (fromList [1, 2, 12 :: Int]) ""
+-- "1 2 12"
+showSpaced :: (Vector v a, Show a) => v a -> ShowS
+showSpaced = showSeparated (showChar ' ') shows
+
+instance ShowString Integer where
+    showStr = showSpaced
+
+instance ShowString Int where
+    showStr = showSpaced
+
+instance ShowString Int8 where
+    showStr = showSpaced
+
+instance ShowString Int16 where
+    showStr = showSpaced
+
+instance ShowString Int32 where
+    showStr = showSpaced
+
+instance ShowString Int64 where
+    showStr = showSpaced
+
+-- --------------------- --
+-- Textual Input classes --
+-- --------------------- --
 
 -- | Specializable text to String conversion.
 --

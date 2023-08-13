@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module Strings.Data.String (
     -- * Unboxed string
     String (..),
@@ -65,7 +63,6 @@ import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
-import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
@@ -78,7 +75,7 @@ import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed (Unbox)
 import Data.Vector.Unboxed qualified as U
 
-import Strings.Data.String.Parse (ReadString (..), readCharsPrec)
+import Strings.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
 
 -- --------------- --
 -- Data definition --
@@ -151,80 +148,12 @@ instance Semigroup (String a) where
 instance Unbox a => Monoid (String a) where
     mempty = String U.empty
 
--- ------------------------ --
--- Textual Output instances --
--- ------------------------ --
-
--- | Specializable String to text conversion.
---
--- Used for showing a string of the given character `a`.
-class ShowString a where
-    {-# MINIMAL showStr #-}
-
-    -- | Shows a `String a`.
-    --
-    -- `Show (String a)` uses this specialized implementation.
-    showStr :: String a -> ShowS
+-- ---------------------- --
+-- Textual Input / Output --
+-- ---------------------- --
 
 instance ShowString a => Show (String a) where
-    showsPrec _ = showStr
-
--- | Shows all characters without quoting or separation.
---
--- >>> showMany shows [1, 2, 12 :: Int] ""
--- "1212"
-showMany :: (a -> ShowS) -> String a -> ShowS
-showMany showItem str text = foldr' showItem text str
-
--- | The default, shows all characters without separators.
-instance {-# OVERLAPPABLE #-} Show a => ShowString a where
-    showStr = showMany shows
-
--- | Specialized Char version, removing quotes.
-instance ShowString Char where
-    showStr = showMany showChar
-
--- | Shows characters of a string separated by `sep`.
---
--- >>> showSeparated (showString ", ") shows [1, 2, 12 :: Int] ""
--- "1, 2, 12"
-showSeparated :: ShowS -> (a -> ShowS) -> String a -> ShowS
-showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
-  where
-    showEmpty = id
-    showWithSep (ch, str) = showItem ch . showMany showItemThenSep str
-    showItemThenSep ch = showSep . showItem ch
-
--- | Shows characters of a string separated by spaces.
---
--- This implementation uses the default converter for `Show a`.
---
--- >>> showSpaced [1, 2, 12 :: Int] ""
--- "1 2 12"
-showSpaced :: Show a => String a -> ShowS
-showSpaced = showSeparated (showChar ' ') shows
-
-instance ShowString Integer where
-    showStr = showSpaced
-
-instance ShowString Int where
-    showStr = showSpaced
-
-instance ShowString Int8 where
-    showStr = showSpaced
-
-instance ShowString Int16 where
-    showStr = showSpaced
-
-instance ShowString Int32 where
-    showStr = showSpaced
-
-instance ShowString Int64 where
-    showStr = showSpaced
-
--- ---------------------- --
--- Textual Input instance --
--- ---------------------- --
+    showsPrec _ s@(String _) = showStr s
 
 instance (ReadString a, Unbox a) => Read (String a) where
     readPrec = fromList <$> readCharsPrec
