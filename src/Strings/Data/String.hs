@@ -65,6 +65,7 @@ import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
@@ -182,6 +183,44 @@ instance {-# OVERLAPPABLE #-} Show a => ShowString a where
 -- | Specialized Char version, removing quotes.
 instance ShowString Char where
     showStr = showMany showChar
+
+-- | Shows characters of a string separated by `sep`.
+--
+-- >>> showSeparated (showString ", ") shows [1, 2, 12 :: Int] ""
+-- "1, 2, 12"
+showSeparated :: ShowS -> (a -> ShowS) -> String a -> ShowS
+showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
+  where
+    showEmpty = id
+    showWithSep (ch, str) = showItem ch . showMany showItemThenSep str
+    showItemThenSep ch = showSep . showItem ch
+
+-- | Shows characters of a string separated by spaces.
+--
+-- This implementation uses the default converter for `Show a`.
+--
+-- >>> showSpaced [1, 2, 12 :: Int] ""
+-- "1 2 12"
+showSpaced :: Show a => String a -> ShowS
+showSpaced = showSeparated (showChar ' ') shows
+
+instance ShowString Integer where
+    showStr = showSpaced
+
+instance ShowString Int where
+    showStr = showSpaced
+
+instance ShowString Int8 where
+    showStr = showSpaced
+
+instance ShowString Int16 where
+    showStr = showSpaced
+
+instance ShowString Int32 where
+    showStr = showSpaced
+
+instance ShowString Int64 where
+    showStr = showSpaced
 
 -- ---------------------- --
 -- Textual Input instance --
