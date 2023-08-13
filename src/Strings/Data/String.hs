@@ -63,7 +63,6 @@ import Prelude hiding (String, concat, drop, head, init, last, readList, reverse
 
 import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
-import Data.Char (isSpace)
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
@@ -71,14 +70,14 @@ import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
 import GHC.IsList (IsList (..))
-import Text.ParserCombinators.ReadP (ReadP, satisfy, skipSpaces, (<++))
-import Text.ParserCombinators.ReadPrec (lift, readPrec_to_P)
-import Text.Read (Read (..))
+import Text.Read (Read (readPrec))
 
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
 import Data.Vector.Unboxed (Unbox)
 import Data.Vector.Unboxed qualified as U
+
+import Strings.Data.String.Parse (ReadString (..), readCharsPrec)
 
 -- --------------- --
 -- Data definition --
@@ -184,46 +183,12 @@ instance {-# OVERLAPPABLE #-} Show a => ShowString a where
 instance ShowString Char where
     showStr = showMany showChar
 
--- ----------------------- --
--- Textual Input instances --
--- ----------------------- --
-
--- | Specializable text to String conversion.
---
--- Used for reading a string of the given character `a`.
-class ReadString a where
-    {-# MINIMAL readChars #-}
-
-    -- | Read characters of a `String a`.
-    --
-    -- `Read (String a)` uses this specialized implementation.
-    readChars :: ReadP [a]
+-- ---------------------- --
+-- Textual Input instance --
+-- ---------------------- --
 
 instance (ReadString a, Unbox a) => Read (String a) where
-    readPrec = fromList <$> lift readChars
-
--- | Tries to read a list of elements, returning an empty list in case of errors.
-readOrEmpty :: ReadP [a] -> ReadP [a]
-readOrEmpty r = r <++ pure []
-
--- | Reads a list of unquoted and unseparated items.
-readMany :: ReadP a -> ReadP [a]
-readMany readItem = readOrEmpty $ do
-    value <- readItem
-    rest <- readMany readItem
-    pure (value : rest)
-
--- | The default, reads all characters without separators.
-instance {-# OVERLAPPABLE #-} Read a => ReadString a where
-    readChars = readMany $ readPrec_to_P readPrec minPrec
-
--- | Reads a non-space character.
-readNonSpace :: ReadP Char
-readNonSpace = satisfy (not . isSpace)
-
--- | Specialized Char version, reading unquoted characters.
-instance ReadString Char where
-    readChars = skipSpaces *> readMany readNonSpace
+    readPrec = fromList <$> readCharsPrec
 
 -- --------------------------------- --
 -- Binary Input and Output instances --
