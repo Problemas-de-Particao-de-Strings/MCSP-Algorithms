@@ -6,10 +6,13 @@ module Strings.Data.String.Text (
     readCharsPrec,
 ) where
 
+import Control.Monad.Extra (concatForM)
 import Data.Char (isSpace)
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.Extra (firstJust, snoc)
 import Data.Vector.Generic (Vector, foldr', uncons)
+import Data.Word (Word16, Word32, Word64, Word8)
+import Language.Haskell.TH (conT)
 import Text.ParserCombinators.ReadP (ReadP, gather, pfail, readP_to_S, satisfy, (<++))
 import Text.ParserCombinators.ReadPrec (ReadPrec, lift, minPrec, readPrec_to_P)
 import Text.Read (Read (readPrec))
@@ -67,23 +70,15 @@ showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
 showSpaced :: (Vector v a, Show a) => v a -> ShowS
 showSpaced = showSeparated (showChar ' ') shows
 
-instance ShowString Integer where
-    showStr = showSpaced
-
-instance ShowString Int where
-    showStr = showSpaced
-
-instance ShowString Int8 where
-    showStr = showSpaced
-
-instance ShowString Int16 where
-    showStr = showSpaced
-
-instance ShowString Int32 where
-    showStr = showSpaced
-
-instance ShowString Int64 where
-    showStr = showSpaced
+-- | Implementation of string as space-separated values for multiple integer types.
+concatForM
+    [''Integer, ''Int, ''Int8, ''Int16, ''Int32, ''Int64, ''Word, ''Word8, ''Word16, ''Word32, ''Word64]
+    ( \name ->
+        [d|
+            instance ShowString $(conT name) where
+                showStr = showSpaced
+            |]
+    )
 
 -- --------------------- --
 -- Textual Input classes --
@@ -241,20 +236,12 @@ instance ReadString Char where
 readTokensInLine :: Read a => ReadP [a]
 readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)
 
-instance ReadString Integer where
-    readChars = readTokensInLine
-
-instance ReadString Int where
-    readChars = readTokensInLine
-
-instance ReadString Int8 where
-    readChars = readTokensInLine
-
-instance ReadString Int16 where
-    readChars = readTokensInLine
-
-instance ReadString Int32 where
-    readChars = readTokensInLine
-
-instance ReadString Int64 where
-    readChars = readTokensInLine
+-- | Implementation of string as space-separated values for multiple integer types.
+concatForM
+    [''Integer, ''Int, ''Int8, ''Int16, ''Int32, ''Int64, ''Word, ''Word8, ''Word16, ''Word32, ''Word64]
+    ( \name ->
+        [d|
+            instance ReadString $(conT name) where
+                readChars = readTokensInLine
+            |]
+    )
