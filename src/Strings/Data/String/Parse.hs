@@ -6,6 +6,7 @@ module Strings.Data.String.Parse (
 ) where
 
 import Data.Char (isSpace)
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.Extra (firstJust, snoc)
 import Text.ParserCombinators.ReadP (ReadP, gather, pfail, readP_to_S, satisfy, (<++))
 import Text.ParserCombinators.ReadPrec (ReadPrec, lift, minPrec, readPrec_to_P)
@@ -155,3 +156,28 @@ instance ReadString Char where
     readChars = do
         skipInLine
         readMany readNonSpace
+
+-- | Reads characters split as tokens, using the default parser for `Read a`.
+--
+-- >>> readP_to_S (readTokensInLine :: ReadP [Int]) "1234 5"
+-- [([1234,5],"")]
+readTokensInLine :: Read a => ReadP [a]
+readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)
+
+instance ReadString Integer where
+    readChars = readTokensInLine
+
+instance ReadString Int where
+    readChars = readTokensInLine
+
+instance ReadString Int8 where
+    readChars = readTokensInLine
+
+instance ReadString Int16 where
+    readChars = readTokensInLine
+
+instance ReadString Int32 where
+    readChars = readTokensInLine
+
+instance ReadString Int64 where
+    readChars = readTokensInLine
