@@ -63,6 +63,7 @@ import Prelude hiding (String, concat, drop, head, init, last, readList, reverse
 
 import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
+import Data.Char (isSpace)
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
@@ -70,7 +71,7 @@ import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
 import GHC.IsList (IsList (..))
-import Text.ParserCombinators.ReadP (ReadP, get, (<++))
+import Text.ParserCombinators.ReadP (ReadP, satisfy, skipSpaces, (<++))
 import Text.ParserCombinators.ReadPrec (lift, readPrec_to_P)
 import Text.Read (Read (..))
 
@@ -216,9 +217,13 @@ readMany readItem = readOrEmpty $ do
 instance {-# OVERLAPPABLE #-} Read a => ReadString a where
     readChars = readMany $ readPrec_to_P readPrec minPrec
 
+-- | Reads a non-space character.
+readNonSpace :: ReadP Char
+readNonSpace = satisfy (not . isSpace)
+
 -- | Specialized Char version, reading unquoted characters.
 instance ReadString Char where
-    readChars = readMany get
+    readChars = skipSpaces *> readMany readNonSpace
 
 -- --------------------------------- --
 -- Binary Input and Output instances --
