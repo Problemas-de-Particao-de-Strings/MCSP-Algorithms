@@ -51,6 +51,11 @@ module Strings.Data.String (
     -- ** Updates
     modify,
 
+    -- * Information
+    frequency,
+    singletons,
+    hasOneOf,
+
     -- * Other operations
     eqBy,
     cmpBy,
@@ -59,12 +64,16 @@ module Strings.Data.String (
 
 import Prelude hiding (String, concat, drop, head, init, last, readList, reverse, splitAt, tail, take, (++))
 
+import Control.Monad (guard)
 import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Data (Typeable)
 import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
+import Data.Map.Strict qualified as Map (Map, alter, empty, foldrWithKey')
+import Data.Maybe (isJust)
 import Data.Semigroup (Semigroup (..), Sum (..))
+import Data.Set qualified as Set (Set, empty, insert, member)
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
 import GHC.IsList (IsList (..))
@@ -176,6 +185,40 @@ instance (Store a, Unbox a) => Store (String a) where
         n <- peek
         v <- U.replicateM n peek
         pure $ String v
+
+-- ----------------------------- --
+-- String information extraction --
+-- ----------------------------- --
+
+-- | /O(n lg n)/ Extracts the frequency count of each character in a string.
+--
+-- >>> frequency "aabacabd"
+-- fromList [('a',4),('b',2),('c',1),('d',1)]
+frequency :: Ord a => String a -> Map.Map a Int
+frequency = foldr' (Map.alter $ Just . maybe 1 (+ 1)) Map.empty
+
+-- | /O(n lg n)/ Extracts the set of singleton characters in a string.
+--
+-- >>> singletons "aabacabd"
+-- fromList "cd"
+singletons :: Ord a => String a -> Set.Set a
+singletons = Map.foldrWithKey' insertSingleton Set.empty . frequency
+  where
+    insertSingleton k 1 = Set.insert k
+    insertSingleton _ _ = id
+
+-- | /O(n lg m)/ Check if at least one of the character of string is present in the given set.
+--
+-- >>> import Data.Set (fromList)
+-- >>> hasOneOf "abca" (Data.Set.fromList "bdf")
+-- True
+-- >>> import Data.Set (fromList)
+-- >>> hasOneOf "xxx" (Data.Set.fromList "bdf")
+-- False
+hasOneOf :: Ord a => String a -> Set.Set a -> Bool
+hasOneOf str ls = isJust $ foldMap hasLetter str
+  where
+    hasLetter ch = guard (Set.member ch ls)
 
 -- --------------------------------------- --
 -- Operations with lifted Unbox constraint --
