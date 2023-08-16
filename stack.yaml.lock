@@ -3,25 +3,10 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-  - completed:
-      hackage: fourmolu-0.13.1.0@sha256:bb4428d6069e4d09475e613cf8c0a1d8ce442bd1aef4aa0e069b21ce7c8f0f4b,6999
-      pantry-tree:
-        sha256: e5085af775945c2fc456ced07428da5f02873a4503fc11f562524403bb1f7cac
-        size: 155362
-    original:
-      hackage: fourmolu-0.13.1.0
-  - completed:
-      hackage: hlint-3.6.1@sha256:c77340770bfc5c9b2fc3f77e58181f1ebce2825afcf2b925860751814130914e,4435
-      pantry-tree:
-        sha256: 03a1279139f88722d7bd284b3cad1b24dbcd98dd165e6fe7422ffc60d1c59ccd
-        size: 6163
-    original:
-      hackage: hlint-3.6.1
+packages: []
 snapshots:
   - completed:
-      sha256: 05d50b875e9273b40eef9f5f7da82ec1c7728c31d99eada5bf79407399108686
-      size: 598883
-      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/8/1.yaml
-    original:
-      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/8/1.yaml
+      sha256: eeba5564ef07b2ce7f6b99574ca9dc673c5068d847843de7e94a6c6bb2de9423
+      size: 658024
+      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/8/14.yaml
+    original: nightly-2023-08-14
