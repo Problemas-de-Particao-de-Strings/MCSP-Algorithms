@@ -3,70 +3,73 @@ module Strings.Heuristics.Combine (combineHeuristic, combineHeuristicS) where
 import Prelude hiding (String, (++))
 
 import Data.Bifunctor (first, second)
-import Data.Set qualified as S (Set)
+import Data.Set (Set)
 
 import Strings.Data.Partition (chars)
 import Strings.Data.String (String, hasOneOf, singletons, (++))
 
-data CombineMode
-    = BothHaveSingleton
-    | EitherHasSingleton
-    deriving stock (Eq)
+-- | Two collections of blocks, used for represeting common partitions.
+type PartitionPair a = ([String a], [String a])
 
 -- | Applies a function until the result converges.
 converge :: Eq a => (a -> a) -> a -> a
 converge = until =<< ((==) =<<)
 
--- | Evaluate if two strings should be combined according to combine mode.
-shouldCombine :: Ord a => CombineMode -> S.Set a -> String a -> String a -> Bool
-shouldCombine mode singles xs ys = case mode of
-    BothHaveSingleton -> hasOneOf xs singles && hasOneOf ys singles
-    EitherHasSingleton -> hasOneOf xs singles || hasOneOf ys singles
+-- | Algorithm used in `combineAll` to decide whether to combine to matching blocks.
+class CombineDecision h a where
+    -- | Given two matching blocks, decide if they should be combined.
+    shouldCombine :: h -> String a -> String a -> Bool
+
+-- | Always combine two matching blocks.
+data AlwaysCombine = AlwaysCombine
+
+instance CombineDecision AlwaysCombine a where
+    shouldCombine AlwaysCombine _ _ = True
+
+-- | Combine blocks if both of them have a singleton.
+newtype BothHaveSingleton a = BothHaveSingleton (Set a)
+
+instance Ord a => CombineDecision (BothHaveSingleton a) a where
+    shouldCombine (BothHaveSingleton singles) xs ys = hasOneOf xs singles && hasOneOf ys singles
+
+-- | Combine blocks if either one of them have a singleton.
+newtype EitherHasSingleton a = EitherHasSingleton (Set a)
+
+instance Ord a => CombineDecision (EitherHasSingleton a) a where
+    shouldCombine (EitherHasSingleton singles) xs ys = hasOneOf xs singles || hasOneOf ys singles
 
 -- | If possible, combines the first 2 blocks of a string and the first identical pair of another.
-combineOne :: Eq a => ([String a], [String a]) -> Maybe ([String a], [String a])
-combineOne (x1 : x2 : xs, y1 : y2 : ys)
-    | (x1, x2) == (y1, y2) = Just ((x1 ++ x2) : xs, (y1 ++ y2) : ys)
-    | otherwise = second (y1 :) <$> combineOne (x1 : x2 : xs, y2 : ys)
-combineOne _ = Nothing
-
--- | If possible, combines the first 2 blocks of a string and
--- the first identical pair of another, considering combine mode.
-combineOneS :: Ord a => CombineMode -> S.Set a -> ([String a], [String a]) -> Maybe ([String a], [String a])
-combineOneS mode singles (x1 : x2 : xs, y1 : y2 : ys)
-    | (x1, x2) == (y1, y2) && shouldCombine mode singles x1 x2 = Just ((x1 ++ x2) : xs, (y1 ++ y2) : ys)
-    | otherwise = second (y1 :) <$> combineOneS mode singles (x1 : x2 : xs, y2 : ys)
-combineOneS _ _ _ = Nothing
+combineOne :: (CombineDecision h a, Eq a) => h -> PartitionPair a -> Maybe (PartitionPair a)
+combineOne deicision (x1 : x2 : xs, y1 : y2 : ys)
+    | (x1, x2) == (y1, y2) && shouldCombine deicision x1 x2 = Just ((x1 ++ x2) : xs, (y1 ++ y2) : ys)
+    | otherwise = second (y1 :) <$> combineOne deicision (x1 : x2 : xs, y2 : ys)
+combineOne _ _ = Nothing
+-- Specilization for each `CombineDecision` possible.
+{-# SPECIALIZE combineOne :: Eq a => AlwaysCombine -> PartitionPair a -> Maybe (PartitionPair a) #-}
+{-# SPECIALIZE combineOne :: Ord a => BothHaveSingleton a -> PartitionPair a -> Maybe (PartitionPair a) #-}
+{-# SPECIALIZE combineOne :: Ord a => EitherHasSingleton a -> PartitionPair a -> Maybe (PartitionPair a) #-}
 
 -- | Combines pairs of blocks from left to right in 2 strings.
-combineAll :: Eq a => ([String a], [String a]) -> ([String a], [String a])
-combineAll ([], ys) = ([], ys)
-combineAll (xs, []) = (xs, [])
-combineAll (x : xs, ys) =
+combineAll :: (CombineDecision h a, Eq a) => h -> PartitionPair a -> PartitionPair a
+combineAll _ ([], ys) = ([], ys)
+combineAll _ (xs, []) = (xs, [])
+combineAll decision (x : xs, ys) =
     maybe
         combineXs
-        combineAll
-        (combineOne (x : xs, ys))
+        (combineAll decision)
+        (combineOne decision (x : xs, ys))
   where
-    combineXs = first (x :) $ combineAll (xs, ys)
-
--- | Combines pairs of blocks from left to right in 2 strings according to combine mode.
-combineAllS :: Ord a => CombineMode -> S.Set a -> ([String a], [String a]) -> ([String a], [String a])
-combineAllS _ _ ([], ys) = ([], ys)
-combineAllS _ _ (xs, []) = (xs, [])
-combineAllS mode singles (x : xs, ys) =
-    maybe
-        combineXs
-        (combineAllS mode singles)
-        (combineOneS mode singles (x : xs, ys))
-  where
-    combineXs = first (x :) $ combineAllS mode singles (xs, ys)
+    combineXs = first (x :) $ combineAll decision (xs, ys)
+-- Specilization for each `CombineDecision` possible.
+{-# SPECIALIZE combineAll :: Eq a => AlwaysCombine -> PartitionPair a -> PartitionPair a #-}
+{-# SPECIALIZE combineAll :: Ord a => BothHaveSingleton a -> PartitionPair a -> PartitionPair a #-}
+{-# SPECIALIZE combineAll :: Ord a => EitherHasSingleton a -> PartitionPair a -> PartitionPair a #-}
 
 -- | MCSP combine heuristic.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
-combineHeuristic :: Ord a => String a -> String a -> ([String a], [String a])
-combineHeuristic x y = converge combineAll (chars x, chars y)
+combineHeuristic :: Eq a => String a -> String a -> ([String a], [String a])
+combineHeuristic x y = converge (combineAll AlwaysCombine) (chars x, chars y)
 
 -- | MSCP combine heuristic considering singleton analysis.
 --
@@ -75,10 +78,10 @@ combineHeuristic x y = converge combineAll (chars x, chars y)
 -- block has singletons and finally all other possible pairs.
 combineHeuristicS :: Ord a => String a -> String a -> ([String a], [String a])
 combineHeuristicS x y
-    | null singles = converge combineAll (chars x, chars y)
-    | otherwise = converge combineAll $ combineSingletons (chars x, chars y)
+    | null singles = converge (combineAll AlwaysCombine) (chars x, chars y)
+    | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars x, chars y)
   where
     singles = singletons x
     combineSingletons =
-        converge (combineAllS EitherHasSingleton singles)
-            . converge (combineAllS BothHaveSingleton singles)
+        converge (combineAll $ EitherHasSingleton singles)
+            . converge (combineAll $ BothHaveSingleton singles)
