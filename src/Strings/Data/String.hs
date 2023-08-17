@@ -2,7 +2,7 @@
 
 module Strings.Data.String (
     -- * Unboxed string
-    String (..),
+    String (.., Unboxed, Null, NonNull, Singleton, (:<), (:>), (:<:), (:>:)),
     Unbox,
 
     -- ** Text IO
@@ -62,23 +62,24 @@ module Strings.Data.String (
     eqBy,
     cmpBy,
     convert,
+    empty,
 ) where
 
-import Control.Applicative (pure, (<$>))
+import Control.Applicative (pure, (<$>), (<*))
 import Control.Monad (Monad, guard)
 import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
-import Data.Bool (Bool)
+import Data.Bool (Bool, not)
 import Data.Char (Char)
 import Data.Data (Typeable)
 import Data.Eq (Eq (..))
 import Data.Foldable (Foldable (..))
 import Data.Function (id, ($), (.))
 import Data.Int (Int)
-import Data.List (map)
+import Data.List (find, map)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Map.Strict qualified as Map (Map, alter, empty, foldrWithKey')
-import Data.Maybe (Maybe (..), isJust, maybe)
+import Data.Maybe (Maybe (Just, Nothing), isJust, maybe)
 import Data.Monoid (Monoid (..))
 import Data.Ord (Ord (..), Ordering)
 import Data.Semigroup (Semigroup (..), Sum (..))
@@ -88,7 +89,7 @@ import Data.String (IsString (..))
 import Data.Type.Equality (type (~))
 import GHC.Err (undefined)
 import GHC.IsList (IsList (..))
-import GHC.Num ((+))
+import GHC.Num ((+), (-))
 import Text.Read (Read (readPrec))
 import Text.Show (Show (showsPrec))
 
@@ -113,6 +114,90 @@ data String a where
     -- without that constraint.
     String :: Unbox a => !(U.Vector a) -> String a
     deriving newtype (Typeable)
+
+{-# COMPLETE Unboxed #-}
+{-# COMPLETE Null, NonNull #-}
+{-# COMPLETE Null, (:<) #-}
+{-# COMPLETE Null, (:>) #-}
+{-# COMPLETE Null, (:<:) #-}
+{-# COMPLETE Null, (:>:) #-}
+
+-- | Proves `Unbox a` from an already constructed string.
+--
+-- This pattern is useful for matching in operations where `Unbox a` is required.
+--
+-- >>> import GHC.Base (asTypeOf)
+-- >>> emptyLike s = asTypeOf empty s
+-- >>> :t emptyLike
+-- emptyLike :: Unbox a => String a -> String a
+-- >>> emptyLike' s@Unboxed = asTypeOf empty s
+-- >>> :t emptyLike'
+-- emptyLike' :: String a -> String a
+pattern Unboxed :: () => Unbox a => String a
+pattern Unboxed <- (id -> (String _))
+{-# INLINE Unboxed #-}
+
+-- | Matches the `empty` string.
+--
+-- >>> [s | s@Null <- ["", "a", "ab", "", "abc"]]
+-- [,]
+pattern Null :: () => Unbox a => String a
+pattern Null <- (find null . Just -> Just Unboxed)
+{-# INLINE Null #-}
+
+-- | Matches any non-`empty` string.
+--
+-- >>> [s | NonNull s <- ["", "a", "ab", "", "abc"]]
+-- [a,ab,abc]
+pattern NonNull :: () => Unbox a => String a -> String a
+pattern NonNull s <- (find (not . null) . Just -> Just s@Unboxed)
+    where
+        NonNull = id
+{-# INLINE NonNull #-}
+
+-- | Matches a string composed of a single character.
+--
+-- >>> [c | Singleton c <- ["", "a", "ab", "", "abc"]]
+-- "a"
+pattern Singleton :: () => Unbox a => a -> String a
+pattern Singleton c <- (uncons -> Just (c, Null))
+{-# INLINE Singleton #-}
+
+-- | Matches `head` and `tail` of a string, if present.
+--
+-- >>> [(h,t) | h :< t <- ["", "a", "ab", "", "abc"]]
+-- [('a',),('a',b),('a',bc)]
+pattern (:<) :: () => Unbox a => a -> String a -> String a
+pattern x :< xs <- (uncons -> Just (x, xs@Unboxed))
+    where
+        x :< xs = cons x xs
+{-# INLINE (:<) #-}
+
+-- | Matches `init` and `last` of a string, if present.
+--
+-- >>> [(i,l) | i :> l <- ["", "a", "ab", "", "abc"]]
+-- [(,'a'),(a,'b'),(ab,'c')]
+pattern (:>) :: () => Unbox a => String a -> a -> String a
+pattern xs :> x <- (unsnoc -> Just (xs@Unboxed, x))
+    where
+        xs :> x = snoc xs x
+{-# INLINE (:>) #-}
+
+-- | Stringified `:<`, matching `head` and `tail`.
+--
+-- >>> [(h,t) | h :<: t <- ["", "a", "ab", "", "abc"]]
+-- [(a,),(a,b),(a,bc)]
+pattern (:<:) :: () => Unbox a => String a -> String a -> String a
+pattern x :<: xs <- (splitAtHead -> Just (x@(Singleton _), xs))
+{-# INLINE (:<:) #-}
+
+-- | Stringified `:>`, matching `init` and `last`.
+--
+-- >>> [(i,l) | i :>: l <- ["", "a", "ab", "", "abc"]]
+-- [(,a),(a,b),(ab,c)]
+pattern (:>:) :: () => Unbox a => String a -> String a -> String a
+pattern xs :>: x <- (splitAtLast -> Just (xs, x@(Singleton _)))
+{-# INLINE (:>:) #-}
 
 -- | Extract the inner contents of a `String`.
 contents :: String a -> U.Vector a
@@ -175,7 +260,7 @@ instance Unbox a => Monoid (String a) where
 -- ---------------------- --
 
 instance ShowString a => Show (String a) where
-    showsPrec _ s@(String _) = showStr s
+    showsPrec _ s@Unboxed = showStr s
 
 instance (ReadString a, Unbox a) => Read (String a) where
     readPrec = fromList <$> readCharsPrec
@@ -403,7 +488,7 @@ concat str = String $ U.concat (map contents str)
 -- >>> concatNE ("abc" :| ["123", "def"])
 -- abc123def
 concatNE :: NonEmpty (String a) -> String a
-concatNE (str@(String _) :| rest) = concat (str : rest)
+concatNE (str@Unboxed :| rest) = concat (str : rest)
 
 -- | /O(n)/ Concatenate all strings in the list, if non-empty.
 --
@@ -484,6 +569,31 @@ convert (String vs) = U.convert vs
 -- | /O(n)/ Execute the monadic action the given number of times and store the results in a string.
 replicateM :: (Unbox a, Monad m) => Int -> m a -> m (String a)
 replicateM n m = String <$> U.replicateM n m
+
+-- | /O(1)/ The empty string.
+--
+-- >>> empty == ""
+-- True
+empty :: Unbox a => String a
+empty = String U.empty
+
+-- | /O(1)/ Stringified version of `uncons`.
+--
+-- >>> splitAtHead "acgt"
+-- Just (a,cgt)
+splitAtHead :: String a -> Maybe (String a, String a)
+splitAtHead s = case splitAt 1 s of
+    (NonNull sHead, sTail) -> Just (sHead, sTail)
+    (Null, _) -> Nothing
+
+-- | /O(1)/ Stringified version of `unsnoc`.
+--
+-- >>> splitAtLast "acgt"
+-- Just (acg,t)
+splitAtLast :: String a -> Maybe (String a, String a)
+splitAtLast s = case splitAt (length s - 1) s of
+    (sInit, NonNull sLast) -> Just (sInit, sLast)
+    (_, Null) -> Nothing
 
 -- --------------------------------- --
 -- Generic Vector instance and types --

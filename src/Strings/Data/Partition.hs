@@ -11,7 +11,7 @@ import Prelude hiding (String, concat, splitAt)
 
 import Data.Bifunctor (Bifunctor (bimap))
 
-import Strings.Data.String (String, Unbox, concat, replicateM, splitAt)
+import Strings.Data.String (String (Null, (:<:)), Unbox, concat, replicateM)
 import Strings.System.Random (Random, partitions, shuffle, uniformE)
 
 -- | A collection of substring of the same string.
@@ -22,11 +22,8 @@ type Character a = (Enum a, Bounded a, Unbox a)
 
 -- | Split the `String` in substrings of 1 char each.
 chars :: String a -> Partition a
-chars str
-    | null str = []
-    | otherwise = ch : chars rest
-  where
-    (ch, rest) = splitAt 1 str
+chars (ch :<: rest) = ch : chars rest
+chars Null = []
 
 -- | Generates a pair of string where one is a simple permutation of the other.
 randomShuffle :: Character a => Int -> Random (String a, String a)
