@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Strings.Data.String (
     -- * Unboxed string
     String (..),
@@ -62,22 +64,33 @@ module Strings.Data.String (
     convert,
 ) where
 
-import Prelude hiding (String, concat, drop, head, init, last, readList, reverse, splitAt, tail, take, (++))
-
-import Control.Monad (guard)
+import Control.Applicative (pure, (<$>))
+import Control.Monad (Monad, guard)
 import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
+import Data.Bool (Bool)
+import Data.Char (Char)
 import Data.Data (Typeable)
+import Data.Eq (Eq (..))
 import Data.Foldable (Foldable (..))
+import Data.Function (id, ($), (.))
+import Data.Int (Int)
+import Data.List (map)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Map.Strict qualified as Map (Map, alter, empty, foldrWithKey')
-import Data.Maybe (isJust)
+import Data.Maybe (Maybe (..), isJust, maybe)
+import Data.Monoid (Monoid (..))
+import Data.Ord (Ord (..), Ordering)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Set qualified as Set (Set, empty, insert, member)
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
+import Data.Type.Equality (type (~))
+import GHC.Err (undefined)
 import GHC.IsList (IsList (..))
+import GHC.Num ((+))
 import Text.Read (Read (readPrec))
+import Text.Show (Show (showsPrec))
 
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
