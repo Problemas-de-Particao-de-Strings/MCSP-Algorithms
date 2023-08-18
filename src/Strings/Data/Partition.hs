@@ -20,7 +20,10 @@ type Partition a = [String a]
 -- | Common constraints for a character.
 type Character a = (Enum a, Bounded a, Unbox a)
 
--- | Split the `String` in substrings of 1 char each.
+-- | /O(n)/ Split the `String` in substrings of 1 char each.
+--
+-- >>> chars "abcd"
+-- [a,b,c,d]
 chars :: String a -> Partition a
 chars (ch :<: rest) = ch : chars rest
 chars Null = []

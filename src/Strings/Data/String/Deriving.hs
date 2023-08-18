@@ -82,23 +82,22 @@ clamp = toEnum . max minA . min maxA . fromEnum
 {-# INLINE clamp #-}
 
 -- | Holds information about an `EnumLike a`.
-data Info a = Info {minV :: !Int, maxV :: !Int, name :: !String}
+data Info a = Info {minVal :: !Int, maxVal :: !Int, name :: !String}
 
 -- | Extracts information about an `EnumLike a`.
 info :: forall a. EnumLike a => Info a
 info =
     Info
-        { minV = fromEnum (minBound :: a)
-        , maxV = fromEnum (maxBound :: a)
+        { minVal = fromEnum (minBound :: a)
+        , maxVal = fromEnum (maxBound :: a)
         , name = show $ typeRep (Proxy :: Proxy a)
         }
 
 -- | Checks if `a` is safely convertible to `b` via `Enum` and `Bounded`, then returns the casts.
 safeCasts :: forall a b. (EnumLike a, EnumLike b) => (a -> b, b -> a)
-safeCasts =
-    if minV rep <= minV typ && maxV typ <= maxV rep
-        then (cast, clamp)
-        else error $ name typ ++ " is larger than " ++ name rep ++ " and cannot be safely converted"
+safeCasts
+    | minVal rep <= minVal typ && maxVal typ <= maxVal rep = (cast, clamp)
+    | otherwise = error $ name typ ++ " is larger than " ++ name rep ++ " and cannot be safely converted"
   where
     typ = info :: Info a
     rep = info :: Info b

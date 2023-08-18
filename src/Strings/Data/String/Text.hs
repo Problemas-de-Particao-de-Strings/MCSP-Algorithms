@@ -98,6 +98,7 @@ class ReadString a where
 -- | Same a `readChars`, but lifted to the `ReadPrec` monad.
 readCharsPrec :: ReadString a => ReadPrec [a]
 readCharsPrec = lift readChars
+{-# INLINE readCharsPrec #-}
 
 -- | Unlift a `ReaP` from `ReadPrec` by giving it a default precedence.
 ignorePrec :: ReadPrec a -> ReadP a
