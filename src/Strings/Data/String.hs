@@ -66,22 +66,20 @@ module Strings.Data.String (
     empty,
 ) where
 
-import Control.Applicative (Alternative, pure, (<$>))
+import Control.Applicative (Alternative, (<$>))
 import Control.Applicative qualified as Applicative (empty)
-import Control.Monad (Monad, guard)
+import Control.Monad (Monad)
 import Control.Monad.ST (ST)
-import Data.Bifunctor (Bifunctor (bimap, first, second))
 import Data.Bool (Bool, otherwise, (&&))
 import Data.Char (Char)
 import Data.Data (Typeable)
 import Data.Eq (Eq (..))
-import Data.Foldable (Foldable (..))
+import Data.Foldable (Foldable (..), any)
 import Data.Function (id, ($), (.))
 import Data.Int (Int)
-import Data.List (map)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Map.Strict qualified as Map (Map, alter, empty, foldrWithKey')
-import Data.Maybe (Maybe (Just, Nothing), isJust, maybe)
+import Data.Maybe (Maybe (Just, Nothing), maybe)
 import Data.Monoid (Monoid (..))
 import Data.Ord (Ord (..), Ordering)
 import Data.Semigroup (Semigroup (..), Sum (..))
@@ -89,16 +87,16 @@ import Data.Set qualified as Set (Set, empty, insert, member)
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
 import Data.Type.Equality (type (~))
+import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
 import GHC.Num ((+), (-))
-import Text.Read (Read (readPrec))
-import Text.Show (Show (showsPrec))
+import Text.Read (Read (readListPrec, readPrec), readListPrecDefault)
+import Text.Show (Show (show, showsPrec))
 
-import Data.Vector.Generic qualified as G
-import Data.Vector.Generic.Mutable qualified as M
+import Data.Vector.Generic qualified as Generic
+import Data.Vector.Generic.Mutable qualified as Mutable
 import Data.Vector.Unboxed (MVector, Unbox, Vector)
-import Data.Vector.Unboxed qualified as U
 
 import Strings.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
 
@@ -221,13 +219,6 @@ pattern xs :>: x <- (splitAtLast -> Just (xs, x@Unboxed))
 -- Pattern matching functions --
 -- -------------------------- --
 
--- | (INTERNAL) Extract the backing vector of a `String`.
---
--- >>> :t contents "abc"
--- contents "abc" :: Vector Char
-contents :: String a -> Vector a
-contents (String v) = v
-
 -- | (INTERNAL) `Just` the empty string .
 --
 -- >>> nullish "text"
@@ -235,8 +226,8 @@ contents (String v) = v
 -- >>> nullish "" == Just empty
 -- True
 nullish :: String a -> Maybe (String a)
-nullish s@(String v)
-    | U.null v = Just s
+nullish s@Unboxed
+    | Generic.null s = Just s
     | otherwise = Nothing
 {-# INLINE nullish #-}
 
@@ -248,7 +239,7 @@ nullish s@(String v)
 -- Nothing
 nonNull :: String a -> Maybe (String a)
 nonNull s@Unboxed
-    | G.null s = Nothing
+    | Generic.null s = Nothing
     | otherwise = Just s
 {-# INLINE nonNull #-}
 
@@ -258,10 +249,10 @@ nonNull s@Unboxed
 -- Just (a,cgt)
 splitAtHead :: String a -> Maybe (String a, String a)
 splitAtHead s@Unboxed
-    | n > 0 = Just (G.unsafeSlice 0 1 s, G.unsafeSlice 1 (n - 1) s)
+    | n > 0 = Just (Generic.unsafeSlice 0 1 s, Generic.unsafeSlice 1 (n - 1) s)
     | otherwise = Nothing
   where
-    n = G.length $! s
+    n = Generic.length $! s
 {-# INLINE splitAtHead #-}
 
 -- | (INTERNAL) Stringified version of `unsnoc`.
@@ -270,10 +261,10 @@ splitAtHead s@Unboxed
 -- Just (acg,t)
 splitAtLast :: String a -> Maybe (String a, String a)
 splitAtLast s@Unboxed
-    | n > 0 = Just (G.unsafeSlice 0 (n - 1) s, G.unsafeSlice (n - 1) 1 s)
+    | n > 0 = Just (Generic.unsafeSlice 0 (n - 1) s, Generic.unsafeSlice (n - 1) 1 s)
     | otherwise = Nothing
   where
-    n = G.length $! s
+    n = Generic.length $! s
 {-# INLINE splitAtLast #-}
 
 -- | (INTERNAL) Extracts `head` and `id` for pattern matching.
@@ -305,81 +296,149 @@ singleId s = (single s, s)
 -- ----------------------------------- --
 
 instance Eq a => Eq (String a) where
+    {-# SPECIALIZE instance Eq (String Char) #-}
+    {-# SPECIALIZE instance Eq (String Int) #-}
+    {-# SPECIALIZE instance Eq (String Word8) #-}
     (String lhs) == (String rhs) = lhs == rhs
+    {-# INLINE (==) #-}
     (String lhs) /= (String rhs) = lhs /= rhs
+    {-# INLINE (/=) #-}
 
 instance Ord a => Ord (String a) where
+    {-# SPECIALIZE instance Ord (String Char) #-}
+    {-# SPECIALIZE instance Ord (String Int) #-}
+    {-# SPECIALIZE instance Ord (String Word8) #-}
     (String lhs) `compare` (String rhs) = lhs `compare` rhs
+    {-# INLINE compare #-}
     (String lhs) < (String rhs) = lhs < rhs
+    {-# INLINE (<) #-}
     (String lhs) <= (String rhs) = lhs <= rhs
+    {-# INLINE (<=) #-}
     (String lhs) > (String rhs) = lhs > rhs
+    {-# INLINE (>) #-}
     (String lhs) >= (String rhs) = lhs >= rhs
+    {-# INLINE (>=) #-}
     max (String lhs) (String rhs) = String (max lhs rhs)
+    {-# INLINE max #-}
     min (String lhs) (String rhs) = String (min lhs rhs)
+    {-# INLINE min #-}
 
 instance Unbox a => IsList (String a) where
+    {-# SPECIALIZE instance IsList (String Char) #-}
+    {-# SPECIALIZE instance IsList (String Int) #-}
+    {-# SPECIALIZE instance IsList (String Word8) #-}
     type Item (String a) = a
-    fromList = String . U.fromList
-    fromListN n = String . U.fromListN n
-    toList (String v) = U.toList v
+    fromList = Generic.fromList
+    {-# INLINE fromList #-}
+    fromListN = Generic.fromListN
+    {-# INLINE fromListN #-}
+    toList = Generic.toList
+    {-# INLINE toList #-}
 
 instance a ~ Char => IsString (String a) where
+    {-# SPECIALIZE instance IsString (String Char) #-}
     fromString = fromList
+    {-# INLINE fromString #-}
 
 instance Foldable String where
-    fold (String v) = U.foldMap id v
-    foldMap f (String v) = U.foldMap f v
-    foldMap' f (String v) = U.foldMap' f v
-    foldr f x (String v) = U.foldr f x v
-    foldr' f x (String v) = U.foldr' f x v
-    foldl f x (String v) = U.foldl f x v
-    foldl' f x (String v) = U.foldl' f x v
-    foldr1 f (String v) = U.foldr1 f v
-    foldl1 f (String v) = U.foldl1 f v
-    toList (String v) = U.toList v
-    null (String v) = U.null v
-    length (String v) = U.length v
-    elem x (String v) = U.elem x v
-    maximum (String v) = U.maximum v
-    minimum (String v) = U.minimum v
-    sum (String v) = U.sum v
-    product (String v) = U.product v
+    fold s@Unboxed = Generic.foldMap id s
+    {-# INLINE fold #-}
+    foldMap f s@Unboxed = Generic.foldMap f s
+    {-# INLINE foldMap #-}
+    foldMap' f s@Unboxed = Generic.foldMap' f s
+    {-# INLINE foldMap' #-}
+    foldr f x s@Unboxed = Generic.foldr f x s
+    {-# INLINE foldr #-}
+    foldr' f x s@Unboxed = Generic.foldr' f x s
+    {-# INLINE foldr' #-}
+    foldl f x s@Unboxed = Generic.foldl f x s
+    {-# INLINE foldl #-}
+    foldl' f x s@Unboxed = Generic.foldl' f x s
+    {-# INLINE foldl' #-}
+    foldr1 f s@Unboxed = Generic.foldr1 f s
+    {-# INLINE foldr1 #-}
+    foldl1 f s@Unboxed = Generic.foldl1 f s
+    {-# INLINE foldl1 #-}
+    toList s@Unboxed = Generic.toList s
+    {-# INLINE toList #-}
+    null s@Unboxed = Generic.null s
+    {-# INLINE null #-}
+    length s@Unboxed = Generic.length s
+    {-# INLINE length #-}
+    elem x s@Unboxed = Generic.elem x s
+    {-# INLINE elem #-}
+    maximum s@Unboxed = Generic.maximum s
+    {-# INLINE maximum #-}
+    minimum s@Unboxed = Generic.minimum s
+    {-# INLINE minimum #-}
+    sum s@Unboxed = Generic.sum s
+    {-# INLINE sum #-}
+    product s@Unboxed = Generic.product s
+    {-# INLINE product #-}
 
 instance Semigroup (String a) where
+    {-# SPECIALIZE instance Semigroup (String Char) #-}
+    {-# SPECIALIZE instance Semigroup (String Int) #-}
+    {-# SPECIALIZE instance Semigroup (String Word8) #-}
     (<>) = (++)
+    {-# INLINE (<>) #-}
     sconcat = concatNE
+    {-# INLINE sconcat #-}
 
 instance Unbox a => Monoid (String a) where
-    mempty = String U.empty
+    {-# SPECIALIZE instance Monoid (String Char) #-}
+    {-# SPECIALIZE instance Monoid (String Int) #-}
+    {-# SPECIALIZE instance Monoid (String Word8) #-}
+    mempty = Generic.empty
+    {-# INLINE mempty #-}
+    mconcat = concat
+    {-# INLINE mconcat #-}
 
 -- ---------------------- --
 -- Textual Input / Output --
 -- ---------------------- --
 
 instance ShowString a => Show (String a) where
+    {-# SPECIALIZE instance Show (String Char) #-}
+    {-# SPECIALIZE instance Show (String Int) #-}
+    {-# SPECIALIZE instance Show (String Word8) #-}
     showsPrec _ s@Unboxed = showStr s
+    {-# INLINE showsPrec #-}
+    show s@Unboxed = showStr s ""
+    {-# INLINE show #-}
 
 instance (ReadString a, Unbox a) => Read (String a) where
+    {-# SPECIALIZE instance Read (String Char) #-}
+    {-# SPECIALIZE instance Read (String Int) #-}
+    {-# SPECIALIZE instance Read (String Word8) #-}
     readPrec = fromList <$> readCharsPrec
+    {-# INLINE readPrec #-}
+    readListPrec = readListPrecDefault
+    {-# INLINE readListPrec #-}
 
 -- --------------------------------- --
 -- Binary Input and Output instances --
 -- --------------------------------- --
 
 instance (Store a, Unbox a) => Store (String a) where
+    {-# SPECIALIZE instance Store (String Char) #-}
+    {-# SPECIALIZE instance Store (String Int) #-}
+    {-# SPECIALIZE instance Store (String Word8) #-}
     size = VarSize calcSize
       where
         calcSize s = sizeOf size (length s) + sizeSum s
         sizeOf (ConstSize n) _ = n
         sizeOf (VarSize f) x = f x
-        sizeSum v = getSum $ foldMap (Sum . sizeOf size) v
-    poke (String v) = do
-        poke $ U.length v
-        U.forM_ v poke
+        sizeSum s@Unboxed = getSum (Generic.foldMap (Sum . sizeOf size) s)
+    {-# INLINE size #-}
+    poke s = do
+        poke (Generic.length s)
+        Generic.forM_ s poke
+    {-# INLINE poke #-}
     peek = do
         n <- peek
-        v <- U.replicateM n peek
-        pure $ String v
+        Generic.replicateM n peek
+    {-# INLINE peek #-}
 
 -- ----------------------------- --
 -- String information extraction --
@@ -411,9 +470,9 @@ singletons = Map.foldrWithKey' insertSingleton Set.empty . frequency
 -- >>> hasOneOf "xxx" (Data.Set.fromList "bdf")
 -- False
 hasOneOf :: Ord a => String a -> Set.Set a -> Bool
-hasOneOf str ls = isJust $ foldMap hasLetter str
+hasOneOf str ls = any hasLetter str
   where
-    hasLetter ch = guard (Set.member ch ls)
+    hasLetter ch = Set.member ch ls
 
 -- --------------------------------------- --
 -- Operations with lifted Unbox constraint --
@@ -427,7 +486,8 @@ hasOneOf str ls = isJust $ foldMap hasLetter str
 -- >>> "abc" ! 1
 -- 'b'
 (!) :: String a -> Int -> a
-(String v) ! n = v U.! n
+s@Unboxed ! i = s Generic.! i
+{-# INLINE (!) #-}
 
 -- | /O(1)/ Safe indexing.
 --
@@ -436,21 +496,24 @@ hasOneOf str ls = isJust $ foldMap hasLetter str
 -- >>> "abc" !? 3
 -- Nothing
 (!?) :: String a -> Int -> Maybe a
-(String v) !? n = v U.!? n
+s@Unboxed !? i = s Generic.!? i
+{-# INLINE (!?) #-}
 
 -- | /O(1)/ First character.
 --
 -- >>> head "hello"
 -- 'h'
 head :: String a -> a
-head (String v) = U.head v
+head s@Unboxed = Generic.head s
+{-# INLINE head #-}
 
 -- | /O(1)/ Last character.
 --
 -- >>> last "hello"
 -- 'o'
 last :: String a -> a
-last (String v) = U.last v
+last s@Unboxed = Generic.last s
+{-# INLINE last #-}
 
 -- | /O(1)/ The character of a singleton string.
 --
@@ -461,11 +524,12 @@ last (String v) = U.last v
 -- >>> single "xy"
 -- Nothing
 single :: String a -> Maybe a
-single (String v)
-    | n == 1 = U.unsafeIndexM v 0
+single s@Unboxed
+    | n == 1 = Generic.unsafeIndexM s 0
     | otherwise = Applicative.empty
   where
-    n = U.length $! v
+    n = Generic.length $! s
+{-# INLINE single #-}
 
 -- | /O(1)/ Indexing in a monad.
 --
@@ -474,11 +538,12 @@ single (String v)
 -- >>> indexM "xyz" 5 :: Maybe Char
 -- Nothing
 indexM :: (Alternative m, Monad m) => String a -> Int -> m a
-indexM (String v) i
-    | 0 <= i && i < n = U.unsafeIndexM v i
+indexM s@Unboxed i
+    | 0 <= i && i < n = Generic.unsafeIndexM s i
     | otherwise = Applicative.empty
   where
-    n = U.length $! v
+    n = Generic.length $! s
+{-# INLINE indexM #-}
 
 -- | /O(1)/ First character of a string in a monad.
 --
@@ -487,11 +552,12 @@ indexM (String v) i
 -- >>> headM "" :: Maybe Char
 -- Nothing
 headM :: (Alternative m, Monad m) => String a -> m a
-headM (String v)
-    | n > 0 = U.unsafeIndexM v 0
+headM s@Unboxed
+    | n > 0 = Generic.unsafeIndexM s 0
     | otherwise = Applicative.empty
   where
-    n = U.length $! v
+    n = Generic.length $! s
+{-# INLINE headM #-}
 
 -- | /O(1)/ Last character of a string in a monad.
 --
@@ -500,11 +566,12 @@ headM (String v)
 -- >>> lastM "" :: Maybe Char
 -- Nothing
 lastM :: (Alternative m, Monad m) => String a -> m a
-lastM (String v)
-    | n > 0 = U.unsafeIndexM v (n - 1)
+lastM s@Unboxed
+    | n > 0 = Generic.unsafeIndexM s (n - 1)
     | otherwise = Applicative.empty
   where
-    n = U.length $! v
+    n = Generic.length $! s
+{-# INLINE lastM #-}
 
 -- Substrings (slicing)
 -- --------------------
@@ -516,7 +583,8 @@ lastM (String v)
 -- >>> slice 2 3 "genome"
 -- nom
 slice :: Int -> Int -> String a -> String a
-slice i n (String v) = String $ U.slice i n v
+slice i n s@Unboxed = Generic.slice i n s
+{-# INLINE slice #-}
 
 -- | /O(1)/ Yield all but the last character without copying.
 --
@@ -525,7 +593,8 @@ slice i n (String v) = String $ U.slice i n v
 -- >>> init "genome"
 -- genom
 init :: String a -> String a
-init (String v) = String $ U.init v
+init s@Unboxed = Generic.init s
+{-# INLINE init #-}
 
 -- | /O(1)/ Yield all but the first character without copying.
 --
@@ -534,7 +603,8 @@ init (String v) = String $ U.init v
 -- >>> tail "genome"
 -- enome
 tail :: String a -> String a
-tail (String v) = String $ U.tail v
+tail s@Unboxed = Generic.tail s
+{-# INLINE tail #-}
 
 -- | /O(1)/ Yield at the first `n` characters without copying.
 --
@@ -545,7 +615,8 @@ tail (String v) = String $ U.tail v
 -- >>> take 10 "hello"
 -- hello
 take :: Int -> String a -> String a
-take n (String v) = String $ U.take n v
+take n s@Unboxed = Generic.take n s
+{-# INLINE take #-}
 
 -- | /O(1)/ Yield all but the first `n` characters without copying.
 --
@@ -556,7 +627,8 @@ take n (String v) = String $ U.take n v
 -- >>> drop 10 "hello"
 -- <BLANKLINE>
 drop :: Int -> String a -> String a
-drop n (String v) = String $ U.drop n v
+drop n s@Unboxed = Generic.drop n s
+{-# INLINE drop #-}
 
 -- | /O(1)/ Yield the first `n` characters paired with the remainder, without copying.
 --
@@ -565,21 +637,24 @@ drop n (String v) = String $ U.drop n v
 -- >>> splitAt 6 "babushka"
 -- (babush,ka)
 splitAt :: Int -> String a -> (String a, String a)
-splitAt n (String v) = bimap String String $ U.splitAt n v
+splitAt n s@Unboxed = Generic.splitAt n s
+{-# INLINE splitAt #-}
 
 -- | /O(1)/ Yield the `head` and `tail` of the string, or `Nothing` if it is empty.
 --
 -- >>> uncons "acgt"
 -- Just ('a',cgt)
 uncons :: String a -> Maybe (a, String a)
-uncons (String v) = second String <$> U.uncons v
+uncons s@Unboxed = Generic.uncons s
+{-# INLINE uncons #-}
 
 -- | /O(1)/ Yield the `init` and `last` of the string, or `Nothing` if it is empty.
 --
 -- >>> unsnoc "acgt"
 -- Just (acg,'t')
 unsnoc :: String a -> Maybe (String a, a)
-unsnoc (String v) = first String <$> U.unsnoc v
+unsnoc s@Unboxed = Generic.unsnoc s
+{-# INLINE unsnoc #-}
 
 -- Concatenation
 -- -------------
@@ -589,21 +664,24 @@ unsnoc (String v) = first String <$> U.unsnoc v
 -- >>> cons 'e' "xtrem"
 -- extrem
 cons :: a -> String a -> String a
-cons ch (String v) = String $ U.cons ch v
+cons ch s@Unboxed = Generic.cons ch s
+{-# INLINE cons #-}
 
 -- | /O(n)/ Append a character.
 --
 -- >>> snoc "xtrem" 'a'
 -- xtrema
 snoc :: String a -> a -> String a
-snoc (String v) ch = String $ U.snoc v ch
+snoc s@Unboxed = Generic.snoc s
+{-# INLINE snoc #-}
 
 -- | /O(m+n)/ Concatenate two strings.
 --
 -- >>> "abc" ++ "xyz"
 -- abcxyz
 (++) :: String a -> String a -> String a
-(String v1) ++ (String v2) = String (v1 U.++ v2)
+l@Unboxed ++ r = l Generic.++ r
+{-# INLINE (++) #-}
 
 -- | /O(n)/ Concatenate all strings in the list.
 --
@@ -614,14 +692,16 @@ snoc (String v) ch = String $ U.snoc v ch
 -- >>> concat ([] :: [String Char])
 -- <BLANKLINE>
 concat :: Unbox a => [String a] -> String a
-concat str = String $ U.concat (map contents str)
+concat = Generic.concat
+{-# INLINE concat #-}
 
 -- | /O(n)/ Concatenate all strings in the non-empty list.
 --
 -- >>> concatNE ("abc" :| ["123", "def"])
 -- abc123def
 concatNE :: NonEmpty (String a) -> String a
-concatNE (str@Unboxed :| rest) = concat (str : rest)
+concatNE strs@(Unboxed :| _) = Generic.concatNE strs
+{-# INLINE concatNE #-}
 
 -- | /O(n)/ Concatenate all strings in the list, if non-empty.
 --
@@ -633,6 +713,7 @@ concatNE (str@Unboxed :| rest) = concat (str : rest)
 -- Nothing
 maybeConcat :: [String a] -> Maybe (String a)
 maybeConcat strs = concatNE <$> nonEmpty strs
+{-# INLINE maybeConcat #-}
 
 -- Restricting memory usage
 -- ------------------------
@@ -641,7 +722,8 @@ maybeConcat strs = concatNE <$> nonEmpty strs
 --
 -- See [Data.Vector.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:force).
 force :: String a -> String a
-force (String v) = String $ U.force v
+force s@Unboxed = Generic.force s
+{-# INLINE force #-}
 
 -- Permutations
 -- ------------
@@ -651,7 +733,8 @@ force (String v) = String $ U.force v
 -- >>> reverse "abc123"
 -- 321cba
 reverse :: String a -> String a
-reverse (String v) = String $ U.reverse v
+reverse s@Unboxed = Generic.reverse s
+{-# INLINE reverse #-}
 
 -- | O(n) Yield the string obtained by replacing each element `i` of the index list by `xs!i`.
 --
@@ -660,7 +743,8 @@ reverse (String v) = String $ U.reverse v
 -- >>> backpermute "abcd" [0,3,2,3,1,0]
 -- adcdba
 backpermute :: String a -> [Int] -> String a
-backpermute (String v0) idx = String $ U.backpermute v0 (U.fromList idx)
+backpermute s@Unboxed idx = Generic.backpermute s (Generic.fromList idx)
+{-# INLINE backpermute #-}
 
 -- Updates
 -- -------
@@ -669,7 +753,8 @@ backpermute (String v0) idx = String $ U.backpermute v0 (U.fromList idx)
 --
 -- The operation will be performed in place if it is safe to do so and will modify a copy of the vector otherwise.
 modify :: (forall s. MVector s a -> ST s ()) -> String a -> String a
-modify f (String v) = String $ U.modify f v
+modify f s@Unboxed = Generic.modify (f . mContents) s
+{-# INLINE modify #-}
 
 -- Comparisons
 -- -----------
@@ -680,20 +765,23 @@ modify f (String v) = String $ U.modify f v
 -- >>> eqBy (\x y -> toLower x == toLower y) "ABcd" "abcD"
 -- True
 eqBy :: (a -> b -> Bool) -> String a -> String b -> Bool
-eqBy f (String va) (String vb) = U.eqBy f va vb
+eqBy f l@Unboxed r@Unboxed = Generic.eqBy f l r
+{-# INLINE eqBy #-}
 
 -- | /O(n)/ Compare two strings using the supplied comparison function for characters.
 --
 -- Comparison works the same as for lists.
 cmpBy :: (a -> b -> Ordering) -> String a -> String b -> Ordering
-cmpBy f (String va) (String vb) = U.cmpBy f va vb
+cmpBy f l@Unboxed r@Unboxed = Generic.cmpBy f l r
+{-# INLINE cmpBy #-}
 
 -- Other vector types
 -- ------------------
 
 -- | /O(n)/ Convert to a vector of characters.
-convert :: G.Vector v a => String a -> v a
-convert (String vs) = U.convert vs
+convert :: Generic.Vector v a => String a -> v a
+convert s@Unboxed = Generic.convert s
+{-# INLINE convert #-}
 
 -- --------------------------- --
 -- Other reexported operations --
@@ -704,14 +792,15 @@ convert (String vs) = U.convert vs
 -- >>> replicateM 4 (Just 'v')
 -- Just vvvv
 replicateM :: (Unbox a, Monad m) => Int -> m a -> m (String a)
-replicateM n m = String <$> U.replicateM n m
+replicateM = Generic.replicateM
+{-# INLINE replicateM #-}
 
 -- | /O(1)/ The empty string.
 --
 -- >>> empty == ""
 -- True
 empty :: Unbox a => String a
-empty = G.empty
+empty = Generic.empty
 {-# INLINE empty #-}
 
 -- --------------------------------- --
@@ -721,28 +810,54 @@ empty = G.empty
 -- | Mutable variant of `String`, so that it can implement the `Generic Vector` interface.
 newtype MString s a = MString {mContents :: MVector s a}
 
-instance Unbox a => M.MVector MString a where
-    basicLength = M.basicLength . mContents
-    basicUnsafeSlice s n = MString . M.basicUnsafeSlice s n . mContents
-    basicOverlaps lhs rhs = M.basicOverlaps (mContents lhs) (mContents rhs)
-    basicUnsafeNew n = MString <$> M.basicUnsafeNew n
-    basicInitialize = M.basicInitialize . mContents
-    basicUnsafeReplicate n x = MString <$> M.basicUnsafeReplicate n x
-    basicUnsafeRead = M.basicUnsafeRead . mContents
-    basicUnsafeWrite = M.basicUnsafeWrite . mContents
-    basicClear = M.basicClear . mContents
-    basicSet = M.basicSet . mContents
-    basicUnsafeCopy tgt src = M.basicUnsafeCopy (mContents tgt) (mContents src)
-    basicUnsafeMove tgt src = M.basicUnsafeMove (mContents tgt) (mContents src)
-    basicUnsafeGrow v n = MString <$> M.basicUnsafeGrow (mContents v) n
+instance Unbox a => Mutable.MVector MString a where
+    {-# SPECIALIZE instance Mutable.MVector MString Char #-}
+    {-# SPECIALIZE instance Mutable.MVector MString Int #-}
+    {-# SPECIALIZE instance Mutable.MVector MString Word8 #-}
+    basicLength (MString v) = Mutable.basicLength v
+    {-# INLINE basicLength #-}
+    basicUnsafeSlice s n (MString v) = MString (Mutable.basicUnsafeSlice s n v)
+    {-# INLINE basicUnsafeSlice #-}
+    basicOverlaps (MString lhs) (MString rhs) = Mutable.basicOverlaps lhs rhs
+    {-# INLINE basicOverlaps #-}
+    basicUnsafeNew n = MString <$> Mutable.basicUnsafeNew n
+    {-# INLINE basicUnsafeNew #-}
+    basicInitialize (MString v) = Mutable.basicInitialize v
+    {-# INLINE basicInitialize #-}
+    basicUnsafeReplicate n x = MString <$> Mutable.basicUnsafeReplicate n x
+    {-# INLINE basicUnsafeReplicate #-}
+    basicUnsafeRead (MString v) = Mutable.basicUnsafeRead v
+    {-# INLINE basicUnsafeRead #-}
+    basicUnsafeWrite (MString v) = Mutable.basicUnsafeWrite v
+    {-# INLINE basicUnsafeWrite #-}
+    basicClear (MString v) = Mutable.basicClear v
+    {-# INLINE basicClear #-}
+    basicSet (MString v) = Mutable.basicSet v
+    {-# INLINE basicSet #-}
+    basicUnsafeCopy (MString tgt) (MString src) = Mutable.basicUnsafeCopy tgt src
+    {-# INLINE basicUnsafeCopy #-}
+    basicUnsafeMove (MString tgt) (MString src) = Mutable.basicUnsafeMove tgt src
+    {-# INLINE basicUnsafeMove #-}
+    basicUnsafeGrow (MString v) n = MString <$> Mutable.basicUnsafeGrow v n
+    {-# INLINE basicUnsafeGrow #-}
 
-type instance G.Mutable String = MString
+type instance Generic.Mutable String = MString
 
-instance Unbox a => G.Vector String a where
-    basicUnsafeFreeze (MString v) = String <$> G.basicUnsafeFreeze v
-    basicUnsafeThaw (String v) = MString <$> G.basicUnsafeThaw v
-    basicLength (String v) = G.basicLength v
-    basicUnsafeSlice s n (String v) = String $ G.basicUnsafeSlice s n v
-    basicUnsafeIndexM (String v) = G.basicUnsafeIndexM v
-    basicUnsafeCopy (MString mv) (String v) = G.basicUnsafeCopy mv v
-    elemseq _ = G.elemseq (undefined :: Vector a)
+instance Unbox a => Generic.Vector String a where
+    {-# SPECIALIZE instance Generic.Vector String Char #-}
+    {-# SPECIALIZE instance Generic.Vector String Int #-}
+    {-# SPECIALIZE instance Generic.Vector String Word8 #-}
+    basicUnsafeFreeze (MString v) = String <$> Generic.basicUnsafeFreeze v
+    {-# INLINE basicUnsafeFreeze #-}
+    basicUnsafeThaw (String v) = MString <$> Generic.basicUnsafeThaw v
+    {-# INLINE basicUnsafeThaw #-}
+    basicLength (String v) = Generic.basicLength v
+    {-# INLINE basicLength #-}
+    basicUnsafeSlice s n (String v) = String (Generic.basicUnsafeSlice s n v)
+    {-# INLINE basicUnsafeSlice #-}
+    basicUnsafeIndexM (String v) = Generic.basicUnsafeIndexM v
+    {-# INLINE basicUnsafeIndexM #-}
+    basicUnsafeCopy (MString mv) (String v) = Generic.basicUnsafeCopy mv v
+    {-# INLINE basicUnsafeCopy #-}
+    elemseq _ = Generic.elemseq (undefined :: Vector a)
+    {-# INLINE elemseq #-}
