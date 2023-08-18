@@ -2,7 +2,7 @@
 
 module Strings.Data.String (
     -- * Unboxed string
-    String (.., Unboxed, Null, NonNull, Singleton, (:<), (:>), (:<:), (:>:)),
+    String (.., Unboxed, Null, NonNull, Head, Last, Singleton, (:<), (:>), (:<:), (:>:)),
     Unbox,
 
     -- ** Text IO
@@ -16,6 +16,7 @@ module Strings.Data.String (
     (!?),
     head,
     last,
+    single,
     indexM,
     headM,
     lastM,
@@ -65,18 +66,19 @@ module Strings.Data.String (
     empty,
 ) where
 
-import Control.Applicative (pure, (<$>), (<*))
+import Control.Applicative (Alternative, pure, (<$>))
+import Control.Applicative qualified as Applicative (empty)
 import Control.Monad (Monad, guard)
 import Control.Monad.ST (ST)
 import Data.Bifunctor (Bifunctor (bimap, first, second))
-import Data.Bool (Bool, not)
+import Data.Bool (Bool, otherwise, (&&))
 import Data.Char (Char)
 import Data.Data (Typeable)
 import Data.Eq (Eq (..))
 import Data.Foldable (Foldable (..))
 import Data.Function (id, ($), (.))
 import Data.Int (Int)
-import Data.List (find, map)
+import Data.List (map)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Map.Strict qualified as Map (Map, alter, empty, foldrWithKey')
 import Data.Maybe (Maybe (Just, Nothing), isJust, maybe)
@@ -87,7 +89,7 @@ import Data.Set qualified as Set (Set, empty, insert, member)
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
 import Data.Type.Equality (type (~))
-import GHC.Err (undefined)
+import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
 import GHC.Num ((+), (-))
 import Text.Read (Read (readPrec))
@@ -95,7 +97,7 @@ import Text.Show (Show (showsPrec))
 
 import Data.Vector.Generic qualified as G
 import Data.Vector.Generic.Mutable qualified as M
-import Data.Vector.Unboxed (Unbox)
+import Data.Vector.Unboxed (MVector, Unbox, Vector)
 import Data.Vector.Unboxed qualified as U
 
 import Strings.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
@@ -112,7 +114,7 @@ data String a where
     --
     -- Note that `Unbox a` is only required for constructing the string. All other operations should be possible
     -- without that constraint.
-    String :: Unbox a => !(U.Vector a) -> String a
+    String :: Unbox a => !(Vector a) -> String a
     deriving newtype (Typeable)
 
 {-# COMPLETE Unboxed #-}
@@ -142,7 +144,7 @@ pattern Unboxed <- (id -> (String _))
 -- >>> [s | s@Null <- ["", "a", "ab", "", "abc"]]
 -- [,]
 pattern Null :: () => Unbox a => String a
-pattern Null <- (find null . Just -> Just Unboxed)
+pattern Null <- (nullish -> Just Unboxed)
 {-# INLINE Null #-}
 
 -- | Matches any non-`empty` string.
@@ -150,17 +152,33 @@ pattern Null <- (find null . Just -> Just Unboxed)
 -- >>> [s | NonNull s <- ["", "a", "ab", "", "abc"]]
 -- [a,ab,abc]
 pattern NonNull :: () => Unbox a => String a -> String a
-pattern NonNull s <- (find (not . null) . Just -> Just s@Unboxed)
+pattern NonNull s <- (nonNull -> Just s@Unboxed)
     where
         NonNull = id
 {-# INLINE NonNull #-}
+
+-- | Matches the first character in a string.
+--
+-- >>> [c | Head c <- ["", "a", "ab", "", "abc"]]
+-- "aaa"
+pattern Head :: () => Unbox a => a -> String a
+pattern Head c <- (headId -> (Just c, Unboxed))
+{-# INLINE Head #-}
+
+-- | Matches the last character in a string.
+--
+-- >>> [c | Last c <- ["", "a", "ab", "", "abc"]]
+-- "abc"
+pattern Last :: () => Unbox a => a -> String a
+pattern Last c <- (lastId -> (Just c, Unboxed))
+{-# INLINE Last #-}
 
 -- | Matches a string composed of a single character.
 --
 -- >>> [c | Singleton c <- ["", "a", "ab", "", "abc"]]
 -- "a"
 pattern Singleton :: () => Unbox a => a -> String a
-pattern Singleton c <- (uncons -> Just (c, Null))
+pattern Singleton c <- (singleId -> (Just c, Unboxed))
 {-# INLINE Singleton #-}
 
 -- | Matches `head` and `tail` of a string, if present.
@@ -188,7 +206,7 @@ pattern xs :> x <- (unsnoc -> Just (xs@Unboxed, x))
 -- >>> [(h,t) | h :<: t <- ["", "a", "ab", "", "abc"]]
 -- [(a,),(a,b),(a,bc)]
 pattern (:<:) :: () => Unbox a => String a -> String a -> String a
-pattern x :<: xs <- (splitAtHead -> Just (x@(Singleton _), xs))
+pattern x :<: xs <- (splitAtHead -> Just (x@Unboxed, xs))
 {-# INLINE (:<:) #-}
 
 -- | Stringified `:>`, matching `init` and `last`.
@@ -196,12 +214,95 @@ pattern x :<: xs <- (splitAtHead -> Just (x@(Singleton _), xs))
 -- >>> [(i,l) | i :>: l <- ["", "a", "ab", "", "abc"]]
 -- [(,a),(a,b),(ab,c)]
 pattern (:>:) :: () => Unbox a => String a -> String a -> String a
-pattern xs :>: x <- (splitAtLast -> Just (xs, x@(Singleton _)))
+pattern xs :>: x <- (splitAtLast -> Just (xs, x@Unboxed))
 {-# INLINE (:>:) #-}
 
--- | Extract the inner contents of a `String`.
-contents :: String a -> U.Vector a
+-- -------------------------- --
+-- Pattern matching functions --
+-- -------------------------- --
+
+-- | (INTERNAL) Extract the backing vector of a `String`.
+--
+-- >>> :t contents "abc"
+-- contents "abc" :: Vector Char
+contents :: String a -> Vector a
 contents (String v) = v
+
+-- | (INTERNAL) `Just` the empty string .
+--
+-- >>> nullish "text"
+-- Nothing
+-- >>> nullish "" == Just empty
+-- True
+nullish :: String a -> Maybe (String a)
+nullish s@(String v)
+    | U.null v = Just s
+    | otherwise = Nothing
+{-# INLINE nullish #-}
+
+-- | (INTERNAL) Yield the string, if not empty, `Nothing` otherwise.
+--
+-- >>> nonNull "text"
+-- Just text
+-- >>> nonNull ""
+-- Nothing
+nonNull :: String a -> Maybe (String a)
+nonNull s@Unboxed
+    | G.null s = Nothing
+    | otherwise = Just s
+{-# INLINE nonNull #-}
+
+-- | (INTERNAL) Stringified version of `uncons`.
+--
+-- >>> splitAtHead "acgt"
+-- Just (a,cgt)
+splitAtHead :: String a -> Maybe (String a, String a)
+splitAtHead s@Unboxed
+    | n > 0 = Just (G.unsafeSlice 0 1 s, G.unsafeSlice 1 (n - 1) s)
+    | otherwise = Nothing
+  where
+    n = G.length $! s
+{-# INLINE splitAtHead #-}
+
+-- | (INTERNAL) Stringified version of `unsnoc`.
+--
+-- >>> splitAtLast "acgt"
+-- Just (acg,t)
+splitAtLast :: String a -> Maybe (String a, String a)
+splitAtLast s@Unboxed
+    | n > 0 = Just (G.unsafeSlice 0 (n - 1) s, G.unsafeSlice (n - 1) 1 s)
+    | otherwise = Nothing
+  where
+    n = G.length $! s
+{-# INLINE splitAtLast #-}
+
+-- | (INTERNAL) Extracts `head` and `id` for pattern matching.
+--
+-- >>> headId "texting"
+-- (Just 't',texting)
+headId :: String a -> (Maybe a, String a)
+headId s = (headM s, s)
+{-# INLINE headId #-}
+
+-- | (INTERNAL) Extracts `tail` and `id` for pattern matching.
+--
+-- >>> lastId "texting"
+-- (Just 'g',texting)
+lastId :: String a -> (Maybe a, String a)
+lastId s = (lastM s, s)
+{-# INLINE lastId #-}
+
+-- | (INTERNAL) Extracts `singleM` and `id` for pattern matching.
+--
+-- >>> singleId "texting"
+-- (Nothing,texting)
+singleId :: String a -> (Maybe a, String a)
+singleId s = (single s, s)
+{-# INLINE singleId #-}
+
+-- ----------------------------------- --
+-- List-like and String-like instances --
+-- ----------------------------------- --
 
 instance Eq a => Eq (String a) where
     (String lhs) == (String rhs) = lhs == rhs
@@ -215,10 +316,6 @@ instance Ord a => Ord (String a) where
     (String lhs) >= (String rhs) = lhs >= rhs
     max (String lhs) (String rhs) = String (max lhs rhs)
     min (String lhs) (String rhs) = String (min lhs rhs)
-
--- ----------------------------------- --
--- List-like and String-like instances --
--- ----------------------------------- --
 
 instance Unbox a => IsList (String a) where
     type Item (String a) = a
@@ -355,23 +452,59 @@ head (String v) = U.head v
 last :: String a -> a
 last (String v) = U.last v
 
+-- | /O(1)/ The character of a singleton string.
+--
+-- >>> single ""
+-- Nothing
+-- >>> single "x"
+-- Just 'x'
+-- >>> single "xy"
+-- Nothing
+single :: String a -> Maybe a
+single (String v)
+    | n == 1 = U.unsafeIndexM v 0
+    | otherwise = Applicative.empty
+  where
+    n = U.length $! v
+
 -- | /O(1)/ Indexing in a monad.
 --
 -- See [Data.Vactor.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:indexM).
-indexM :: Monad m => String a -> Int -> m a
-indexM (String v) = U.indexM v
+--
+-- >>> indexM "xyz" 5 :: Maybe Char
+-- Nothing
+indexM :: (Alternative m, Monad m) => String a -> Int -> m a
+indexM (String v) i
+    | 0 <= i && i < n = U.unsafeIndexM v i
+    | otherwise = Applicative.empty
+  where
+    n = U.length $! v
 
 -- | /O(1)/ First character of a string in a monad.
 --
 -- See [Data.Vactor.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:indexM).
-headM :: Monad m => String a -> m a
-headM (String v) = U.headM v
+--
+-- >>> headM "" :: Maybe Char
+-- Nothing
+headM :: (Alternative m, Monad m) => String a -> m a
+headM (String v)
+    | n > 0 = U.unsafeIndexM v 0
+    | otherwise = Applicative.empty
+  where
+    n = U.length $! v
 
 -- | /O(1)/ Last character of a string in a monad.
 --
 -- See [Data.Vactor.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:indexM).
-lastM :: Monad m => String a -> m a
-lastM (String v) = U.lastM v
+--
+-- >>> lastM "" :: Maybe Char
+-- Nothing
+lastM :: (Alternative m, Monad m) => String a -> m a
+lastM (String v)
+    | n > 0 = U.unsafeIndexM v (n - 1)
+    | otherwise = Applicative.empty
+  where
+    n = U.length $! v
 
 -- Substrings (slicing)
 -- --------------------
@@ -441,7 +574,7 @@ splitAt n (String v) = bimap String String $ U.splitAt n v
 uncons :: String a -> Maybe (a, String a)
 uncons (String v) = second String <$> U.uncons v
 
--- | /O(1)/ Yield the `last` and `init` of the string, or `Nothing` if it is empty.
+-- | /O(1)/ Yield the `init` and `last` of the string, or `Nothing` if it is empty.
 --
 -- >>> unsnoc "acgt"
 -- Just (acg,'t')
@@ -535,7 +668,7 @@ backpermute (String v0) idx = String $ U.backpermute v0 (U.fromList idx)
 -- | Apply a destructive operation to a string.
 --
 -- The operation will be performed in place if it is safe to do so and will modify a copy of the vector otherwise.
-modify :: (forall s. U.MVector s a -> ST s ()) -> String a -> String a
+modify :: (forall s. MVector s a -> ST s ()) -> String a -> String a
 modify f (String v) = String $ U.modify f v
 
 -- Comparisons
@@ -567,6 +700,9 @@ convert (String vs) = U.convert vs
 -- --------------------------- --
 
 -- | /O(n)/ Execute the monadic action the given number of times and store the results in a string.
+--
+-- >>> replicateM 4 (Just 'v')
+-- Just vvvv
 replicateM :: (Unbox a, Monad m) => Int -> m a -> m (String a)
 replicateM n m = String <$> U.replicateM n m
 
@@ -575,32 +711,15 @@ replicateM n m = String <$> U.replicateM n m
 -- >>> empty == ""
 -- True
 empty :: Unbox a => String a
-empty = String U.empty
-
--- | /O(1)/ Stringified version of `uncons`.
---
--- >>> splitAtHead "acgt"
--- Just (a,cgt)
-splitAtHead :: String a -> Maybe (String a, String a)
-splitAtHead s = case splitAt 1 s of
-    (NonNull sHead, sTail) -> Just (sHead, sTail)
-    (Null, _) -> Nothing
-
--- | /O(1)/ Stringified version of `unsnoc`.
---
--- >>> splitAtLast "acgt"
--- Just (acg,t)
-splitAtLast :: String a -> Maybe (String a, String a)
-splitAtLast s = case splitAt (length s - 1) s of
-    (sInit, NonNull sLast) -> Just (sInit, sLast)
-    (_, Null) -> Nothing
+empty = G.empty
+{-# INLINE empty #-}
 
 -- --------------------------------- --
 -- Generic Vector instance and types --
 -- --------------------------------- --
 
 -- | Mutable variant of `String`, so that it can implement the `Generic Vector` interface.
-newtype MString s a = MString {mContents :: U.MVector s a}
+newtype MString s a = MString {mContents :: MVector s a}
 
 instance Unbox a => M.MVector MString a where
     basicLength = M.basicLength . mContents
@@ -626,4 +745,4 @@ instance Unbox a => G.Vector String a where
     basicUnsafeSlice s n (String v) = String $ G.basicUnsafeSlice s n v
     basicUnsafeIndexM (String v) = G.basicUnsafeIndexM v
     basicUnsafeCopy (MString mv) (String v) = G.basicUnsafeCopy mv v
-    elemseq _ = G.elemseq (undefined :: U.Vector a)
+    elemseq _ = G.elemseq (undefined :: Vector a)
