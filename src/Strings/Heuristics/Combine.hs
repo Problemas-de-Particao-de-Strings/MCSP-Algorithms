@@ -26,20 +26,23 @@ data AlwaysCombine = AlwaysCombine
 
 instance CombineDecision AlwaysCombine a where
     shouldCombine AlwaysCombine _ _ = True
+    {-# INLINE shouldCombine #-}
 
 -- | Combine blocks if both of them have a singleton.
 newtype BothHaveSingleton a = BothHaveSingleton (Set a)
 
 instance Ord a => CombineDecision (BothHaveSingleton a) a where
     shouldCombine (BothHaveSingleton singles) xs ys = hasOneOf xs singles && hasOneOf ys singles
+    {-# INLINE shouldCombine #-}
 
 -- | Combine blocks if either one of them have a singleton.
 newtype EitherHasSingleton a = EitherHasSingleton (Set a)
 
 instance Ord a => CombineDecision (EitherHasSingleton a) a where
     shouldCombine (EitherHasSingleton singles) xs ys = hasOneOf xs singles || hasOneOf ys singles
+    {-# INLINE shouldCombine #-}
 
--- | If possible, combines the first 2 blocks of a string and the first identical pair of another.
+-- | /O(n^2)/ If possible, combines the first 2 blocks of a string and the first identical pair of another.
 combineOne :: (CombineDecision h a, Eq a) => h -> PartitionPair a -> Maybe (PartitionPair a)
 combineOne deicision (x1 : x2 : xs, y1 : y2 : ys)
     | (x1, x2) == (y1, y2) && shouldCombine deicision x1 x2 = Just ((x1 ++ x2) : xs, (y1 ++ y2) : ys)
