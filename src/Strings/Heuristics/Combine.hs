@@ -7,7 +7,7 @@ import Data.Set (Set)
 
 import Strings.Data.Partition (chars)
 import Strings.Data.String (String, (++))
-import Strings.Data.String.Analysis (hasOneOf, singletons)
+import Strings.Data.String.Extra (hasOneOf, singletons)
 
 -- | Two collections of blocks, used for represeting common partitions.
 type PartitionPair a = ([String a], [String a])

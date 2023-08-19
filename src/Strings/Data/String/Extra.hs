@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Strings.Data.String.Analysis (
+module Strings.Data.String.Extra (
+    -- ** Character set analysis
     frequency,
     singletons,
     hasOneOf,
@@ -19,9 +20,8 @@ import GHC.Num ((+))
 
 import Strings.Data.String (String)
 
--- ----------------------------- --
--- String information extraction --
--- ----------------------------- --
+-- ---------------------- --
+-- Character set analysis --
 
 -- | /O(n lg n)/ Extracts the frequency count of each character in a string.
 --
