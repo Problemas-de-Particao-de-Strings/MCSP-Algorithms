@@ -12,8 +12,8 @@ module Strings.Data.String (
     -- * Accessors
 
     -- ** Length information
-    length,
-    null,
+    Strings.Data.String.length,
+    Strings.Data.String.null,
 
     -- ** Indexing
     (!),
@@ -153,9 +153,10 @@ module Strings.Data.String (
 
 import Control.Applicative (Alternative, (<$>))
 import Control.Applicative qualified as Applicative (empty)
+import Control.Arrow ((&&&))
 import Control.Monad (Monad)
 import Control.Monad.ST (ST)
-import Data.Bool (Bool, otherwise, (&&))
+import Data.Bool (Bool (False, True), otherwise, (&&))
 import Data.Char (Char)
 import Data.Data (Typeable)
 import Data.Either (Either)
@@ -176,7 +177,7 @@ import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
 import GHC.Num (Num, (+), (-))
 import Text.Read (Read (readListPrec, readPrec), readListPrecDefault)
-import Text.Show (Show (show, showsPrec))
+import Text.Show (Show (showsPrec))
 
 import Data.Vector.Generic qualified as Generic
 import Data.Vector.Generic.Mutable qualified as Mutable
@@ -201,6 +202,8 @@ data String a where
 
 {-# COMPLETE Unboxed #-}
 {-# COMPLETE Null, NonNull #-}
+{-# COMPLETE Null, Head #-}
+{-# COMPLETE Null, Last #-}
 {-# COMPLETE Null, (:<) #-}
 {-# COMPLETE Null, (:>) #-}
 {-# COMPLETE Null, (:<:) #-}
@@ -218,52 +221,52 @@ data String a where
 -- >>> :t emptyLike'
 -- emptyLike' :: String a -> String a
 pattern Unboxed :: () => Unbox a => String a
-pattern Unboxed <- (id -> (String _))
+pattern Unboxed <- (id -> String _)
 {-# INLINE Unboxed #-}
 
--- | Matches the `empty` string.
+-- | /O(1)/ Matches the `empty` string.
 --
 -- >>> [s | s@Null <- ["", "a", "ab", "", "abc"]]
 -- [,]
 pattern Null :: () => Unbox a => String a
-pattern Null <- (nullish -> Just Unboxed)
+pattern Null <- (Strings.Data.String.null &&& id -> (True, Unboxed))
 {-# INLINE Null #-}
 
--- | Matches any non-`empty` string.
+-- | /O(1)/ Matches any non-`empty` string.
 --
 -- >>> [s | NonNull s <- ["", "a", "ab", "", "abc"]]
 -- [a,ab,abc]
 pattern NonNull :: () => Unbox a => String a -> String a
-pattern NonNull s <- (nonNull -> Just s@Unboxed)
+pattern NonNull s <- (Strings.Data.String.null &&& id -> (False, s@Unboxed))
     where
         NonNull = id
 {-# INLINE NonNull #-}
 
--- | Matches the first character in a string.
+-- | /O(1)/ Matches the first character in a string.
 --
 -- >>> [c | Head c <- ["", "a", "ab", "", "abc"]]
 -- "aaa"
 pattern Head :: () => Unbox a => a -> String a
-pattern Head c <- (\s -> (headM s, s) -> (Just c, Unboxed))
+pattern Head c <- (headM &&& id -> (Just c, Unboxed))
 {-# INLINE Head #-}
 
--- | Matches the last character in a string.
+-- | /O(1)/ Matches the last character in a string.
 --
 -- >>> [c | Last c <- ["", "a", "ab", "", "abc"]]
 -- "abc"
 pattern Last :: () => Unbox a => a -> String a
-pattern Last c <- (\s -> (lastM s, s) -> (Just c, Unboxed))
+pattern Last c <- (lastM &&& id -> (Just c, Unboxed))
 {-# INLINE Last #-}
 
--- | Matches a string composed of a single character.
+-- | /O(1)/ Matches a string composed of a single character.
 --
 -- >>> [c | Singleton c <- ["", "a", "ab", "", "abc"]]
 -- "a"
 pattern Singleton :: () => Unbox a => a -> String a
-pattern Singleton c <- (\s -> (single s, s) -> (Just c, Unboxed))
+pattern Singleton c <- (single &&& id -> (Just c, Unboxed))
 {-# INLINE Singleton #-}
 
--- | Matches `head` and `tail` of a string, if present.
+-- | /O(1)/ Matches `head` and `tail` of a string, if present.
 --
 -- >>> [(h,t) | h :< t <- ["", "a", "ab", "", "abc"]]
 -- [('a',),('a',b),('a',bc)]
@@ -273,7 +276,7 @@ pattern x :< xs <- (uncons -> Just (x, xs@Unboxed))
         x :< xs = cons x xs
 {-# INLINE (:<) #-}
 
--- | Matches `init` and `last` of a string, if present.
+-- | /O(1)/ Matches `init` and `last` of a string, if present.
 --
 -- >>> [(i,l) | i :> l <- ["", "a", "ab", "", "abc"]]
 -- [(,'a'),(a,'b'),(ab,'c')]
@@ -283,7 +286,7 @@ pattern xs :> x <- (unsnoc -> Just (xs@Unboxed, x))
         xs :> x = snoc xs x
 {-# INLINE (:>) #-}
 
--- | Stringified `:<`, matching `head` and `tail`.
+-- | /O(1)/ Stringified `:<`, matching `head` and `tail`.
 --
 -- >>> [(h,t) | h :<: t <- ["", "a", "ab", "", "abc"]]
 -- [(a,),(a,b),(a,bc)]
@@ -291,7 +294,7 @@ pattern (:<:) :: () => Unbox a => String a -> String a -> String a
 pattern x :<: xs <- (splitAtHead -> Just (x@Unboxed, xs))
 {-# INLINE (:<:) #-}
 
--- | Stringified `:>`, matching `init` and `last`.
+-- | /O(1)/ Stringified `:>`, matching `init` and `last`.
 --
 -- >>> [(i,l) | i :>: l <- ["", "a", "ab", "", "abc"]]
 -- [(,a),(a,b),(ab,c)]
@@ -303,31 +306,7 @@ pattern xs :>: x <- (splitAtLast -> Just (xs, x@Unboxed))
 -- Pattern matching functions --
 -- -------------------------- --
 
--- | (INTERNAL) `Just` the empty string .
---
--- >>> nullish "text"
--- Nothing
--- >>> nullish "" == Just empty
--- True
-nullish :: String a -> Maybe (String a)
-nullish s@Unboxed
-    | Generic.null s = Just s
-    | otherwise = Nothing
-{-# INLINE nullish #-}
-
--- | (INTERNAL) Yield the string, if not empty, `Nothing` otherwise.
---
--- >>> nonNull "text"
--- Just text
--- >>> nonNull ""
--- Nothing
-nonNull :: String a -> Maybe (String a)
-nonNull s@Unboxed
-    | Generic.null s = Nothing
-    | otherwise = Just s
-{-# INLINE nonNull #-}
-
--- | (INTERNAL) Stringified version of `uncons`.
+-- | (INTERNAL) /O(1)/ Stringified version of `uncons`.
 --
 -- >>> splitAtHead "acgt"
 -- Just (a,cgt)
@@ -340,7 +319,7 @@ splitAtHead s@Unboxed
     n = Generic.length $! s
 {-# INLINE splitAtHead #-}
 
--- | (INTERNAL) Stringified version of `unsnoc`.
+-- | (INTERNAL) /O(1)/ Stringified version of `unsnoc`.
 --
 -- >>> splitAtLast "acgt"
 -- Just (acg,t)
@@ -466,8 +445,6 @@ instance ShowString a => Show (String a) where
     {-# SPECIALIZE instance Show (String Word8) #-}
     showsPrec _ s@Unboxed = showStr s
     {-# INLINE showsPrec #-}
-    show s@Unboxed = showStr s ""
-    {-# INLINE show #-}
 
 instance (ReadString a, Unbox a) => Read (String a) where
     {-# SPECIALIZE instance Read (String Char) #-}
@@ -488,7 +465,7 @@ instance (Store a, Unbox a) => Store (String a) where
     {-# SPECIALIZE instance Store (String Word8) #-}
     size = VarSize calcSize
       where
-        calcSize s = sizeOf size (length s) + sizeSum s
+        calcSize s = sizeOf size (Strings.Data.String.length s) + sizeSum s
         sizeOf (ConstSize n) _ = n
         sizeOf (VarSize f) x = f x
         sizeSum s@Unboxed = getSum (Generic.foldMap (Sum . sizeOf size) s)
@@ -564,6 +541,17 @@ instance Unbox a => Generic.Vector String a where
 -- --------------------------------------- --
 -- Operations with lifted Unbox constraint --
 -- --------------------------------------- --
+
+-- ------------------ --
+-- Length information --
+
+-- | /O(1)/ Yield the length of the string.
+length :: String a -> Int
+length s@Unboxed = Generic.length s
+
+-- | /O(1)/ Test whether a string is empty.
+null :: String a -> Bool
+null s@Unboxed = Generic.null s
 
 -- -------- --
 -- Indexing --
@@ -728,7 +716,7 @@ drop n s@Unboxed = Generic.drop n s
 
 -- | /O(1)/ Yield the first `n` characters paired with the remainder, without copying.
 --
--- Note that `splitAt n v` is equivalent to `(take n v, drop n v)`, but slightly more efficient.
+-- Note that `splitAt n s` is equivalent to `(take n s, drop n s)`, but slightly more efficient.
 --
 -- >>> splitAt 6 "babushka"
 -- (babush,ka)
@@ -814,7 +802,7 @@ generateM :: (Unbox a, Monad m) => Int -> (Int -> m a) -> m (String a)
 generateM = Generic.generateM
 {-# INLINE generateM #-}
 
--- | Execute the monadic action and freeze the resulting string.
+-- | /O(f(n))/ Execute the monadic action and freeze the resulting string.
 --
 -- >>> import Control.Applicative (pure)
 -- >>> import Data.Vector.Unboxed.Mutable (new, write)
@@ -872,7 +860,7 @@ unfoldrExactNM = Generic.unfoldrExactNM
 -- ----------- --
 -- Enumeration --
 
--- /O(n)/ Yield a string of the given length, containing the characters `x`, `x+1` etc.
+-- | /O(n)/ Yield a string of the given length, containing the characters `x`, `x+1` etc.
 --
 -- This operation is usually more efficient than `enumFromTo`.
 --
@@ -882,7 +870,7 @@ enumFromN :: (Unbox a, Num a) => a -> Int -> String a
 enumFromN = Generic.enumFromN
 {-# INLINE enumFromN #-}
 
--- /O(n)/ Yield a string of the given length, containing the characters `x`, `x+y`, `x+y+y` etc.
+-- | /O(n)/ Yield a string of the given length, containing the characters `x`, `x+y`, `x+y+y` etc.
 --
 -- This operations is usually more efficient than `enumFromThenTo`.
 --
@@ -1013,7 +1001,7 @@ backpermute s@Unboxed idx = Generic.backpermute s (Generic.fromList idx)
 -- ------------------------ --
 -- Safe destructive updates --
 
--- | Apply a destructive operation to a string.
+-- | /O(f(n))/ Apply a destructive operation to a string.
 --
 -- The operation will be performed in place if it is safe to do so and will modify a copy of the vector otherwise.
 --
@@ -1074,7 +1062,7 @@ imap_ :: (Int -> a -> a) -> String a -> String a
 imap_ f s@Unboxed = Generic.imap f s
 {-# INLINE imap_ #-}
 
--- | Map a function over a string and concatenate the results.
+-- | /O(?)/ Map a function over a string and concatenate the results.
 --
 -- >>> concatMap (\c -> [c, c]) "genome"
 -- ggeennoommee
@@ -1082,7 +1070,7 @@ concatMap :: Unbox b => (a -> [b]) -> String a -> String b
 concatMap f s@Unboxed = Generic.concatMap (fromList . f) s
 {-# INLINE concatMap #-}
 
--- | Map a function over a string and concatenate the resulting strings.
+-- | /O(?)/ Map a function over a string and concatenate the resulting strings.
 --
 -- >>> concatMap_ (\c -> replicate 3 c) "gen"
 -- gggeeennn

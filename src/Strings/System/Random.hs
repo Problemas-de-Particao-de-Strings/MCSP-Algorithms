@@ -149,7 +149,7 @@ treeIndices n = mapM sample bounds
     sample (i :: Int) = uniformB i
 {-# INLINE treeIndices #-}
 
--- | Shuffles a non-empty list.
+-- | /O(?)/ Shuffles a non-empty list.
 --
 -- This simple implementation runs forever with empty lists.
 shuffleNonEmpty :: IsList l => NonEmpty (Item l) -> Random l
@@ -161,7 +161,7 @@ shuffleNonEmpty (h :| rest) = do
     pure (fromListN n ys)
 {-# INLINE shuffleNonEmpty #-}
 
--- | Shuffles a list randomly.
+-- | /O(?)/ Shuffles a list randomly.
 --
 -- >>> generateWith (1,2) $ shuffle [1..5] :: [Int]
 -- [4,1,2,3,5]
