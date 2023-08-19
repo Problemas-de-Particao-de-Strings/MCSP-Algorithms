@@ -9,10 +9,10 @@ module Strings.Data.String.Extra (
 
 import Data.Bool (Bool)
 import Data.Foldable (Foldable (foldr'), any)
-import Data.Function (id, ($), (.))
+import Data.Function (id)
 import Data.Int (Int)
 import Data.Map.Strict (Map, alter, foldrWithKey')
-import Data.Maybe (Maybe (Just), maybe)
+import Data.Maybe (Maybe (Just), fromMaybe)
 import Data.Monoid (mempty)
 import Data.Ord (Ord)
 import Data.Set (Set, insert, member)
@@ -28,7 +28,9 @@ import Strings.Data.String (String)
 -- >>> frequency "aabacabd"
 -- fromList [('a',4),('b',2),('c',1),('d',1)]
 frequency :: Ord a => String a -> Map a Int
-frequency = foldr' (alter $ Just . maybe 1 (+ 1)) mempty
+frequency = foldr' (alter increment) mempty
+  where
+    increment x = Just (1 + fromMaybe 0 x)
 
 -- | /O(n lg n)/ Extracts the set of singleton characters in a string.
 --
