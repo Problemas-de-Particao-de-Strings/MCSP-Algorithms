@@ -1,3 +1,4 @@
+-- | Compile time random value generation.
 module Strings.System.Random.Static (
     mkWord64,
     RandomIO,
@@ -16,15 +17,15 @@ import Language.Haskell.TH.Syntax (Lift (liftTyped), unTypeCode)
 -- | A random value generator in the `IO` Monad.
 type RandomIO a = GenIO -> IO a
 
--- | Yields a random `a` in the quotation monad.
+-- | Yields a random @a@ in the quotation monad.
 mkRandomQ :: RandomIO a -> Q a
 mkRandomQ = runIO . withSystemRandom
 
--- | Generates a random `a` in compile-time.
+-- | Generates a random @a@ in compile-time.
 mkRandom :: Lift a => RandomIO a -> CodeQ a
 mkRandom r = bindCode (mkRandomQ r) liftTyped
 
--- | Generates an untyped random `a` in compile-time.
+-- | Generates an untyped random @a@ in compile-time.
 mkRandomE :: Lift a => RandomIO a -> ExpQ
 mkRandomE = unTypeCode . mkRandom
 

@@ -1,5 +1,9 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
+-- | Operations on partitions of `String`.
 module Strings.Data.Partition (
     Partition,
+    SimpleEnum,
     concat,
     chars,
     randomShuffledChars,
@@ -7,9 +11,10 @@ module Strings.Data.Partition (
     randomShuffledBlocks,
 ) where
 
-import Prelude hiding (String, concat, splitAt)
-
+import Control.Applicative (pure, (<$>))
 import Data.Bifunctor (Bifunctor (bimap))
+import Data.Int (Int)
+import GHC.Enum (Bounded, Enum)
 
 import Strings.Data.String (String (Null, (:<:)), Unbox, concat, replicateM)
 import Strings.System.Random (Random, partitions, shuffle, uniformE)

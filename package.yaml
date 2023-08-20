@@ -78,6 +78,7 @@ library:
   exposed-modules:
     - Strings.Data.Partition
     - Strings.Data.String
+    - Strings.Data.String.Extra
     - Strings.Data.String.Deriving
     - Strings.Heuristics.Combine
     - Strings.System.Random
