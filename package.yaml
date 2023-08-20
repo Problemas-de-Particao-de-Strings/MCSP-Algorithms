@@ -1,6 +1,6 @@
-name: playground
+name: MCSP-Algorithms
 version: 0.0.1
-github: Problemas-de-Particao-de-Strings/playground
+github: Problemas-de-Particao-de-Strings/MCSP-Algorithms
 license: MIT
 author:
   - Leonardo Rodrigues <leonardosrodrigues1@gmail.com>
@@ -13,13 +13,13 @@ extra-source-files:
   - README.md
 
 # Metadata used when publishing your package
-synopsis: Discovering Haskell
-category: College
+synopsis: Algorithms for Minimum Common String Partition (MCSP) in Haskell.
+category: College,MCSP,Algorithms,String,Partition
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description: Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/playground#readme>
+description: Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/MCSP-Algorithms#readme>
 
 # Using modern Haskell features
 language: GHC2021
@@ -85,7 +85,7 @@ library:
     - Strings.System.Random
 
 executables:
-  playground-exe:
+  playground:
     main: Main.hs
     source-dirs: app
     ghc-options:
@@ -94,10 +94,10 @@ executables:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - playground
+      - MCSP-Algorithms
 
 tests:
-  playground-test:
+  MCSP-Algorithms-test:
     main: Spec.hs
     source-dirs: test
     ghc-options:
@@ -106,4 +106,4 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - playground
+      - MCSP-Algorithms
