@@ -37,3 +37,13 @@ pre-commit install
 
 Commits should follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. Types in use can
 be found at [pvdlg/conventional-commit-types](https://github.com/pvdlg/conventional-commit-types).
+
+### Haddock
+
+HTML documentation can be generated with:
+
+```sh
+stack haddock --haddock-internal MCSP-Algorithms --open
+```
+
+For exposed modules only, you can drop `--haddock-internal`.
