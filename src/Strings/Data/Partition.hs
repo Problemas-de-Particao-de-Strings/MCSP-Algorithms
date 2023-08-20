@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 -- | Operations on partitions of `String`.
 module Strings.Data.Partition (
     Partition,

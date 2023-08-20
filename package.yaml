@@ -25,6 +25,7 @@ description: Please see the README on GitHub at <https://github.com/Problemas-de
 language: GHC2021
 default-extensions:
   - DerivingStrategies
+  - NoImplicitPrelude
   - OverloadedLists
   - OverloadedStrings
   - PatternSynonyms

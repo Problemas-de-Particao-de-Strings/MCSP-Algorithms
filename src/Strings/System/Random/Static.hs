@@ -7,7 +7,9 @@ module Strings.System.Random.Static (
     mkRandomE,
 ) where
 
+import Data.Function ((.))
 import Data.Word (Word64)
+import System.IO (IO)
 import System.Random.PCG (GenIO, withSystemRandom)
 import System.Random.PCG.Class (uniformW64)
 
