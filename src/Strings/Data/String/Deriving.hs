@@ -4,9 +4,20 @@ module Strings.Data.String.Deriving (
     derivingUnboxVia,
 ) where
 
+import Control.Applicative (pure)
+import Control.Monad (fail, (>>=))
+import Data.Bool (otherwise, (&&))
 import Data.Char (toLower)
 import Data.Data (Proxy (Proxy), Typeable, typeRep)
+import Data.Function (($), (.))
+import Data.Int (Int)
+import Data.List ((++))
+import Data.Ord (max, min, (<=))
+import Data.String (String)
 import Data.Vector.Unboxed.Deriving (derivingUnbox)
+import GHC.Enum (Bounded (maxBound, minBound), Enum (fromEnum, toEnum))
+import GHC.Err (error)
+import Text.Show (show)
 
 import Language.Haskell.TH (
     Dec,

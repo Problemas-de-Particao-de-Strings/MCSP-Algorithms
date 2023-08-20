@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 -- | Generic strings using backed by a contiguous array of unboxed characters.
 module Strings.Data.String (
     -- * Unboxed string

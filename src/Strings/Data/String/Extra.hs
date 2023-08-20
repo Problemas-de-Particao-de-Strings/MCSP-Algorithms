@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 -- | Custom operations for `String`.
 module Strings.Data.String.Extra (
     -- ** Character set analysis

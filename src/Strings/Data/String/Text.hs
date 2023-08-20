@@ -7,16 +7,25 @@ module Strings.Data.String.Text (
     readCharsPrec,
 ) where
 
+import Control.Applicative (pure, (*>))
+import Control.Monad ((>>=))
 import Control.Monad.Extra (concatForM)
-import Data.Char (isSpace)
-import Data.Int (Int16, Int32, Int64, Int8)
+import Data.Bool (not, (&&))
+import Data.Char (Char, isSpace)
+import Data.Eq ((/=))
+import Data.Function (id, ($), (.))
+import Data.Int (Int, Int16, Int32, Int64, Int8)
 import Data.List.Extra (firstJust, snoc)
+import Data.Maybe (Maybe (Just, Nothing), maybe)
+import Data.String (String)
 import Data.Vector.Generic (Vector, foldr', uncons)
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word, Word16, Word32, Word64, Word8)
+import GHC.Integer (Integer)
 import Language.Haskell.TH (conT, withDecsDoc)
 import Text.ParserCombinators.ReadP (ReadP, gather, pfail, readP_to_S, satisfy, (<++))
 import Text.ParserCombinators.ReadPrec (ReadPrec, lift, minPrec, readPrec_to_P)
 import Text.Read (Read (readPrec))
+import Text.Show (Show, ShowS, showChar, shows)
 
 -- ---------------------- --
 -- Textual Output classes --
