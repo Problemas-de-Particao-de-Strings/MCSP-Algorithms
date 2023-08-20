@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
+-- | Generic strings using backed by a contiguous array of unboxed characters.
 module Strings.Data.String (
     -- * Unboxed string
     String (.., Unboxed, Null, NonNull, Head, Last, Singleton, (:<), (:>), (:<:), (:>:)),
@@ -171,7 +172,6 @@ import Data.Ord (Ord (..), Ordering)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
-import Data.Type.Equality (type (~))
 import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
@@ -189,13 +189,13 @@ import Strings.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec
 -- Data definition --
 -- --------------- --
 
--- | An unboxed string of characters `a`.
+-- | An unboxed string of characters @a@.
 --
--- Implemented as a unboxed vector.
+-- Implemented as a contiguous vector of unboxed characters.
 data String a where
     -- | Construct a string from a unboxed vector.
     --
-    -- Note that `Unbox a` is only required for constructing the string. All other operations should be possible
+    -- Note that `Unbox` is only required for constructing the string. All other operations should be possible
     -- without that constraint.
     String :: Unbox a => !(Vector a) -> String a
     deriving newtype (Typeable)
@@ -209,9 +209,9 @@ data String a where
 {-# COMPLETE Null, (:<:) #-}
 {-# COMPLETE Null, (:>:) #-}
 
--- | Proves `Unbox a` from an already constructed string.
+-- | Proves `Unbox` from an already constructed string.
 --
--- This pattern is useful for matching in operations where `Unbox a` is required.
+-- This pattern is useful for matching in operations where @Unbox a@ is required.
 --
 -- >>> import GHC.Base (asTypeOf)
 -- >>> emptyLike s = asTypeOf empty s
@@ -376,7 +376,8 @@ instance Unbox a => IsList (String a) where
     toList = Generic.toList
     {-# INLINE toList #-}
 
-instance a ~ Char => IsString (String a) where
+-- | `String` `Char` can be written using `Prelude.String` syntax (@"abcd"@).
+instance IsString (String Char) where
     {-# SPECIALIZE instance IsString (String Char) #-}
     fromString = fromList
     {-# INLINE fromString #-}
@@ -417,6 +418,7 @@ instance Foldable String where
     product s@Unboxed = Generic.product s
     {-# INLINE product #-}
 
+-- | `Semigroup` based on concatenation (@"a" <> "b" == "ab"@).
 instance Semigroup (String a) where
     {-# SPECIALIZE instance Semigroup (String Char) #-}
     {-# SPECIALIZE instance Semigroup (String Int) #-}
@@ -426,6 +428,7 @@ instance Semigroup (String a) where
     sconcat = concatNE
     {-# INLINE sconcat #-}
 
+-- | `Monoid` based on concatenation (@mempty == ""@).
 instance Unbox a => Monoid (String a) where
     {-# SPECIALIZE instance Monoid (String Char) #-}
     {-# SPECIALIZE instance Monoid (String Int) #-}
@@ -690,9 +693,9 @@ tail :: String a -> String a
 tail s@Unboxed = Generic.tail s
 {-# INLINE tail #-}
 
--- | /O(1)/ Yield at the first `n` characters without copying.
+-- | /O(1)/ Yield at the first @n@ characters without copying.
 --
--- The string may contain less than `n` characters, in which case it is returned unchanged.
+-- The string may contain less than @n@ characters, in which case it is returned unchanged.
 --
 -- >>> take 2 "hello"
 -- he
@@ -702,9 +705,9 @@ take :: Int -> String a -> String a
 take n s@Unboxed = Generic.take n s
 {-# INLINE take #-}
 
--- | /O(1)/ Yield all but the first `n` characters without copying.
+-- | /O(1)/ Yield all but the first @n@ characters without copying.
 --
--- The string may contain less than `n` characters, in which case an empty string is returned.
+-- The string may contain less than @n@ characters, in which case an empty string is returned.
 --
 -- >>> drop 2 "hello"
 -- llo
@@ -714,7 +717,7 @@ drop :: Int -> String a -> String a
 drop n s@Unboxed = Generic.drop n s
 {-# INLINE drop #-}
 
--- | /O(1)/ Yield the first `n` characters paired with the remainder, without copying.
+-- | /O(1)/ Yield the first @n@ characters paired with the remainder, without copying.
 --
 -- Note that `splitAt n s` is equivalent to `(take n s, drop n s)`, but slightly more efficient.
 --
@@ -826,7 +829,7 @@ unfoldr :: Unbox a => (b -> Maybe (a, b)) -> b -> String a
 unfoldr = Generic.unfoldr
 {-# INLINE unfoldr #-}
 
--- | /O(n)/ Construct a vector with exactly `n` characters by repeatedly applying the generator function to a seed.
+-- | /O(n)/ Construct a vector with exactly @n@ characters by repeatedly applying the generator function to a seed.
 --
 -- The generator function yields the next character and the new seed.
 --
@@ -847,7 +850,7 @@ unfoldrM :: (Unbox a, Monad m) => (b -> m (Maybe (a, b))) -> b -> m (String a)
 unfoldrM = Generic.unfoldrM
 {-# INLINE unfoldrM #-}
 
--- | /O(n)/ Construct a string with exactly `n` characters by repeatedly applying the generator function to a seed.
+-- | /O(n)/ Construct a string with exactly @n@ characters by repeatedly applying the generator function to a seed.
 --
 -- The generator function yields the next character and the new seed.
 --
@@ -860,9 +863,9 @@ unfoldrExactNM = Generic.unfoldrExactNM
 -- ----------- --
 -- Enumeration --
 
--- | /O(n)/ Yield a string of the given length, containing the characters `x`, `x+1` etc.
+-- | /O(n)/ Yield a string of the given length, containing the characters @x@, @x+1@ etc.
 --
--- This operation is usually more efficient than `enumFromTo`.
+-- This operation is usually more efficient than `Data.Vector.Generic.enumFromTo`.
 --
 -- >>> enumFromN 5 3 :: String Int
 -- 5 6 7
@@ -870,9 +873,9 @@ enumFromN :: (Unbox a, Num a) => a -> Int -> String a
 enumFromN = Generic.enumFromN
 {-# INLINE enumFromN #-}
 
--- | /O(n)/ Yield a string of the given length, containing the characters `x`, `x+y`, `x+y+y` etc.
+-- | /O(n)/ Yield a string of the given length, containing the characters @x@, @x+y@, @x+y+y@ etc.
 --
--- This operations is usually more efficient than `enumFromThenTo`.
+-- This operations is usually more efficient than `Data.Vector.Generic.enumFromThenTo`.
 --
 -- >>> enumFromStepN 1 2 5 :: String Int
 -- 1 3 5 7 9
@@ -940,7 +943,7 @@ force s@Unboxed = Generic.force s
 -- ------------ --
 -- Bulk updates --
 
--- | /O(m+n)/ For each pair `(i,a)` from the list of index/value pairs, replace the character at position `i` by `a`.
+-- | /O(m+n)/ For each pair `(i,a)` from the list of index/value pairs, replace the character at position @i@ by @a@.
 --
 -- >>> "test" // [(2,'x'),(0,'y'),(2,'z')]
 -- yezt
@@ -948,8 +951,8 @@ force s@Unboxed = Generic.force s
 s@Unboxed // idx = s Generic.// idx
 {-# INLINE (//) #-}
 
--- | /O(m+min(n1,n2))/ For each index `i` from the index list and the corresponding value a from another string,
--- replace the character of the initial string at position `i` by `a`.
+-- | /O(m+min(n1,n2))/ For each index @i@ from the index list and the corresponding value a from another string,
+-- replace the character of the initial string at position @i@ by @a@.
 --
 -- >>> update "test" [2,0,2] "xyz"
 -- yezt
@@ -960,7 +963,7 @@ update s@Unboxed idx = Generic.update_ s (fromList idx)
 -- ------------- --
 -- Accumulations --
 
--- | /O(m+n)/ For each pair `(i,b)` from the list, replace the character at position `i` by `f a b`.
+-- | /O(m+n)/ For each pair @(i,b)@ from the list, replace the character at position @i@ by @f a b@.
 --
 -- >>> accum (+) [1000,2000,3000] [(2,4),(1,6),(0,3),(1,10)] :: String Int
 -- 1003 2016 3004
@@ -968,8 +971,8 @@ accum :: (a -> b -> a) -> String a -> [(Int, b)] -> String a
 accum f s@Unboxed = Generic.accum f s
 {-# INLINE accum #-}
 
--- | /O(m+min(n1,n2))/ For each index `i` from the index list and the corresponding value `b` from the string,
--- replace the character of the initial string at position `i` by `f a b`.
+-- | /O(m+min(n1,n2))/ For each index @i@ from the index list and the corresponding value @b@ from the string,
+-- replace the character of the initial string at position @i@ by @f a b@.
 --
 -- >>> accumulate (+) [5,9,2] [2,1,0,1] [4,6,3,7] :: String Int
 -- 8 22 6
@@ -988,7 +991,7 @@ reverse :: String a -> String a
 reverse s@Unboxed = Generic.reverse s
 {-# INLINE reverse #-}
 
--- | /O(n)/ Yield the string obtained by replacing each element `i` of the index list by `xs!i`.
+-- | /O(n)/ Yield the string obtained by replacing each element @i@ of the index list by `xs!i`.
 --
 -- This is equivalent to `map (xs!)` is, but is often much more efficient.
 --
@@ -1214,8 +1217,8 @@ partition :: (a -> Bool) -> String a -> (String a, String a)
 partition f s@Unboxed = Generic.partition f s
 {-# INLINE partition #-}
 
--- | /O(n)/ Split the string into two parts, the first one containing the `Left` characters and the second containing
--- the `Right` characters.
+-- | /O(n)/ Split the string into two parts, the first one containing the `Prelude.Left` characters and the second
+-- containing the `Prelude.Right` characters.
 --
 -- The relative order of the characters is preserved.
 partitionWith :: (Unbox b, Unbox c) => (a -> Either b c) -> String a -> (String b, String c)
@@ -1275,7 +1278,7 @@ elem :: Eq a => a -> String a -> Bool
 elem c s@Unboxed = Generic.elem c s
 {-# INLINE elem #-}
 
--- | /O(n)/ Check if the string does not contain a character (inverse of `elem`).
+-- | /O(n)/ Check if the string does not contain a character (inverse of `Strings.Data.String.elem`).
 notElem :: Eq a => a -> String a -> Bool
 notElem c s@Unboxed = Generic.notElem c s
 {-# INLINE notElem #-}

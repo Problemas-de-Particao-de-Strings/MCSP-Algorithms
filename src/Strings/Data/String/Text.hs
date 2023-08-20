@@ -1,5 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | Textual conversion for strings.
 module Strings.Data.String.Text (
     ShowString (..),
     ReadString (..),
@@ -12,7 +13,7 @@ import Data.Int (Int16, Int32, Int64, Int8)
 import Data.List.Extra (firstJust, snoc)
 import Data.Vector.Generic (Vector, foldr', uncons)
 import Data.Word (Word16, Word32, Word64, Word8)
-import Language.Haskell.TH (conT)
+import Language.Haskell.TH (conT, withDecsDoc)
 import Text.ParserCombinators.ReadP (ReadP, gather, pfail, readP_to_S, satisfy, (<++))
 import Text.ParserCombinators.ReadPrec (ReadPrec, lift, minPrec, readPrec_to_P)
 import Text.Read (Read (readPrec))
@@ -21,15 +22,15 @@ import Text.Read (Read (readPrec))
 -- Textual Output classes --
 -- ---------------------- --
 
--- | Specializable String to text conversion.
+-- | Specializable `Strings.Data.String.String` to text conversion.
 --
--- Used for showing a string of the given character `a`.
+-- Used for showing a string of the given character @a@.
 class ShowString a where
     {-# MINIMAL showStr #-}
 
-    -- | Shows characters of a `String a`.
+    -- | Shows characters of a `Strings.Data.String.String`.
     --
-    -- `Show (String a)` uses this specialized implementation.
+    -- `Show` @(String a)@ uses this specialized implementation.
     showStr :: Vector v a => v a -> ShowS
 
 -- | Shows all characters without quoting or separation.
@@ -40,15 +41,15 @@ class ShowString a where
 showMany :: Vector v a => (a -> ShowS) -> v a -> ShowS
 showMany showItem str text = foldr' showItem text str
 
--- | The default, shows all characters without separators.
+-- | The default, shows all characters without separators (@ACGT@).
 instance {-# OVERLAPPABLE #-} Show a => ShowString a where
     showStr = showMany shows
 
--- | Specialized Char version, removing quotes.
+-- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes (@abcd@).
 instance ShowString Char where
     showStr = showMany showChar
 
--- | Shows characters of a string separated by `sep`.
+-- | Shows characters of a string separated by @sep@.
 --
 -- >>> import Data.Vector (fromList)
 -- >>> showSeparated (showString ", ") shows (fromList [1, 2, 12 :: Int]) ""
@@ -62,7 +63,7 @@ showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
 
 -- | Shows characters of a string separated by spaces.
 --
--- This implementation uses the default converter for `Show a`.
+-- This implementation uses the default converter for @Show a@.
 --
 -- >>> import Data.Vector (fromList)
 -- >>> showSpaced (fromList [1, 2, 12 :: Int]) ""
@@ -70,29 +71,31 @@ showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
 showSpaced :: (Vector v a, Show a) => v a -> ShowS
 showSpaced = showSeparated (showChar ' ') shows
 
--- | Implementation of string as space-separated values for multiple integer types.
+-- Implementation of string as space-separated values for multiple integer types.
 concatForM
     [''Integer, ''Int, ''Int8, ''Int16, ''Int32, ''Int64, ''Word, ''Word8, ''Word16, ''Word32, ''Word64]
     ( \name ->
-        [d|
-            instance ShowString $(conT name) where
-                showStr = showSpaced
-            |]
+        withDecsDoc
+            "`Strings.Data.String.String` represented by a sequence of space separated integers (@1 2 3@)."
+            [d|
+                instance ShowString $(conT name) where
+                    showStr = showSpaced
+                |]
     )
 
 -- --------------------- --
 -- Textual Input classes --
 -- --------------------- --
 
--- | Specializable text to String conversion.
+-- | Specializable text to `Strings.Data.String.String` conversion.
 --
--- Used for reading a string of the given character `a`.
+-- Used for reading a string of the given character @a@.
 class ReadString a where
     {-# MINIMAL readChars #-}
 
-    -- | Read characters of a `String a`.
+    -- | Read characters of a `Strings.Data.String.String`.
     --
-    -- `Read (String a)` uses this specialized implementation.
+    -- `Read` @(String a)@ uses this specialized implementation.
     readChars :: ReadP [a]
 
 -- | Same a `readChars`, but lifted to the `ReadPrec` monad.
@@ -100,7 +103,7 @@ readCharsPrec :: ReadString a => ReadPrec [a]
 readCharsPrec = lift readChars
 {-# INLINE readCharsPrec #-}
 
--- | Unlift a `ReaP` from `ReadPrec` by giving it a default precedence.
+-- | Unlift a `ReadP` from `ReadPrec` by giving it a default precedence.
 ignorePrec :: ReadPrec a -> ReadP a
 ignorePrec r = readPrec_to_P r minPrec
 
@@ -213,7 +216,7 @@ readMany readItem = readOr [] $ do
     rest <- readMany readItem
     pure (value : rest)
 
--- | The default, reads all characters without separators.
+-- | The default, reads all characters without separators (@ACGT@).
 instance {-# OVERLAPPABLE #-} Read a => ReadString a where
     readChars = do
         skipInLine
@@ -224,7 +227,7 @@ instance {-# OVERLAPPABLE #-} Read a => ReadString a where
 readNonSpace :: ReadP Char
 readNonSpace = satisfy (not . isSpace)
 
--- | Specialized Char version, reading unquoted characters.
+-- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes (@abcd@).
 instance ReadString Char where
     readChars = do
         skipInLine
@@ -237,12 +240,14 @@ instance ReadString Char where
 readTokensInLine :: Read a => ReadP [a]
 readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)
 
--- | Implementation of string as space-separated values for multiple integer types.
+-- Implementation of string as space-separated values for multiple integer types.
 concatForM
     [''Integer, ''Int, ''Int8, ''Int16, ''Int32, ''Int64, ''Word, ''Word8, ''Word16, ''Word32, ''Word64]
     ( \name ->
-        [d|
-            instance ReadString $(conT name) where
-                readChars = readTokensInLine
-            |]
+        withDecsDoc
+            "`Strings.Data.String.String` represented by a sequence of space separated integers (@1 2 3@)."
+            [d|
+                instance ReadString $(conT name) where
+                    readChars = readTokensInLine
+                |]
     )

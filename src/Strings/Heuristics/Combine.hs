@@ -1,4 +1,8 @@
-module Strings.Heuristics.Combine (combineHeuristic, combineHeuristicS) where
+-- | Combine Heuristics for solving the MCSP problem.
+module Strings.Heuristics.Combine (
+    combineHeuristic,
+    combineHeuristicS,
+) where
 
 import Prelude hiding (String, (++))
 
@@ -16,7 +20,7 @@ type PartitionPair a = ([String a], [String a])
 converge :: Eq a => (a -> a) -> a -> a
 converge = until =<< ((==) =<<)
 
--- | Algorithm used in `combineAll` to decide whether to combine to matching blocks.
+-- | Algorithm used in @combineAll@ to decide whether to combine to matching blocks.
 class CombineDecision h a where
     -- | Given two matching blocks, decide if they should be combined.
     shouldCombine :: h -> String a -> String a -> Bool

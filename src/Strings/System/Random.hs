@@ -1,3 +1,4 @@
+-- | Randomized operations using a `Random` monad for "PCG" operations.
 module Strings.System.Random (
     Random,
     Seed,
@@ -30,7 +31,7 @@ import System.Random.Shuffle qualified as Shuffle (shuffle)
 
 import Strings.System.Random.Static (mkWord64)
 
--- | A monad capable of producing random values of `a`.
+-- | A monad capable of producing random values of @a@.
 type Random a = forall g m. Generator g m => RandT g m a
 
 -- | Values used to seed a random number generator.
@@ -91,8 +92,8 @@ uniformR lo hi = liftRandom $ PCG.uniformR (lo, hi)
 
 -- | /O(1)/ Generate a uniformly distributed random variate in the range [0,b).
 --
--- * For integral types the bound must be less than the max bound of 'Word32' (4294967295). Behaviour is undefined for
---   negative bounds.
+-- * For integral types the bound must be less than the max bound of `Data.Word.Word32` (4294967295). Behaviour is
+-- undefined for negative bounds.
 --
 -- >>> generateWith (1,2) $ uniformB 200 :: Int
 -- 143
@@ -102,7 +103,7 @@ uniformB b = liftRandom $ PCG.uniformB b
 
 -- | /O(1)/ Generate a uniformly distributed random variate.
 --
--- It should be equivalent to `uniformR (minBound, maxBound)`, but for non-`Variate`.
+-- It should be equivalent to @`uniformR` (`minBound`, `maxBound`)@, but for non-`PCG.Variate`.
 --
 -- >>> data T = A | B | C | D deriving (Enum, Bounded, Show)
 -- >>> generateWith (1,3) uniformE :: T
@@ -113,7 +114,7 @@ uniformE = uniformRE minBound maxBound
 
 -- | /O(1)/ Generate a uniformly distributed random variate in the given inclusive range.
 --
--- It should be equivalent to `uniformR`, but for non-`Variate`.
+-- It should be equivalent to `uniformR`, but for non-`PCG.Variate`.
 --
 -- >>> generateWithSeed 1 2 $ uniformRE 0 10 :: Int
 -- 2

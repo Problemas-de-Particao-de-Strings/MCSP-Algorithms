@@ -1,4 +1,6 @@
+-- | Simplified `derivingUnbox`.
 module Strings.Data.String.Deriving (
+    EnumLike,
     derivingUnboxVia,
 ) where
 
@@ -30,7 +32,7 @@ getName :: Type -> Q String
 getName (ConT name) = pure $ nameBase name
 getName typ = fail $ "invalid type " ++ show typ
 
---- | Defines the signature and name for a cast function from `src` to `dst`
+--- | Defines the signature and name for a cast function from @src@ to @dst@.
 mkCastFn :: Type -> Type -> Q (Dec, Name)
 mkCastFn src dst = do
     srcName <- getName src
@@ -39,19 +41,19 @@ mkCastFn src dst = do
     fnSig <- sigD fnName [t|$(pure src) -> $(pure dst)|]
     pure (fnSig, fnName)
 
--- | Creates a prefix name for deriving `Unbox`.
+-- | Creates a prefix name for deriving `Data.Vector.Unboxed.Unbox`.
 mkPrefix :: Type -> Type -> Q String
 mkPrefix typ rep = do
     typName <- getName typ
     repName <- getName rep
     pure $ typName ++ "Via" ++ repName
 
--- | `T` and `U` from `T -> U`.
+-- | @T@ and @U@ from @T -> U@.
 splitTypRep :: Type -> Q (Type, Type)
 splitTypRep (ArrowT `AppT` typ `AppT` rep) = pure (typ, rep)
 splitTypRep typ = fail $ "invalid deriving rule " ++ show typ
 
--- | Given `T -> U`, derives `Unbox T` by casting it to `U`.
+-- | Given @T -> U@, derives `Data.Vector.Unboxed.Unbox` @T@ by casting it to @U@.
 --
 -- >>> data DNA = A | C | G | T
 -- >>> derivingUnboxVia [t|DNA -> Word8]
@@ -68,12 +70,12 @@ derivingUnboxVia rule = do
 -- | Types convertible to a bounded integer.
 type EnumLike a = (Enum a, Bounded a, Typeable a)
 
--- | Cast `a` to `b` via their integer representations.
+-- | Cast @a@ to @b@ via their integer representations.
 cast :: (EnumLike a, EnumLike b) => a -> b
 cast = toEnum . fromEnum
 {-# INLINE cast #-}
 
--- | Cast `b` to `a`, clamping to valid values of `a`.
+-- | Cast @b@ to @a@, clamping to valid values of @a@.
 clamp :: forall a b. (EnumLike a, EnumLike b) => b -> a
 clamp = toEnum . max minA . min maxA . fromEnum
   where
@@ -81,10 +83,10 @@ clamp = toEnum . max minA . min maxA . fromEnum
     maxA = fromEnum (maxBound :: a)
 {-# INLINE clamp #-}
 
--- | Holds information about an `EnumLike a`.
+-- | Holds information about an `EnumLike` @a@.
 data Info a = Info {minVal :: !Int, maxVal :: !Int, name :: !String}
 
--- | Extracts information about an `EnumLike a`.
+-- | Extracts information about an `EnumLike` @a@.
 info :: forall a. EnumLike a => Info a
 info =
     Info
@@ -93,7 +95,7 @@ info =
         , name = show $ typeRep (Proxy :: Proxy a)
         }
 
--- | Checks if `a` is safely convertible to `b` via `Enum` and `Bounded`, then returns the casts.
+-- | Checks if @a@ is safely convertible to @b@ via `Enum` and `Bounded`, then returns the casts.
 safeCasts :: forall a b. (EnumLike a, EnumLike b) => (a -> b, b -> a)
 safeCasts
     | minVal rep <= minVal typ && maxVal typ <= maxVal rep = (cast, clamp)
