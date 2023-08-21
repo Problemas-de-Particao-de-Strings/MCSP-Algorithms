@@ -1,0 +1,303 @@
+name: Haskell Workflow
+
+on:
+  # Runs on pushes targeting the default branch
+  pull_request:
+  push:
+    branches: [main]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up HLint
+        uses: haskell/actions/hlint-setup@v2
+        with:
+          version: 3.6.1
+
+      - name: Run HLint
+        uses: haskell/actions/hlint-run@v2
+        with:
+          path: .
+          fail-on: warning
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    outputs:
+      cache-setup: ${{ steps.cache-keys-1.outputs.cache-setup }}
+      cache-config: ${{ steps.cache-keys-1.outputs.cache-config }}
+      cache-store: ${{ steps.cache-keys-2.outputs.cache-store }}
+      cache-dist: ${{ steps.cache-keys-2.outputs.cache-dist }}
+      html-dir: ${{ steps.docs-dir.outputs.html-dir }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Haskell
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-setup-ghc: false
+          stack-version: latest
+          cabal-version: latest
+          ghc-version: latest
+
+      - name: Generate Cache Keys before Cabal File
+        id: cache-keys-1
+        shell: sh
+        run: |
+          CACHE_SETUP=${{ runner.os }}-cabal-packages-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+          CACHE_CONFIG=${{ runner.os }}-cabal-config-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+          echo "cache-setup=$CACHE_SETUP" >> $GITHUB_OUTPUT
+          echo "cache-config=$CACHE_CONFIG" >> $GITHUB_OUTPUT
+
+      - name: Cache Cabal-Packages
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-keys-1.outputs.cache-setup }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-packages-${{ hashFiles('stack.yaml') }}-
+            ${{ runner.os }}-cabal-packages-
+            ${{ runner.os }}-cabal-store-
+            ${{ runner.os }}-cabal-
+            ${{ runner.os }}-
+          path: |
+            ~/.cabal/packages
+
+      - name: Cache Configuration
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-keys-1.outputs.cache-config }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-config-${{ hashFiles('stack.yaml') }}-
+            ${{ runner.os }}-cabal-config-
+            ${{ runner.os }}-cabal-
+            ${{ runner.os }}-
+          path: |
+            ~/.stack
+            ~/.cabal/*
+            !~/.cabal/logs
+            !~/.cabal/packages
+            !~/.cabal/store
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Generate Cabal File
+        shell: sh
+        run: |
+          stack build --dry-run
+
+      - name: Generate Remaining Cache Keys
+        id: cache-keys-2
+        shell: sh
+        run: |
+          CACHE_STORE=${{ runner.os }}-cabal-store-${{ hashFiles('stack.yaml') }}-${{ hashFiles('*.cabal') }}
+          CACHE_DIST=${{ runner.os }}-cabal-dist-${{ hashFiles('*.cabal') }}-${{ hashFiles('**/*.hs') }}
+          echo "cache-store=$CACHE_STORE" >> $GITHUB_OUTPUT
+          echo "cache-dist=$CACHE_DIST" >> $GITHUB_OUTPUT
+
+      - name: Cache Cabal-Store
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-keys-2.outputs.cache-store }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-store-${{ hashFiles('stack.yaml') }}-
+            ${{ runner.os }}-cabal-store-
+            ${{ runner.os }}-cabal-
+            ${{ runner.os }}-
+          path: |
+            ~/.stack
+            ~/.cabal/*
+            !~/.cabal/packages
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Cache Cabal-Dist
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-keys-2.outputs.cache-dist }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-dist-${{ hashFiles('*.cabal') }}-
+            ${{ runner.os }}-cabal-dist-
+            ${{ runner.os }}-cabal-
+            ${{ runner.os }}-
+          path: |
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Update Package List
+        shell: sh
+        run: |
+          cabal new-update \
+            --enable-tests --enable-benchmarks --enable-documentation
+
+      - name: Install Dependencies
+        shell: sh
+        run: |
+          cabal configure \
+            --enable-tests --enable-benchmarks --enable-documentation
+          cabal build all --only-dependencies \
+            --enable-tests --enable-benchmarks --enable-documentation
+
+      - name: Build Haskell Sources
+        shell: sh
+        run: |
+          cabal build all \
+            --enable-tests --enable-benchmarks --enable-documentation
+
+      - name: Build Haskell Documentation Files
+        shell: sh
+        run: |
+          cabal haddock --haddock-internal \
+            --enable-documentation \
+            --haddock-html-location='https://hackage.haskell.org/package/$pkg-$version/docs' \
+            --haddock-hyperlink-source \
+            --haddock-quickjump
+
+      - name: Find Documentation Index
+        id: docs
+        shell: bash
+        run: |
+          INDEX_HTML=$(ls -l -1 --full-time dist-newstyle/build/*/ghc-*/*-*/doc/html/*/index.html |\
+            awk '{print$6,$7,$9}' | sort -r | head -n 1 | awk '{print$3}')
+          OUTPUT_DIR=$(dirname "$INDEX_HTML")
+          echo "Documentation should be at $OUTPUT_DIR"
+          echo "html-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Restore Cabal-Packages Cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.build.outputs.cache-setup }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.cabal/packages
+
+      - name: Restore Configuration Cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.build.outputs.cache-config }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.stack
+            ~/.cabal/*
+            !~/.cabal/logs
+            !~/.cabal/packages
+            !~/.cabal/store
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Restore Cabal-Store Cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.build.outputs.cache-store }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.stack
+            ~/.cabal/*
+            !~/.cabal/packages
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Restore Cabal-Dist Cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.build.outputs.cache-dist }}
+          fail-on-cache-miss: true
+          path: |
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Install Haskell
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-setup-ghc: false
+          stack-version: latest
+          cabal-version: latest
+          ghc-version: latest
+
+      - name: Generate Cabal File
+        shell: sh
+        run: |
+          stack build --dry-run
+          cabal configure \
+            --enable-tests --enable-benchmarks --enable-documentation
+
+      - name: Run Tests
+        run: |
+          cabal test --test-show-details=streaming --test-option=--color \
+            --enable-tests --enable-benchmarks --enable-documentation
+
+  docs:
+    name: Update Documentation
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Restore Cabal-Dist Cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.build.outputs.cache-dist }}
+          fail-on-cache-miss: true
+          path: |
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - uses: actions/configure-pages@v3
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: ${{ needs.build.outputs.html-dir }}
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
