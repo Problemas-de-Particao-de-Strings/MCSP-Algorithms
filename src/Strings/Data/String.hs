@@ -170,6 +170,7 @@ import Data.Ord (Ord (..), Ordering)
 import Data.Semigroup (Semigroup (..), Sum (..))
 import Data.Store (Size (..), Store (..))
 import Data.String (IsString (..))
+import Data.Type.Equality (type (~))
 import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
@@ -375,7 +376,7 @@ instance Unbox a => IsList (String a) where
     {-# INLINE toList #-}
 
 -- | `String` `Char` can be written using `Prelude.String` syntax (@"abcd"@).
-instance IsString (String Char) where
+instance a ~ Char => IsString (String a) where
     {-# SPECIALIZE instance IsString (String Char) #-}
     fromString = fromList
     {-# INLINE fromString #-}
