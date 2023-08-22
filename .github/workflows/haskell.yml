@@ -49,7 +49,7 @@ jobs:
       cache-config: ${{ steps.cache-keys-1.outputs.cache-config }}
       cache-store: ${{ steps.cache-keys-2.outputs.cache-store }}
       cache-dist: ${{ steps.cache-keys-2.outputs.cache-dist }}
-      html-dir: ${{ steps.docs-dir.outputs.html-dir }}
+      html-dir: ${{ steps.docs.outputs.html-dir }}
 
     steps:
       - uses: actions/checkout@v3
@@ -273,7 +273,7 @@ jobs:
     name: Update Documentation
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
 
     environment:
       name: github-pages
