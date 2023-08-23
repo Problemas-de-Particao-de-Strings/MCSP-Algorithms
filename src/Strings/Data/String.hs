@@ -11,8 +11,8 @@ module Strings.Data.String (
     -- * Accessors
 
     -- ** Length information
-    Strings.Data.String.length,
-    Strings.Data.String.null,
+    length,
+    null,
 
     -- ** Indexing
     (!),
@@ -135,7 +135,7 @@ module Strings.Data.String (
     group,
 
     -- ** Searching
-    Strings.Data.String.elem,
+    elem,
     notElem,
     find,
     findIndex,
@@ -160,7 +160,7 @@ import Data.Char (Char)
 import Data.Data (Typeable)
 import Data.Either (Either)
 import Data.Eq (Eq (..))
-import Data.Foldable (Foldable (..))
+import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Function (id, (.))
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -228,7 +228,7 @@ pattern Unboxed <- (id -> String _)
 -- >>> [s | s@Null <- ["", "a", "ab", "", "abc"]]
 -- [,]
 pattern Null :: () => Unbox a => String a
-pattern Null <- (Strings.Data.String.null &&& id -> (True, Unboxed))
+pattern Null <- (null &&& id -> (True, Unboxed))
 {-# INLINE Null #-}
 
 -- | /O(1)/ Matches any non-`empty` string.
@@ -236,7 +236,7 @@ pattern Null <- (Strings.Data.String.null &&& id -> (True, Unboxed))
 -- >>> [s | NonNull s <- ["", "a", "ab", "", "abc"]]
 -- [a,ab,abc]
 pattern NonNull :: () => Unbox a => String a -> String a
-pattern NonNull s <- (Strings.Data.String.null &&& id -> (False, s@Unboxed))
+pattern NonNull s <- (null &&& id -> (False, s@Unboxed))
     where
         NonNull = id
 {-# INLINE NonNull #-}
@@ -381,7 +381,7 @@ instance a ~ Char => IsString (String a) where
     fromString = fromList
     {-# INLINE fromString #-}
 
-instance Foldable String where
+instance Foldable.Foldable String where
     fold s@Unboxed = Generic.foldMap id s
     {-# INLINE fold #-}
     foldMap f s@Unboxed = Generic.foldMap f s
@@ -402,9 +402,9 @@ instance Foldable String where
     {-# INLINE foldl1 #-}
     toList s@Unboxed = Generic.toList s
     {-# INLINE toList #-}
-    null s@Unboxed = Generic.null s
+    null = null
     {-# INLINE null #-}
-    length s@Unboxed = Generic.length s
+    length = length
     {-# INLINE length #-}
     elem x s@Unboxed = Generic.elem x s
     {-# INLINE elem #-}
@@ -467,7 +467,7 @@ instance (Store a, Unbox a) => Store (String a) where
     {-# SPECIALIZE instance Store (String Word8) #-}
     size = VarSize calcSize
       where
-        calcSize s = sizeOf size (Strings.Data.String.length s) + sizeSum s
+        calcSize s = sizeOf size (length s) + sizeSum s
         sizeOf (ConstSize n) _ = n
         sizeOf (VarSize f) x = f x
         sizeSum s@Unboxed = getSum (Generic.foldMap (Sum . sizeOf size) s)
@@ -1277,7 +1277,7 @@ elem :: Eq a => a -> String a -> Bool
 elem c s@Unboxed = Generic.elem c s
 {-# INLINE elem #-}
 
--- | /O(n)/ Check if the string does not contain a character (inverse of `Strings.Data.String.elem`).
+-- | /O(n)/ Check if the string does not contain a character (inverse of `elem`).
 notElem :: Eq a => a -> String a -> Bool
 notElem c s@Unboxed = Generic.notElem c s
 {-# INLINE notElem #-}
