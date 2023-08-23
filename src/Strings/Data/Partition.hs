@@ -14,22 +14,24 @@ import Data.Bifunctor (Bifunctor (bimap))
 import Data.Int (Int)
 import GHC.Enum (Bounded, Enum)
 
-import Strings.Data.String (String (Null, (:<:)), Unbox, concat, replicateM)
+import Strings.Data.String (String (Null, (:>:)), Unbox, concat, replicateM)
 import Strings.System.Random (Random, partitions, shuffle, uniformE)
 
--- | A collection of substring of the same string.
+-- | A collection of substrings of the same string.
 type Partition a = [String a]
 
 -- | Common constraints for a character.
 type SimpleEnum a = (Enum a, Bounded a, Unbox a)
 
--- | /O(n)/ Split the `String` in substrings of 1 char each.
+-- | /O(n)/ Split the string in substrings of 1 char each.
 --
 -- >>> chars "abcd"
 -- [a,b,c,d]
 chars :: String a -> Partition a
-chars (ch :<: rest) = ch : chars rest
-chars Null = []
+chars = go []
+  where
+    go p (rest :>: ch) = go (ch : p) rest
+    go p Null = p
 
 -- | Generates a pair of related strings by shuffling all the characters.
 --
