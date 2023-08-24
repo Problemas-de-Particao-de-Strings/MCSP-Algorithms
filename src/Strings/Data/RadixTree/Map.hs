@@ -19,12 +19,13 @@ module Strings.Data.RadixTree.Map (
     insert,
 ) where
 
-import Data.Bool (Bool (True))
+import Data.Bool (Bool (True), (&&))
 import Data.Eq (Eq)
-import Data.Foldable (foldr')
-import Data.Function (($), (.))
+import Data.Foldable (Foldable (..))
+import Data.Function (flip, ($), (.))
 import Data.List (map)
-import Data.Maybe (Maybe (Just, Nothing), isJust)
+import Data.Maybe (Maybe (Just, Nothing), isJust, isNothing)
+import Data.Monoid ((<>))
 import Data.Ord (Ord, (>))
 import Data.Tuple (snd, uncurry)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
@@ -69,6 +70,10 @@ type EdgeSet a v = Map.Map a (Edge a v)
 -- A simple pair @(label `:~>` subtree)@ representing an edge of a `RadixTreeMap`.
 data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v)
     deriving stock (Eq, Ord)
+
+-- | /O(1)/ Extracts the subtree of an edge.
+subtree :: Edge a v -> RadixTreeMap a v
+subtree (_ :~> t) = t
 
 -- -------------- --
 -- Map operations --
@@ -143,3 +148,36 @@ instance (ShowString a, Show v) => Show (RadixTreeMap a v) where
 
 instance (ShowString a, Show v) => Show (Edge a v) where
     showsPrec _ (s :~> t) = shows s . showString " :~> " . shows t
+
+-- -------------------- --
+-- Collection instances --
+-- -------------------- --
+
+instance Foldable (RadixTreeMap s) where
+    fold (Tree val es) = fold val <> foldMap fold es
+    foldMap f (Tree val es) = foldMap f val <> foldMap (foldMap f) es
+    foldMap' f (Tree val es) = foldMap' f val <> foldMap' (foldMap' f) es
+    foldr f x (Tree val es) = foldr (flip $ foldr f) (foldr f x val) es
+    foldr' f x (Tree val es) = foldr' (flip $ foldr' f) (foldr' f x val) es
+    foldl f x (Tree val es) = foldl (foldl f) (foldl f x val) es
+    foldl' f x (Tree val es) = foldl' (foldl' f) (foldl' f x val) es
+    null (Tree val es) = isNothing val && Map.null es
+
+-- | Delegate `Foldable` to its `subtree`.
+instance Foldable (Edge s) where
+    fold = fold . subtree
+    foldMap f = foldMap f . subtree
+    foldMap' f = foldMap' f . subtree
+    foldr f x = foldr f x . subtree
+    foldr' f x = foldr' f x . subtree
+    foldl f x = foldl f x . subtree
+    foldl' f x = foldl' f x . subtree
+    foldr1 f = foldr1 f . subtree
+    foldl1 f = foldl1 f . subtree
+    toList = toList . subtree
+    null = null . subtree
+    length = length . subtree
+    elem x = elem x . subtree
+    maximum = maximum . subtree
+    minimum = minimum . subtree
+    sum = sum . subtree
