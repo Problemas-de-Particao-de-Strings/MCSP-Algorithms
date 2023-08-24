@@ -221,7 +221,7 @@ data String a where
 -- emptyLike' :: String a -> String a
 pattern Unboxed :: () => Unbox a => String a
 pattern Unboxed <- (id -> String _)
-{-# INLINE Unboxed #-}
+{-# INLINE CONLIKE Unboxed #-}
 
 -- | /O(1)/ Matches the `empty` string.
 --
@@ -229,7 +229,7 @@ pattern Unboxed <- (id -> String _)
 -- [,]
 pattern Null :: () => Unbox a => String a
 pattern Null <- (null &&& id -> (True, Unboxed))
-{-# INLINE Null #-}
+{-# INLINE CONLIKE Null #-}
 
 -- | /O(1)/ Matches any non-`empty` string.
 --
@@ -239,7 +239,7 @@ pattern NonNull :: () => Unbox a => String a -> String a
 pattern NonNull s <- (null &&& id -> (False, s@Unboxed))
     where
         NonNull = id
-{-# INLINE NonNull #-}
+{-# INLINE CONLIKE NonNull #-}
 
 -- | /O(1)/ Matches the first character in a string.
 --
@@ -247,7 +247,7 @@ pattern NonNull s <- (null &&& id -> (False, s@Unboxed))
 -- "aaa"
 pattern Head :: () => Unbox a => a -> String a
 pattern Head c <- (headM &&& id -> (Just c, Unboxed))
-{-# INLINE Head #-}
+{-# INLINE CONLIKE Head #-}
 
 -- | /O(1)/ Matches the last character in a string.
 --
@@ -255,7 +255,7 @@ pattern Head c <- (headM &&& id -> (Just c, Unboxed))
 -- "abc"
 pattern Last :: () => Unbox a => a -> String a
 pattern Last c <- (lastM &&& id -> (Just c, Unboxed))
-{-# INLINE Last #-}
+{-# INLINE CONLIKE Last #-}
 
 -- | /O(1)/ Matches a string composed of a single character.
 --
@@ -263,7 +263,7 @@ pattern Last c <- (lastM &&& id -> (Just c, Unboxed))
 -- "a"
 pattern Singleton :: () => Unbox a => a -> String a
 pattern Singleton c <- (single &&& id -> (Just c, Unboxed))
-{-# INLINE Singleton #-}
+{-# INLINE CONLIKE Singleton #-}
 
 -- | /O(1)/ Matches `head` and `tail` of a string, if present.
 --
@@ -273,7 +273,7 @@ pattern (:<) :: () => Unbox a => a -> String a -> String a
 pattern x :< xs <- (uncons -> Just (x, xs@Unboxed))
     where
         x :< xs = cons x xs
-{-# INLINE (:<) #-}
+{-# INLINE CONLIKE (:<) #-}
 
 -- | /O(1)/ Matches `init` and `last` of a string, if present.
 --
@@ -283,7 +283,7 @@ pattern (:>) :: () => Unbox a => String a -> a -> String a
 pattern xs :> x <- (unsnoc -> Just (xs@Unboxed, x))
     where
         xs :> x = snoc xs x
-{-# INLINE (:>) #-}
+{-# INLINE CONLIKE (:>) #-}
 
 -- | /O(1)/ Stringified `:<`, matching `head` and `tail`.
 --
@@ -291,7 +291,7 @@ pattern xs :> x <- (unsnoc -> Just (xs@Unboxed, x))
 -- [(a,),(a,b),(a,bc)]
 pattern (:<:) :: () => Unbox a => String a -> String a -> String a
 pattern x :<: xs <- (splitAtHead -> Just (x@Unboxed, xs))
-{-# INLINE (:<:) #-}
+{-# INLINE CONLIKE (:<:) #-}
 
 -- | /O(1)/ Stringified `:>`, matching `init` and `last`.
 --
@@ -299,7 +299,7 @@ pattern x :<: xs <- (splitAtHead -> Just (x@Unboxed, xs))
 -- [(,a),(a,b),(ab,c)]
 pattern (:>:) :: () => Unbox a => String a -> String a -> String a
 pattern xs :>: x <- (splitAtLast -> Just (xs, x@Unboxed))
-{-# INLINE (:>:) #-}
+{-# INLINE CONLIKE (:>:) #-}
 
 -- -------------------------- --
 -- Pattern matching functions --
