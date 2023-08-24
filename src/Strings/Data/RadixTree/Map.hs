@@ -9,25 +9,30 @@ module Strings.Data.RadixTree.Map (
 
     -- * Construction
     empty,
+    construct,
 
     -- * Query
     lookup,
     member,
+
+    -- * Modification
+    insert,
 ) where
 
 import Data.Bool (Bool (True))
 import Data.Eq (Eq)
+import Data.Foldable (foldr')
 import Data.Function (($), (.))
 import Data.List (map)
 import Data.Maybe (Maybe (Just, Nothing), isJust)
 import Data.Ord (Ord, (>))
-import Data.Tuple (snd)
+import Data.Tuple (snd, uncurry)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
 
 import Strings.Data.String (ShowString, String (..))
-import Strings.Data.String.Prefix (stripPrefix)
+import Strings.Data.String.Prefix (splitCommonPrefix, stripPrefix)
 
 -- --------------- --
 -- Data definition --
@@ -73,6 +78,14 @@ data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v
 empty :: RadixTreeMap a v
 empty = Tree Nothing Map.empty
 
+-- | /O(1)/ A map having the given value associated with the empty string (@""@).
+singleton :: v -> RadixTreeMap a v
+singleton x = Tree (Just x) Map.empty
+
+-- | /O(?)/ Build a map from a list of key/value pairs.
+construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
+construct = foldr' (uncurry insert) empty
+
 -- | /O(log r)/ Find the edge where the given key may be found.
 --
 -- Returns `Just` the edge with the first character matching the string key, or `Nothing` if no such label exists.
@@ -91,6 +104,29 @@ lookup !k t = do
 -- | /O(n log r)/ Check if there is an associated value for the key.
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)
+
+-- | /O(log r)/ Insert or replace the edge starting with the same character.
+--
+-- If the key is the empty string, replace the value inside the tree (as if replacing the entire subtree).
+replace :: Ord a => Edge a v -> RadixTreeMap a v -> RadixTreeMap a v
+replace e@(Head !h :~> _) (Tree val es) = Tree val $ Map.insert h e es
+replace (Null :~> Tree newVal _) (Tree _ es) = Tree newVal es
+
+-- | /O(1)/ Constructs a root node with the given edge as its single child.
+node :: Edge a v -> RadixTreeMap a v
+node (kx@(Head h) :~> t) = Tree Nothing (Map.singleton h (kx :~> t))
+node (Null :~> t) = t
+
+-- | /O(?)/ Insert a new key and value in the map.
+--
+--  If the key is already present in the map, the associated value is replaced with the supplied value.
+insert :: Ord a => String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
+insert !kx !x t = case edge kx t of
+    Just (oldK :~> subt) ->
+        let (prefix, rok, rkx) = splitCommonPrefix oldK kx
+            subt' = node (rok :~> subt)
+         in replace (prefix :~> insert rkx x subt') t
+    Nothing -> replace (kx :~> singleton x) t
 
 -- ---------------- --
 -- Text conversions --
