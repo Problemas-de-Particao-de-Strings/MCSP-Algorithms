@@ -4,6 +4,9 @@ module Strings.Data.String.Extra (
     frequency,
     singletons,
     hasOneOf,
+
+    -- ** Prefix analysis
+    module Strings.Data.String.Prefix,
 ) where
 
 import Data.Bool (Bool)
@@ -18,6 +21,7 @@ import Data.Set (Set, insert, member)
 import GHC.Num ((+))
 
 import Strings.Data.String (String)
+import Strings.Data.String.Prefix
 
 -- ---------------------- --
 -- Character set analysis --
