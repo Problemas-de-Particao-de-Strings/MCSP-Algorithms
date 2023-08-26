@@ -20,19 +20,21 @@ module Strings.Data.RadixTree.Map (
 ) where
 
 import Control.Monad (fmap, (<$!>))
-import Data.Bool (Bool (True), (&&))
+import Data.Bool (Bool (False, True))
 import Data.Eq (Eq)
-import Data.Foldable (Foldable (..))
-import Data.Foldable1 qualified as Foldable1 (Foldable1 (..))
+import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
+import Data.Foldable qualified as Foldable (Foldable (..))
+import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
 import Data.Function (flip, ($), (.))
 import Data.List (map)
 import Data.List.NonEmpty (nonEmpty)
-import Data.Maybe (Maybe (Just, Nothing), isJust, isNothing)
-import Data.Monoid ((<>))
+import Data.Maybe (Maybe (Just, Nothing), isJust)
+import Data.Monoid (mempty, (<>))
 import Data.Ord (Ord, (>))
 import Data.String qualified as Text (String)
 import Data.Tuple (snd, uncurry)
-import GHC.Err (errorWithoutStackTrace)
+import GHC.Base (($!))
+import GHC.Err (error, errorWithoutStackTrace, undefined)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
@@ -94,10 +96,6 @@ pattern NullSet <- (Map.null -> True)
 -- Note that the subtre pointed by an edge must never be empty!
 data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v)
     deriving stock (Eq, Ord)
-
--- | /O(1)/ Extracts the subtree of an edge.
-subtree :: Edge a v -> RadixTreeMap a v
-subtree (_ :~> t) = t
 
 -- -------------- --
 -- Map operations --
@@ -173,35 +171,6 @@ instance (ShowString a, Show v) => Show (Edge a v) where
 -- Collection instances --
 -- -------------------- --
 
-instance Foldable (RadixTreeMap s) where
-    fold (Tree val es) = fold val <> foldMap fold es
-    foldMap f (Tree val es) = foldMap f val <> foldMap (foldMap f) es
-    foldMap' f (Tree val es) = foldMap' f val <> foldMap' (foldMap' f) es
-    foldr f x (Tree val es) = foldr (flip $ foldr f) (foldr f x val) es
-    foldr' f x (Tree val es) = foldr' (flip $ foldr' f) (foldr' f x val) es
-    foldl f x (Tree val es) = foldl (foldl f) (foldl f x val) es
-    foldl' f x (Tree val es) = foldl' (foldl' f) (foldl' f x val) es
-    null (Tree val es) = isNothing val && Map.null es
-
--- | Delegate `Foldable` to its `subtree`.
-instance Foldable (Edge s) where
-    fold = fold . subtree
-    foldMap f = foldMap f . subtree
-    foldMap' f = foldMap' f . subtree
-    foldr f x = foldr f x . subtree
-    foldr' f x = foldr' f x . subtree
-    foldl f x = foldl f x . subtree
-    foldl' f x = foldl' f x . subtree
-    foldr1 f = foldr1 f . subtree
-    foldl1 f = foldl1 f . subtree
-    toList = toList . subtree
-    null = null . subtree
-    length = length . subtree
-    elem x = elem x . subtree
-    maximum = maximum . subtree
-    minimum = minimum . subtree
-    sum = sum . subtree
-
 -- | Extracts the element out of a `Just` and throws an error if its argument is `Nothing`.
 --
 -- This is an adaptation of `Data.Maybe.fromJust` without capturing the call stack for traces. It should only be used
@@ -219,7 +188,61 @@ unwrap' !message Nothing = errorWithoutStackTrace message
 fmap' :: (a -> b) -> Maybe a -> Maybe b
 fmap' = (<$!>)
 
-instance Foldable1.Foldable1 (Edge s) where
+-- | Delegate `Foldable` to its `Edge`s.
+instance Foldable.Foldable (RadixTreeMap s) where
+    fold Empty = mempty
+    fold t = fold1 (undefined :~> t)
+    foldMap _ Empty = mempty
+    foldMap f t = foldMap1 f (undefined :~> t)
+    foldMap' _ Empty = mempty
+    foldMap' f t = foldMap1' f (undefined :~> t)
+    foldr _ x Empty = x
+    foldr f x t = foldr f x (undefined :~> t)
+    foldr' _ x Empty = x
+    foldr' f x t = foldr' f x (undefined :~> t)
+    foldl _ x Empty = x
+    foldl f x t = foldl f x (undefined :~> t)
+    foldl' _ x Empty = x
+    foldl' f x t = foldl' f x (undefined :~> t)
+    foldr1 _ Empty = error "foldr1.RadixTreeMap: empty tree"
+    foldr1 f t = foldr1 f (undefined :~> t)
+    foldl1 _ Empty = error "foldl1.RadixTreeMap: empty tree"
+    foldl1 f t = foldl1 f (undefined :~> t)
+    toList Empty = []
+    toList t = toList (undefined :~> t)
+    null Empty = True
+    null _ = False
+    length Empty = 0
+    length t = Foldable.length (undefined :~> t)
+    elem _ Empty = False
+    elem x t = Foldable.elem x (undefined :~> t)
+    maximum Empty = error "maximum.RadixTreeMap: empty tree"
+    maximum t = maximum (undefined :~> t)
+    minimum Empty = error "minimum.RadixTreeMap: empty tree"
+    minimum t = minimum (undefined :~> t)
+    sum Empty = 0
+    sum t = Foldable.sum (undefined :~> t)
+    product Empty = 1
+    product t = Foldable.product (undefined :~> t)
+
+-- | Implementation based on @`Foldable1` (`Edge` s)@
+instance Foldable.Foldable (Edge s) where
+    fold = fold1
+    foldMap = foldMap1
+    foldMap' = foldMap1'
+    foldr f x (_ :~> Tree val es) = Map.foldr (flip $ foldr f) (foldr f x val) es
+    foldr' f x (_ :~> Tree !val !es) = Map.foldr' (flip $! foldr' f) (foldr' f x val) es
+    foldl f x (_ :~> Tree val es) = foldl f (Map.foldl (foldl f) x es) val
+    foldl' f x (_ :~> Tree !val !es) = foldl' f (Map.foldl' (foldl' f) x es) val
+    foldr1 = foldr1
+    foldl1 = foldl1
+    toList (_ :~> Tree (Just x) es) = x : foldMap toList es
+    toList (_ :~> Tree Nothing es) = foldMap toList es
+    null _ = False
+    maximum = maximum
+    minimum = minimum
+
+instance Foldable1 (Edge s) where
     fold1 = unwrap "Edge.fold1: unexpected empty subtree" . go
       where
         go (_ :~> Tree val es) = val <> foldMap go es
@@ -229,11 +252,8 @@ instance Foldable1.Foldable1 (Edge s) where
     foldMap1' f = unwrap' "Edge.foldMap1': unexpected empty subtree" . go f
       where
         go fs (_ :~> Tree !val !es) = fmap' fs val <> foldMap' (go fs) es
-    toNonEmpty = unwrap "Edge.toNonEmpty: unexpected empty subtree" . nonEmpty . go
-      where
-        go (_ :~> Tree (Just x) es) = x : foldMap go es
-        go (_ :~> Tree Nothing es) = foldMap go es
+    toNonEmpty = unwrap "Edge.toNonEmpty: unexpected empty subtree" . nonEmpty . toList
     head (_ :~> Tree (Just !x) _) = x
-    head (_ :~> Tree Nothing es) = Foldable1.head $ snd $ Map.findMin es
+    head (_ :~> Tree Nothing es) = head $ snd $ Map.findMin es
     last (_ :~> Leaf !x) = x
-    last (_ :~> Tree _ es) = Foldable1.last $ snd $ Map.findMax es
+    last (_ :~> Tree _ es) = last $ snd $ Map.findMax es
