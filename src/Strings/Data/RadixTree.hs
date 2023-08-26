@@ -12,6 +12,8 @@ module Strings.Data.RadixTree (
 
     -- * Query
     member,
+    findMin,
+    findMax,
 
     -- * Modification
     insert,
@@ -21,6 +23,7 @@ import Control.Arrow ((&&&))
 import Data.Bool (Bool)
 import Data.Function (id, (.))
 import Data.List (map)
+import Data.Maybe (Maybe)
 import Data.Ord (Ord)
 
 import Strings.Data.RadixTree.Map qualified as Map
@@ -36,13 +39,21 @@ type RadixTree a = Map.RadixTreeMap a (String a)
 empty :: RadixTree a
 empty = Map.empty
 
+-- | /O(?)/ Build a radix tree from a list of strings.
+construct :: Ord a => [String a] -> RadixTree a
+construct = Map.construct . map (id &&& id)
+
 -- | /O(n log r)/ Check if string is present in the tree.
 member :: Ord a => String a -> RadixTree a -> Bool
 member = Map.member
 
--- | /O(?)/ Build a radix tree from a list of strings.
-construct :: Ord a => [String a] -> RadixTree a
-construct = Map.construct . map (id &&& id)
+-- | /O(n log r)/ Extract the minimal string in the tree.
+findMin :: RadixTree a -> Maybe (String a)
+findMin = Map.lookupMin
+
+-- | /O(n log r)/ Extract the minimal string in the tree.
+findMax :: RadixTree a -> Maybe (String a)
+findMax = Map.lookupMax
 
 -- | /O(?)/ Insert a string in a tree.
 --

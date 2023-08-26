@@ -13,6 +13,8 @@ module Strings.Data.RadixTree.Map (
 
     -- * Query
     lookup,
+    lookupMin,
+    lookupMax,
     member,
 
     -- * Modification
@@ -109,6 +111,9 @@ data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v
 -- Map operations --
 -- -------------- --
 
+-- ------------ --
+-- Construction --
+
 -- | /O(1)/ The empty map.
 empty :: RadixTreeMap a v
 empty = Empty
@@ -116,6 +121,9 @@ empty = Empty
 -- | /O(?)/ Build a map from a list of key/value pairs.
 construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
 construct = foldr' (uncurry insert) empty
+
+-- ----- --
+-- Query --
 
 -- | /O(log r)/ Find the edge where the given key may be found.
 --
@@ -132,9 +140,26 @@ lookup !k t = do
     rest <- stripPrefix prefix k
     lookup rest subt
 
+-- | /O(n log r)/ Extract the value associated with the minimal key in the map.
+lookupMin :: RadixTreeMap a v -> Maybe v
+lookupMin (Tree (Just !x) _) = Just x
+lookupMin (Tree Nothing !es) = do
+    (_, _ :~> t) <- Map.lookupMin es
+    lookupMin t
+
+-- | /O(n log r)/ Extract the value associated with the maximal key in the map.
+lookupMax :: RadixTreeMap a v -> Maybe v
+lookupMax (Leaf !x) = Just x
+lookupMax (Tree _ !es) = do
+    (_, _ :~> t) <- Map.lookupMax es
+    lookupMax t
+
 -- | /O(n log r)/ Check if there is an associated value for the key.
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)
+
+-- ------------ --
+-- Modification --
 
 -- | /O(log r)/ Insert or replace the edge starting with the same character.
 --
@@ -277,7 +302,5 @@ instance Foldable1 (Edge s) where
       where
         go fs (_ :~> Tree !val !es) = fmap' fs val <> foldMap' (go fs) es
     toNonEmpty = unwrap "Edge.toNonEmpty: unexpected empty subtree" . nonEmpty . toList
-    head (_ :~> Tree (Just !x) _) = x
-    head (_ :~> Tree Nothing es) = head $ snd $ Map.findMin es
-    last (_ :~> Leaf !x) = x
-    last (_ :~> Tree _ es) = last $ snd $ Map.findMax es
+    head (_ :~> t) = unwrap "Edge.head: unexpected empty subtree" (lookupMin t)
+    last (_ :~> t) = unwrap "Edge.last: unexpected empty subtree" (lookupMax t)
