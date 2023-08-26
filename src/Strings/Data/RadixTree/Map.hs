@@ -19,6 +19,7 @@ module Strings.Data.RadixTree.Map (
 
     -- * Modification
     insert,
+    union,
 ) where
 
 import Control.Applicative (liftA2)
@@ -128,32 +129,25 @@ construct = foldr' (uncurry insert) empty
 -- ----- --
 -- Query --
 
--- | /O(log r)/ Find the edge where the given key may be found.
---
--- Returns `Just` the edge with the first character matching the string key, or `Nothing` if no such label exists.
-edge :: Ord a => String a -> RadixTreeMap a v -> Maybe (Edge a v)
-edge (Head !h) t = Map.lookup h (edges t)
-edge Null _ = Nothing
-
 -- | /O(n log r)/ Lookup the value at a key in the map.
 lookup :: Ord a => String a -> RadixTreeMap a v -> Maybe v
 lookup Null t = value t
-lookup !k t = do
-    prefix :~> subt <- edge k t
+lookup k@(Head h) t = do
+    prefix :~> subt <- Map.lookup h (edges t)
     rest <- stripPrefix prefix k
     lookup rest subt
 
 -- | /O(n log r)/ Extract the value associated with the minimal key in the map.
 lookupMin :: RadixTreeMap a v -> Maybe v
 lookupMin (Tree (Just !x) _) = Just x
-lookupMin (Tree Nothing !es) = do
+lookupMin (Tree Nothing es) = do
     (_, _ :~> t) <- Map.lookupMin es
     lookupMin t
 
 -- | /O(n log r)/ Extract the value associated with the maximal key in the map.
 lookupMax :: RadixTreeMap a v -> Maybe v
 lookupMax (Leaf !x) = Just x
-lookupMax (Tree _ !es) = do
+lookupMax (Tree _ es) = do
     (_, _ :~> t) <- Map.lookupMax es
     lookupMax t
 
@@ -161,31 +155,42 @@ lookupMax (Tree _ !es) = do
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)
 
--- ------------ --
--- Modification --
+-- --------- --
+-- Insertion --
 
--- | /O(log r)/ Insert or replace the edge starting with the same character.
+-- | /O(?)/ Merge two edges by their common prefix.
 --
--- If the key is the empty string, replace the value inside the tree (as if replacing the entire subtree).
-replace :: Ord a => Edge a v -> RadixTreeMap a v -> RadixTreeMap a v
-replace e@(Head !h :~> _) (Tree val es) = Tree val $ Map.insert h e es
-replace (Null :~> Tree newVal _) (Tree _ es) = Tree newVal es
-
--- | /O(1)/ Constructs a root node with the given edge as its single child.
-node :: Edge a v -> RadixTreeMap a v
-node (kx@(Head h) :~> t) = Tree Nothing (Map.singleton h (kx :~> t))
-node (Null :~> t) = t
+-- There basically three situations:
+-- * both edge labels are distinct, but share a common prefix; then the edge is replaced by a new edge with both
+-- subtrees as children.
+-- * one label is a prefix of the other; then the other subtree is inserted into the prefix edge.
+-- * both label are equal; then the edge is replaced by the union of the subtrees.
+merge :: Ord a => Edge a v -> Edge a v -> Edge a v
+merge (kx :~> tx@(Tree vx ex)) (ky :~> ty@(Tree vy ey)) =
+    prefix :~> case (rkx, rky) of
+        -- kx == prefix == ky
+        (Null, Null) -> tx `union` ty
+        -- prefix + rky == kx + rky == ky
+        (Null, Head hy) -> Tree vx (Map.insertWith merge hy (rky :~> ty) ex)
+        -- prefix + rkx == kx == ky + rkx
+        (Head hx, Null) -> Tree vy (Map.insertWith merge hx (rkx :~> tx) ey)
+        -- rkx != rky
+        (Head hx, Head hy) -> Tree Nothing (Map.fromList [(hx, rkx :~> tx), (hy, rky :~> ty)])
+  where
+    (prefix, rkx, rky) = splitCommonPrefix kx ky
 
 -- | /O(?)/ Insert a new key and value in the map.
 --
 --  If the key is already present in the map, the associated value is replaced with the supplied value.
 insert :: Ord a => String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
-insert !kx !x t = case edge kx t of
-    Just (oldK :~> subt) ->
-        let (prefix, rok, rkx) = splitCommonPrefix oldK kx
-            subt' = node (rok :~> subt)
-         in replace (prefix :~> insert rkx x subt') t
-    Nothing -> replace (kx :~> Leaf x) t
+insert Null x (Tree _ es) = Tree (Just x) es
+insert kx@(Head h) x (Tree val es) = Tree val (Map.insertWith merge h (kx :~> Leaf x) es)
+
+-- | O(?)/ The expression (union t1 t2) takes the left-biased union of t1 and t2.
+--
+-- It prefers t1 when duplicate keys are encountered.
+union :: Ord a => RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
+union (Tree vx ex) (Tree _ ey) = Tree vx (Map.unionWith merge ex ey)
 
 -- ---------------- --
 -- Text conversions --
