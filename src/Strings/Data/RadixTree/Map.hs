@@ -125,10 +125,18 @@ data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v
 -- Construction --
 
 -- | /O(1)/ The empty map.
+--
+-- >>> import Prelude (Char, Int)
+-- >>> empty :: RadixTreeMap Char Int
+-- Tree []
 empty :: RadixTreeMap a v
 empty = Empty
 
 -- | /O(?)/ Build a map from a list of key/value pairs.
+--
+-- >>> import Prelude (Char, Int)
+-- >>> construct [("abc", 1), ("def", 3), ("abb", 5)] :: RadixTreeMap Char Int
+-- Tree [ab :~> Tree [b :~> Tree (5) [],c :~> Tree (1) []],def :~> Tree (3) []]
 construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
 construct = foldr' (uncurry insert) empty
 
@@ -136,6 +144,15 @@ construct = foldr' (uncurry insert) empty
 -- Query --
 
 -- | /O(n log r)/ Lookup the value at a key in the map.
+--
+-- >>> import Prelude (Int)
+-- >>> lookup "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- Just 1
+-- >>> lookup "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- Nothing
+--
+-- >>> lookupMax (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- Just 3
 lookup :: Ord a => String a -> RadixTreeMap a v -> Maybe v
 lookup Null t = value t
 lookup k@(Head h) t = do
@@ -144,6 +161,11 @@ lookup k@(Head h) t = do
     lookup rest subt
 
 -- | /O(n log r)/ Extract the value associated with the minimal key in the map.
+--
+-- >>> lookupMin (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- Just 5
+-- >>> lookupMin empty :: Maybe Int
+-- Nothing
 lookupMin :: RadixTreeMap a v -> Maybe v
 lookupMin (Tree (Just !x) _) = Just x
 lookupMin (Tree Nothing es) = do
@@ -151,6 +173,11 @@ lookupMin (Tree Nothing es) = do
     lookupMin t
 
 -- | /O(n log r)/ Extract the value associated with the maximal key in the map.
+--
+-- >>> lookupMax (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- Just 3
+-- >>> lookupMax empty :: Maybe Int
+-- Nothing
 lookupMax :: RadixTreeMap a v -> Maybe v
 lookupMax (Leaf !x) = Just x
 lookupMax (Tree _ es) = do
@@ -158,6 +185,11 @@ lookupMax (Tree _ es) = do
     lookupMax t
 
 -- | /O(n log r)/ Check if there is an associated value for the key.
+--
+-- >>> member "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- True
+-- >>> member "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- False
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)
 
@@ -255,7 +287,7 @@ unwrap :: Text.String -> Maybe a -> a
 unwrap _ (Just x) = x
 unwrap message Nothing = errorWithoutStackTrace message
 
--- | Strict version of `unwrap`.
+-- | Strict version of @unwrap@.
 unwrap' :: Text.String -> Maybe a -> a
 unwrap' !_ (Just !x) = x
 unwrap' !message Nothing = errorWithoutStackTrace message
@@ -264,7 +296,7 @@ unwrap' !message Nothing = errorWithoutStackTrace message
 fmap' :: (a -> b) -> Maybe a -> Maybe b
 fmap' = (<$!>)
 
--- | Delegate `Foldable` to its `Edge`s.
+-- | Delegate `Foldable.Foldabe` to its `Edge`s.
 instance Foldable.Foldable (RadixTreeMap s) where
     fold Empty = mempty
     fold (Leaf v) = v
