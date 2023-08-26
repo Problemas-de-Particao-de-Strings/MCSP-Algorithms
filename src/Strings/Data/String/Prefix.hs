@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 -- | Prefix operations on `String`.
 module Strings.Data.String.Prefix (
     stripPrefix,
@@ -61,6 +59,7 @@ commonPrefixLength lhs rhs = fromMaybe n (find notMatching indices)
     indices = [0 .. n - 1] :: [Int]
     -- SAFETY: index i is in range [0, n = min(lhs, rhs)) and is guaranteed to be in bounds for both strings
     notMatching i = unsafeIndex lhs i /= unsafeIndex rhs i
+{-# INLINEABLE commonPrefixLength #-}
 
 -- | /O(min(m,n))/ The maximum common prefix of two strings.
 --
@@ -72,6 +71,7 @@ commonPrefixLength lhs rhs = fromMaybe n (find notMatching indices)
 -- <BLANKLINE>
 commonPrefix :: Eq a => String a -> String a -> String a
 commonPrefix lhs rhs = fst3 (splitCommonPrefix lhs rhs)
+{-# INLINE commonPrefix #-}
 
 -- | /O(min(m,n))/ Returns the maximum common prefix of two strings and the remainder of each string.
 --
@@ -94,3 +94,4 @@ splitCommonPrefix lhs rhs =
     )
   where
     prefix = commonPrefixLength lhs rhs
+{-# INLINE splitCommonPrefix #-}

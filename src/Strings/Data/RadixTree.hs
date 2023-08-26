@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 -- | A compressed trie of string radices.
 module Strings.Data.RadixTree (
     -- * Data Types
@@ -44,6 +42,7 @@ type RadixTree a = Map.RadixTreeMap a (String a)
 -- Tree []
 empty :: RadixTree a
 empty = Map.empty
+{-# INLINE empty #-}
 
 -- | /O(?)/ Build a radix tree from a list of strings.
 --
@@ -51,6 +50,7 @@ empty = Map.empty
 -- Tree [ab :~> Tree [b :~> Tree (abb) [],c :~> Tree (abc) []],def :~> Tree (def) []]
 construct :: Ord a => [String a] -> RadixTree a
 construct = Map.construct . map (id &&& id)
+{-# INLINEABLE construct #-}
 
 -- | /O(n log r)/ Check if string is present in the tree.
 --
@@ -60,6 +60,7 @@ construct = Map.construct . map (id &&& id)
 -- True
 member :: Ord a => String a -> RadixTree a -> Bool
 member = Map.member
+{-# INLINE member #-}
 
 -- | /O(n log r)/ Extract the minimal string in the tree.
 --
@@ -70,6 +71,7 @@ member = Map.member
 -- Nothing
 findMin :: RadixTree a -> Maybe (String a)
 findMin = Map.lookupMin
+{-# INLINE findMin #-}
 
 -- | /O(n log r)/ Extract the minimal string in the tree.
 --
@@ -80,6 +82,7 @@ findMin = Map.lookupMin
 -- Nothing
 findMax :: RadixTree a -> Maybe (String a)
 findMax = Map.lookupMax
+{-# INLINE findMax #-}
 
 -- | /O(?)/ Insert a string in a tree.
 --
@@ -91,6 +94,7 @@ findMax = Map.lookupMax
 -- Tree [abc :~> Tree (abc) [],xyz :~> Tree (xyz) []]
 insert :: Ord a => String a -> RadixTree a -> RadixTree a
 insert s = Map.insert s s
+{-# INLINE insert #-}
 
 -- | /O(?)/ The union of two sets, preferring the first set when equal strings are encountered.
 --
@@ -104,6 +108,7 @@ insert s = Map.insert s s
 -- Tree [abc :~> Tree (abc) []]
 union :: Ord a => RadixTree a -> RadixTree a -> RadixTree a
 union = Map.union
+{-# INLINE union #-}
 
 -- | /O(?)/  Delete a string from the tree set.
 --
@@ -113,3 +118,4 @@ union = Map.union
 -- Tree [def :~> Tree (def) []]
 delete :: Ord a => String a -> RadixTree a -> RadixTree a
 delete = Map.delete
+{-# INLINE delete #-}
