@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 -- | A map of `String` keys represented by a radix tree.
 module Strings.Data.RadixTree.Map (
     -- * Data Types
@@ -26,12 +24,14 @@ module Strings.Data.RadixTree.Map (
 import Control.Applicative (liftA2)
 import Control.Monad ((<$!>))
 import Data.Bool (Bool (False, True))
+import Data.Char (Char)
 import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
 import Data.Function (flip, id, ($), (.))
 import Data.Functor (Functor (fmap, (<$)), (<$>))
+import Data.Int (Int)
 import Data.List (map)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Maybe (Maybe (Just, Nothing), isJust)
@@ -40,6 +40,7 @@ import Data.Ord (Ord, (>))
 import Data.String qualified as Text (String)
 import Data.Traversable (Traversable (..))
 import Data.Tuple (snd, uncurry)
+import Data.Word (Word8)
 import GHC.Base (($!))
 import GHC.Err (error, errorWithoutStackTrace)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
@@ -131,6 +132,7 @@ data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v
 -- Tree []
 empty :: RadixTreeMap a v
 empty = Empty
+{-# INLINE empty #-}
 
 -- | /O(?)/ Build a map from a list of key/value pairs.
 --
@@ -139,6 +141,7 @@ empty = Empty
 -- Tree [ab :~> Tree [b :~> Tree (5) [],c :~> Tree (1) []],def :~> Tree (3) []]
 construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
 construct = foldr' (uncurry insert) empty
+{-# INLINEABLE construct #-}
 
 -- ----- --
 -- Query --
@@ -159,6 +162,7 @@ lookup k@(Head h) t = do
     prefix :~> subt <- Map.lookup h (edges t)
     rest <- stripPrefix prefix k
     lookup rest subt
+{-# INLINEABLE lookup #-}
 
 -- | /O(n log r)/ Extract the value associated with the minimal key in the map.
 --
@@ -171,6 +175,7 @@ lookupMin (Tree (Just !x) _) = Just x
 lookupMin (Tree Nothing es) = do
     (_, _ :~> t) <- Map.lookupMin es
     lookupMin t
+{-# INLINEABLE lookupMin #-}
 
 -- | /O(n log r)/ Extract the value associated with the maximal key in the map.
 --
@@ -183,6 +188,7 @@ lookupMax (Leaf !x) = Just x
 lookupMax (Tree _ es) = do
     (_, _ :~> t) <- Map.lookupMax es
     lookupMax t
+{-# INLINEABLE lookupMax #-}
 
 -- | /O(n log r)/ Check if there is an associated value for the key.
 --
@@ -192,6 +198,7 @@ lookupMax (Tree _ es) = do
 -- False
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)
+{-# INLINE member #-}
 
 -- --------- --
 -- Insertion --
@@ -223,12 +230,14 @@ merge (kx :~> tx@(Tree vx ex)) (ky :~> ty@(Tree vy ey)) =
 insert :: Ord a => String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
 insert Null x (Tree _ es) = Tree (Just x) es
 insert kx@(Head h) x (Tree val es) = Tree val (Map.insertWith merge h (kx :~> Leaf x) es)
+{-# INLINE insert #-}
 
 -- | O(?)/ The expression (union t1 t2) takes the left-biased union of t1 and t2.
 --
 -- It prefers t1 when duplicate keys are encountered.
 union :: Ord a => RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
 union (Tree vx ex) (Tree _ ey) = Tree vx (Map.unionWith merge ex ey)
+{-# INLINE union #-}
 
 -- -------- --
 -- Deletion --
@@ -258,6 +267,7 @@ remove k (label :~> t@(Tree val es)) = case stripPrefix label k of
 delete :: Ord a => String a -> RadixTreeMap a v -> RadixTreeMap a v
 delete Null (Tree _ es) = Tree Nothing es
 delete k@(Head h) (Tree val es) = Tree val (Map.update (remove k) h es)
+{-# INLINE delete #-}
 
 -- ---------------- --
 -- Text conversions --
@@ -286,87 +296,129 @@ instance (ShowString a, Show v) => Show (Edge a v) where
 unwrap :: Text.String -> Maybe a -> a
 unwrap _ (Just x) = x
 unwrap message Nothing = errorWithoutStackTrace message
+{-# INLINEABLE unwrap #-}
 
 -- | Strict version of @unwrap@.
 unwrap' :: Text.String -> Maybe a -> a
 unwrap' !_ (Just !x) = x
 unwrap' !message Nothing = errorWithoutStackTrace message
+{-# INLINEABLE unwrap' #-}
 
 -- | Strict version of `fmap` for `Maybe`.
 fmap' :: (a -> b) -> Maybe a -> Maybe b
 fmap' = (<$!>)
+{-# INLINE fmap' #-}
 
 -- | Delegate `Foldable.Foldabe` to its `Edge`s.
 instance Foldable.Foldable (RadixTreeMap s) where
+    {-# SPECIALIZE instance Foldable.Foldable (RadixTreeMap Char) #-}
+    {-# SPECIALIZE instance Foldable.Foldable (RadixTreeMap Int) #-}
+    {-# SPECIALIZE instance Foldable.Foldable (RadixTreeMap Word8) #-}
     fold Empty = mempty
     fold (Leaf v) = v
     fold t@(WithSomeKey k) = fold1 (k :~> t)
+    {-# INLINEABLE fold #-}
     foldMap _ Empty = mempty
     foldMap f (Leaf v) = f v
     foldMap f t@(WithSomeKey k) = foldMap1 f (k :~> t)
+    {-# INLINEABLE foldMap #-}
     foldMap' _ Empty = mempty
     foldMap' f (Leaf !v) = f v
     foldMap' f t@(WithSomeKey !k) = foldMap1' f (k :~> t)
+    {-# INLINEABLE foldMap' #-}
     foldr _ x Empty = x
     foldr f x (Leaf v) = f v x
     foldr f x t@(WithSomeKey k) = foldr f x (k :~> t)
+    {-# INLINEABLE foldr #-}
     foldr' _ !x Empty = x
     foldr' f !x (Leaf !v) = f v x
     foldr' f !x t@(WithSomeKey !k) = foldr' f x (k :~> t)
+    {-# INLINEABLE foldr' #-}
     foldl _ x Empty = x
     foldl f x (Leaf v) = f x v
     foldl f x t@(WithSomeKey k) = foldl f x (k :~> t)
+    {-# INLINEABLE foldl #-}
     foldl' _ x Empty = x
     foldl' f !x (Leaf !v) = f x v
     foldl' f !x t@(WithSomeKey !k) = foldl' f x (k :~> t)
+    {-# INLINEABLE foldl' #-}
     foldr1 _ Empty = error "foldr1.RadixTreeMap: empty tree"
     foldr1 _ (Leaf v) = v
     foldr1 f t@(WithSomeKey k) = foldr1 f (k :~> t)
+    {-# INLINEABLE foldr1 #-}
     foldl1 _ Empty = error "foldl1.RadixTreeMap: empty tree"
     foldl1 _ (Leaf v) = v
     foldl1 f t@(WithSomeKey k) = foldl1 f (k :~> t)
+    {-# INLINEABLE foldl1 #-}
     toList Empty = []
     toList (Leaf v) = [v]
     toList t@(WithSomeKey k) = toList (k :~> t)
+    {-# INLINEABLE toList #-}
     null Empty = True
     null _ = False
+    {-# INLINE null #-}
     length Empty = 0
     length (Leaf _) = 1
     length t@(WithSomeKey k) = Foldable.length (k :~> t)
+    {-# INLINEABLE length #-}
     elem _ Empty = False
     elem x (Leaf v) = x == v
     elem x t@(WithSomeKey k) = Foldable.elem x (k :~> t)
+    {-# INLINEABLE elem #-}
     maximum Empty = error "maximum.RadixTreeMap: empty tree"
     maximum (Leaf v) = v
     maximum t@(WithSomeKey k) = maximum (k :~> t)
+    {-# INLINEABLE maximum #-}
     minimum Empty = error "minimum.RadixTreeMap: empty tree"
     minimum (Leaf v) = v
     minimum t@(WithSomeKey k) = minimum (k :~> t)
+    {-# INLINEABLE minimum #-}
     sum Empty = 0
     sum (Leaf v) = v
     sum t@(WithSomeKey k) = Foldable.sum (k :~> t)
+    {-# INLINEABLE sum #-}
     product Empty = 1
     product (Leaf v) = v
     product t@(WithSomeKey k) = Foldable.product (k :~> t)
+    {-# INLINEABLE product #-}
 
 -- | Implementation based on @`Foldable1` (`Edge` s)@
 instance Foldable.Foldable (Edge s) where
+    {-# SPECIALIZE instance Foldable.Foldable (Edge Char) #-}
+    {-# SPECIALIZE instance Foldable.Foldable (Edge Int) #-}
+    {-# SPECIALIZE instance Foldable.Foldable (Edge Word8) #-}
     fold = fold1
+    {-# INLINE fold #-}
     foldMap = foldMap1
+    {-# INLINE foldMap #-}
     foldMap' = foldMap1'
+    {-# INLINE foldMap' #-}
     foldr f x (_ :~> Tree val es) = foldr f (Map.foldr (flip $ foldr f) x es) val
+    {-# INLINEABLE foldr #-}
     foldr' f x (_ :~> Tree !val !es) = foldr' f (Map.foldr' (flip $! foldr' f) x es) val
+    {-# INLINEABLE foldr' #-}
     foldl f x (_ :~> Tree val es) = Map.foldl (foldl f) (foldl f x val) es
+    {-# INLINEABLE foldl #-}
     foldl' f x (_ :~> Tree !val !es) = Map.foldl' (foldl' f) (foldl' f x val) es
+    {-# INLINEABLE foldl' #-}
     foldr1 = foldr1
+    {-# INLINE foldr1 #-}
     foldl1 = foldl1
+    {-# INLINE foldl1 #-}
     toList (_ :~> Tree (Just x) es) = x : foldMap toList es
     toList (_ :~> Tree Nothing es) = foldMap toList es
+    {-# INLINEABLE toList #-}
     null _ = False
+    {-# INLINE null #-}
     maximum = maximum
+    {-# INLINE maximum #-}
     minimum = minimum
+    {-# INLINE minimum #-}
 
 instance Foldable1 (Edge s) where
+    {-# SPECIALIZE instance Foldable1 (Edge Char) #-}
+    {-# SPECIALIZE instance Foldable1 (Edge Int) #-}
+    {-# SPECIALIZE instance Foldable1 (Edge Word8) #-}
     fold1 = unwrap "Edge.fold1: unexpected empty subtree" . go
       where
         go (_ :~> Tree val es) = val <> foldMap go es
@@ -377,29 +429,56 @@ instance Foldable1 (Edge s) where
       where
         go fs (_ :~> Tree !val !es) = fmap' fs val <> foldMap' (go fs) es
     toNonEmpty = unwrap "Edge.toNonEmpty: unexpected empty subtree" . nonEmpty . toList
+    {-# INLINE toNonEmpty #-}
     head (_ :~> t) = unwrap "Edge.head: unexpected empty subtree" (lookupMin t)
+    {-# INLINE head #-}
     last (_ :~> t) = unwrap "Edge.last: unexpected empty subtree" (lookupMax t)
+    {-# INLINE last #-}
 
 -- --------------------- --
 -- Traversable instances --
 -- --------------------- --
 
 instance Functor (RadixTreeMap s) where
+    {-# SPECIALIZE instance Functor (RadixTreeMap Char) #-}
+    {-# SPECIALIZE instance Functor (RadixTreeMap Int) #-}
+    {-# SPECIALIZE instance Functor (RadixTreeMap Word8) #-}
     fmap f (Tree val es) = Tree (f <$> val) (fmap f <$> es)
+    {-# INLINEABLE fmap #-}
     x <$ (Tree val es) = Tree (x <$ val) ((x <$) <$> es)
+    {-# INLINEABLE (<$) #-}
 
 instance Functor (Edge s) where
+    {-# SPECIALIZE instance Functor (Edge Char) #-}
+    {-# SPECIALIZE instance Functor (Edge Int) #-}
+    {-# SPECIALIZE instance Functor (Edge Word8) #-}
     fmap f (label :~> t) = label :~> (f <$> t)
+    {-# INLINE fmap #-}
     x <$ (label :~> t) = label :~> (x <$ t)
+    {-# INLINE (<$) #-}
 
 instance Traversable (RadixTreeMap s) where
+    {-# SPECIALIZE instance Traversable (RadixTreeMap Char) #-}
+    {-# SPECIALIZE instance Traversable (RadixTreeMap Int) #-}
+    {-# SPECIALIZE instance Traversable (RadixTreeMap Word8) #-}
     traverse f (Tree val es) = liftA2 Tree (traverse f val) (traverse (traverse f) es)
+    {-# INLINEABLE traverse #-}
     sequenceA (Tree val es) = liftA2 Tree (sequenceA val) (traverse sequenceA es)
+    {-# INLINEABLE sequenceA #-}
     mapM f (Tree val es) = liftA2 Tree (mapM f val) (mapM (mapM f) es)
+    {-# INLINEABLE mapM #-}
     sequence (Tree val es) = liftA2 Tree (sequence val) (mapM sequence es)
+    {-# INLINEABLE sequence #-}
 
 instance Traversable (Edge s) where
+    {-# SPECIALIZE instance Traversable (Edge Char) #-}
+    {-# SPECIALIZE instance Traversable (Edge Int) #-}
+    {-# SPECIALIZE instance Traversable (Edge Word8) #-}
     traverse f (label :~> t) = (label :~>) <$> traverse f t
+    {-# INLINE traverse #-}
     sequenceA (label :~> t) = (label :~>) <$> sequenceA t
+    {-# INLINE sequenceA #-}
     mapM f (label :~> t) = (label :~>) <$> mapM f t
+    {-# INLINE mapM #-}
     sequence (label :~> t) = (label :~>) <$> sequence t
+    {-# INLINE sequence #-}
