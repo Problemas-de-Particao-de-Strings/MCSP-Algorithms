@@ -21,7 +21,7 @@ module Strings.Data.RadixTree.Map (
 
 import Control.Monad (fmap, (<$!>))
 import Data.Bool (Bool (False, True))
-import Data.Eq (Eq)
+import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
@@ -34,12 +34,13 @@ import Data.Ord (Ord, (>))
 import Data.String qualified as Text (String)
 import Data.Tuple (snd, uncurry)
 import GHC.Base (($!))
-import GHC.Err (error, errorWithoutStackTrace, undefined)
+import GHC.Err (error, errorWithoutStackTrace)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
+import Data.Map.Strict.Internal (Map (Bin))
 
-import Strings.Data.String (ShowString, String (..))
+import Strings.Data.String (ShowString, String (..), Unbox)
 import Strings.Data.String.Prefix (splitCommonPrefix, stripPrefix)
 
 -- --------------- --
@@ -65,6 +66,8 @@ data RadixTreeMap a v
       }
     deriving stock (Eq, Ord)
 
+{-# COMPLETE Leaf, Empty, WithSomeKey #-}
+
 -- | /O(1)/ Matches a tree node with value but no edges.
 pattern Leaf :: v -> RadixTreeMap a v
 pattern Leaf x = Tree (Just x) NullSet
@@ -74,6 +77,11 @@ pattern Leaf x = Tree (Just x) NullSet
 pattern Empty :: RadixTreeMap a v
 pattern Empty = Tree Nothing NullSet
 {-# INLINE CONLIKE Empty #-}
+
+-- | /O(1)/ Matches any key inside a `RadixTreeMap`.
+pattern WithSomeKey :: () => Unbox a => String a -> RadixTreeMap a v
+pattern WithSomeKey s <- (edges -> Bin _ _ (s@Unboxed :~> _) _ _)
+{-# INLINE CONLIKE WithSomeKey #-}
 
 -- | A collection of uniquely labelled edges.
 --
@@ -191,39 +199,55 @@ fmap' = (<$!>)
 -- | Delegate `Foldable` to its `Edge`s.
 instance Foldable.Foldable (RadixTreeMap s) where
     fold Empty = mempty
-    fold t = fold1 (undefined :~> t)
+    fold (Leaf v) = v
+    fold t@(WithSomeKey k) = fold1 (k :~> t)
     foldMap _ Empty = mempty
-    foldMap f t = foldMap1 f (undefined :~> t)
+    foldMap f (Leaf v) = f v
+    foldMap f t@(WithSomeKey k) = foldMap1 f (k :~> t)
     foldMap' _ Empty = mempty
-    foldMap' f t = foldMap1' f (undefined :~> t)
+    foldMap' f (Leaf !v) = f v
+    foldMap' f t@(WithSomeKey !k) = foldMap1' f (k :~> t)
     foldr _ x Empty = x
-    foldr f x t = foldr f x (undefined :~> t)
-    foldr' _ x Empty = x
-    foldr' f x t = foldr' f x (undefined :~> t)
+    foldr f x (Leaf v) = f v x
+    foldr f x t@(WithSomeKey k) = foldr f x (k :~> t)
+    foldr' _ !x Empty = x
+    foldr' f !x (Leaf !v) = f v x
+    foldr' f !x t@(WithSomeKey !k) = foldr' f x (k :~> t)
     foldl _ x Empty = x
-    foldl f x t = foldl f x (undefined :~> t)
+    foldl f x (Leaf v) = f x v
+    foldl f x t@(WithSomeKey k) = foldl f x (k :~> t)
     foldl' _ x Empty = x
-    foldl' f x t = foldl' f x (undefined :~> t)
+    foldl' f !x (Leaf !v) = f x v
+    foldl' f !x t@(WithSomeKey !k) = foldl' f x (k :~> t)
     foldr1 _ Empty = error "foldr1.RadixTreeMap: empty tree"
-    foldr1 f t = foldr1 f (undefined :~> t)
+    foldr1 _ (Leaf v) = v
+    foldr1 f t@(WithSomeKey k) = foldr1 f (k :~> t)
     foldl1 _ Empty = error "foldl1.RadixTreeMap: empty tree"
-    foldl1 f t = foldl1 f (undefined :~> t)
+    foldl1 _ (Leaf v) = v
+    foldl1 f t@(WithSomeKey k) = foldl1 f (k :~> t)
     toList Empty = []
-    toList t = toList (undefined :~> t)
+    toList (Leaf v) = [v]
+    toList t@(WithSomeKey k) = toList (k :~> t)
     null Empty = True
     null _ = False
     length Empty = 0
-    length t = Foldable.length (undefined :~> t)
+    length (Leaf _) = 1
+    length t@(WithSomeKey k) = Foldable.length (k :~> t)
     elem _ Empty = False
-    elem x t = Foldable.elem x (undefined :~> t)
+    elem x (Leaf v) = x == v
+    elem x t@(WithSomeKey k) = Foldable.elem x (k :~> t)
     maximum Empty = error "maximum.RadixTreeMap: empty tree"
-    maximum t = maximum (undefined :~> t)
+    maximum (Leaf v) = v
+    maximum t@(WithSomeKey k) = maximum (k :~> t)
     minimum Empty = error "minimum.RadixTreeMap: empty tree"
-    minimum t = minimum (undefined :~> t)
+    minimum (Leaf v) = v
+    minimum t@(WithSomeKey k) = minimum (k :~> t)
     sum Empty = 0
-    sum t = Foldable.sum (undefined :~> t)
+    sum (Leaf v) = v
+    sum t@(WithSomeKey k) = Foldable.sum (k :~> t)
     product Empty = 1
-    product t = Foldable.product (undefined :~> t)
+    product (Leaf v) = v
+    product t@(WithSomeKey k) = Foldable.product (k :~> t)
 
 -- | Implementation based on @`Foldable1` (`Edge` s)@
 instance Foldable.Foldable (Edge s) where
