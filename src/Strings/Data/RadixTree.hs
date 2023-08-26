@@ -17,6 +17,7 @@ module Strings.Data.RadixTree (
 
     -- * Modification
     insert,
+    union,
 ) where
 
 import Control.Arrow ((&&&))
@@ -60,3 +61,7 @@ findMax = Map.lookupMax
 -- If the tree already contains a string equal to the given value, it is replaced with the new value.
 insert :: Ord a => String a -> RadixTree a -> RadixTree a
 insert s = Map.insert s s
+
+-- | /O(?)/ The union of two sets, preferring the first set when equal elements are encountered.
+union :: Ord a => RadixTree a -> RadixTree a -> RadixTree a
+union = Map.union
