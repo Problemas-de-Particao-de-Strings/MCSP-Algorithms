@@ -18,6 +18,7 @@ module Strings.Data.RadixTree (
     -- * Modification
     insert,
     union,
+    delete,
 ) where
 
 import Control.Arrow ((&&&))
@@ -62,6 +63,10 @@ findMax = Map.lookupMax
 insert :: Ord a => String a -> RadixTree a -> RadixTree a
 insert s = Map.insert s s
 
--- | /O(?)/ The union of two sets, preferring the first set when equal elements are encountered.
+-- | /O(?)/ The union of two sets, preferring the first set when equal strings are encountered.
 union :: Ord a => RadixTree a -> RadixTree a -> RadixTree a
 union = Map.union
+
+-- | /O(?)/  Delete a string from a set.
+delete :: Ord a => String a -> RadixTree a -> RadixTree a
+delete = Map.delete

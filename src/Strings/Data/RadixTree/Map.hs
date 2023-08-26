@@ -20,6 +20,7 @@ module Strings.Data.RadixTree.Map (
     -- * Modification
     insert,
     union,
+    delete,
 ) where
 
 import Control.Applicative (liftA2)
@@ -29,7 +30,7 @@ import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
-import Data.Function (flip, ($), (.))
+import Data.Function (flip, id, ($), (.))
 import Data.Functor (Functor (fmap, (<$)), (<$>))
 import Data.List (map)
 import Data.List.NonEmpty (nonEmpty)
@@ -46,7 +47,7 @@ import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 import Data.Map.Strict qualified as Map
 import Data.Map.Strict.Internal (Map (Bin))
 
-import Strings.Data.String (ShowString, String (..), Unbox)
+import Strings.Data.String (ShowString, String (..), Unbox, (++))
 import Strings.Data.String.Prefix (splitCommonPrefix, stripPrefix)
 
 -- --------------- --
@@ -103,6 +104,11 @@ pattern NullSet <- (Map.null -> True)
         NullSet = Map.empty
 {-# INLINE CONLIKE NullSet #-}
 
+-- | /O(1)/ Matches an `EdgeSet` with a single edge.
+pattern Single :: () => Unbox a => Edge a v -> EdgeSet a v
+pattern Single e <- (id -> Bin 1 _ e@(Unboxed :~> _) _ _)
+{-# INLINE CONLIKE Single #-}
+
 -- | A labelled edge.
 --
 -- A simple pair @(label `:~>` subtree)@ representing an edge of a `RadixTreeMap`.
@@ -158,9 +164,9 @@ member k t = isJust (lookup k t)
 -- --------- --
 -- Insertion --
 
--- | /O(?)/ Merge two edges by their common prefix.
+-- | /O(?)/ Merge two edges into a single edge by their common prefix.
 --
--- There basically three situations:
+-- There are basically three situations:
 -- * both edge labels are distinct, but share a common prefix; then the edge is replaced by a new edge with both
 -- subtrees as children.
 -- * one label is a prefix of the other; then the other subtree is inserted into the prefix edge.
@@ -191,6 +197,35 @@ insert kx@(Head h) x (Tree val es) = Tree val (Map.insertWith merge h (kx :~> Le
 -- It prefers t1 when duplicate keys are encountered.
 union :: Ord a => RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
 union (Tree vx ex) (Tree _ ey) = Tree vx (Map.unionWith merge ex ey)
+
+-- -------- --
+-- Deletion --
+
+-- | /O(?)/ Remove a key from a subtree.
+--
+-- Returns `Just` the updated subtree or `Nothing` if the edge should be removed.
+remove :: Ord a => String a -> Edge a v -> Maybe (Edge a v)
+remove k (label :~> t@(Tree val es)) = case stripPrefix label k of
+    -- k == label, remove the current value
+    Just Null -> nonEmptyEdge Nothing es
+    -- k == label + rk, continue searching in rk
+    Just rk@(Head h) -> nonEmptyEdge val (Map.update (remove rk) h es)
+    -- k != label, key is not present in map
+    Nothing -> Just (label :~> t)
+  where
+    -- remove edges to empty subtrees
+    nonEmptyEdge Nothing NullSet = Nothing
+    -- merge edges with a single child
+    nonEmptyEdge Nothing (Single (ln :~> tn)) = Just (label ++ ln :~> tn)
+    -- just reconstruct the edge otherwise
+    nonEmptyEdge vn en = Just (label :~> Tree vn en)
+
+-- | /O(?)/ Delete a key and its value from the map.
+--
+-- When the key is not a member of the map, the original map is returned.
+delete :: Ord a => String a -> RadixTreeMap a v -> RadixTreeMap a v
+delete Null (Tree _ es) = Tree Nothing es
+delete k@(Head h) (Tree val es) = Tree val (Map.update (remove k) h es)
 
 -- ---------------- --
 -- Text conversions --
