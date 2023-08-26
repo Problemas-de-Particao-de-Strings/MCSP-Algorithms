@@ -58,12 +58,29 @@ data RadixTreeMap a v
       }
     deriving stock (Eq, Ord)
 
+-- | /O(1)/ Matches a tree node with value but no edges.
+pattern Leaf :: v -> RadixTreeMap a v
+pattern Leaf x = Tree (Just x) NullSet
+{-# INLINE CONLIKE Leaf #-}
+
+-- | /O(1)/ Matches an empty `RadixTreeMap`.
+pattern Empty :: RadixTreeMap a v
+pattern Empty = Tree Nothing NullSet
+{-# INLINE CONLIKE Empty #-}
+
 -- | A collection of uniquely labelled edges.
 --
 -- This could be @`Map.Map` (`String` a) (`Edge` a v)@, using the entire label as key, but the
 -- [trie property](https://en.wikipedia.org/wiki/Trie) ensures that the first character of the label must also be
 -- unique. This enables us to use a faster implementation and also helps to ensure the trie property.
 type EdgeSet a v = Map.Map a (Edge a v)
+
+-- | /O(1)/ Matches an empty `EdgeSet`.
+pattern NullSet :: EdgeSet a v
+pattern NullSet <- (Map.null -> True)
+    where
+        NullSet = Map.empty
+{-# INLINE CONLIKE NullSet #-}
 
 -- | A labelled edge.
 --
@@ -81,11 +98,7 @@ subtree (_ :~> t) = t
 
 -- | /O(1)/ The empty map.
 empty :: RadixTreeMap a v
-empty = Tree Nothing Map.empty
-
--- | /O(1)/ A map having the given value associated with the empty string (@""@).
-singleton :: v -> RadixTreeMap a v
-singleton x = Tree (Just x) Map.empty
+empty = Empty
 
 -- | /O(?)/ Build a map from a list of key/value pairs.
 construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
@@ -131,7 +144,7 @@ insert !kx !x t = case edge kx t of
         let (prefix, rok, rkx) = splitCommonPrefix oldK kx
             subt' = node (rok :~> subt)
          in replace (prefix :~> insert rkx x subt') t
-    Nothing -> replace (kx :~> singleton x) t
+    Nothing -> replace (kx :~> Leaf x) t
 
 -- ---------------- --
 -- Text conversions --
