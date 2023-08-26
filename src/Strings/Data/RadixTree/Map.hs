@@ -21,19 +21,22 @@ module Strings.Data.RadixTree.Map (
     insert,
 ) where
 
-import Control.Monad (fmap, (<$!>))
+import Control.Applicative (liftA2)
+import Control.Monad ((<$!>))
 import Data.Bool (Bool (False, True))
 import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
 import Data.Function (flip, ($), (.))
+import Data.Functor (Functor (fmap, (<$)), (<$>))
 import Data.List (map)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Maybe (Maybe (Just, Nothing), isJust)
 import Data.Monoid (mempty, (<>))
 import Data.Ord (Ord, (>))
 import Data.String qualified as Text (String)
+import Data.Traversable (Traversable (..))
 import Data.Tuple (snd, uncurry)
 import GHC.Base (($!))
 import GHC.Err (error, errorWithoutStackTrace)
@@ -200,9 +203,9 @@ instance (ShowString a, Show v) => Show (RadixTreeMap a v) where
 instance (ShowString a, Show v) => Show (Edge a v) where
     showsPrec _ (s :~> t) = shows s . showString " :~> " . shows t
 
--- -------------------- --
--- Collection instances --
--- -------------------- --
+-- ------------------ --
+-- Foldable instances --
+-- ------------------ --
 
 -- | Extracts the element out of a `Just` and throws an error if its argument is `Nothing`.
 --
@@ -304,3 +307,27 @@ instance Foldable1 (Edge s) where
     toNonEmpty = unwrap "Edge.toNonEmpty: unexpected empty subtree" . nonEmpty . toList
     head (_ :~> t) = unwrap "Edge.head: unexpected empty subtree" (lookupMin t)
     last (_ :~> t) = unwrap "Edge.last: unexpected empty subtree" (lookupMax t)
+
+-- --------------------- --
+-- Traversable instances --
+-- --------------------- --
+
+instance Functor (RadixTreeMap s) where
+    fmap f (Tree val es) = Tree (f <$> val) (fmap f <$> es)
+    x <$ (Tree val es) = Tree (x <$ val) ((x <$) <$> es)
+
+instance Functor (Edge s) where
+    fmap f (label :~> t) = label :~> (f <$> t)
+    x <$ (label :~> t) = label :~> (x <$ t)
+
+instance Traversable (RadixTreeMap s) where
+    traverse f (Tree val es) = liftA2 Tree (traverse f val) (traverse (traverse f) es)
+    sequenceA (Tree val es) = liftA2 Tree (sequenceA val) (traverse sequenceA es)
+    mapM f (Tree val es) = liftA2 Tree (mapM f val) (mapM (mapM f) es)
+    sequence (Tree val es) = liftA2 Tree (sequence val) (mapM sequence es)
+
+instance Traversable (Edge s) where
+    traverse f (label :~> t) = (label :~>) <$> traverse f t
+    sequenceA (label :~> t) = (label :~>) <$> sequenceA t
+    mapM f (label :~> t) = (label :~>) <$> mapM f t
+    sequence (label :~> t) = (label :~>) <$> sequence t
