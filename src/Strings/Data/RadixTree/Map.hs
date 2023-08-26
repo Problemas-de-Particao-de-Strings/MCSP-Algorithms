@@ -19,15 +19,20 @@ module Strings.Data.RadixTree.Map (
     insert,
 ) where
 
+import Control.Monad (fmap, (<$!>))
 import Data.Bool (Bool (True), (&&))
 import Data.Eq (Eq)
 import Data.Foldable (Foldable (..))
+import Data.Foldable1 qualified as Foldable1 (Foldable1 (..))
 import Data.Function (flip, ($), (.))
 import Data.List (map)
+import Data.List.NonEmpty (nonEmpty)
 import Data.Maybe (Maybe (Just, Nothing), isJust, isNothing)
 import Data.Monoid ((<>))
 import Data.Ord (Ord, (>))
+import Data.String qualified as Text (String)
 import Data.Tuple (snd, uncurry)
+import GHC.Err (errorWithoutStackTrace)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
@@ -85,6 +90,8 @@ pattern NullSet <- (Map.null -> True)
 -- | A labelled edge.
 --
 -- A simple pair @(label `:~>` subtree)@ representing an edge of a `RadixTreeMap`.
+--
+-- Note that the subtre pointed by an edge must never be empty!
 data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v)
     deriving stock (Eq, Ord)
 
@@ -194,3 +201,39 @@ instance Foldable (Edge s) where
     maximum = maximum . subtree
     minimum = minimum . subtree
     sum = sum . subtree
+
+-- | Extracts the element out of a `Just` and throws an error if its argument is `Nothing`.
+--
+-- This is an adaptation of `Data.Maybe.fromJust` without capturing the call stack for traces. It should only be used
+-- when the error should never happen, like an `Edge` pointing to a an empty subtree.
+unwrap :: Text.String -> Maybe a -> a
+unwrap _ (Just x) = x
+unwrap message Nothing = errorWithoutStackTrace message
+
+-- | Strict version of `unwrap`.
+unwrap' :: Text.String -> Maybe a -> a
+unwrap' !_ (Just !x) = x
+unwrap' !message Nothing = errorWithoutStackTrace message
+
+-- | Strict version of `fmap` for `Maybe`.
+fmap' :: (a -> b) -> Maybe a -> Maybe b
+fmap' = (<$!>)
+
+instance Foldable1.Foldable1 (Edge s) where
+    fold1 = unwrap "Edge.fold1: unexpected empty subtree" . go
+      where
+        go (_ :~> Tree val es) = val <> foldMap go es
+    foldMap1 f = unwrap "Edge.foldMap1: unexpected empty subtree" . go f
+      where
+        go fs (_ :~> Tree val es) = fmap fs val <> foldMap (go fs) es
+    foldMap1' f = unwrap' "Edge.foldMap1': unexpected empty subtree" . go f
+      where
+        go fs (_ :~> Tree !val !es) = fmap' fs val <> foldMap' (go fs) es
+    toNonEmpty = unwrap "Edge.toNonEmpty: unexpected empty subtree" . nonEmpty . go
+      where
+        go (_ :~> Tree (Just x) es) = x : foldMap go es
+        go (_ :~> Tree Nothing es) = foldMap go es
+    head (_ :~> Tree (Just !x) _) = x
+    head (_ :~> Tree Nothing es) = Foldable1.head $ snd $ Map.findMin es
+    last (_ :~> Leaf !x) = x
+    last (_ :~> Tree _ es) = Foldable1.last $ snd $ Map.findMax es
