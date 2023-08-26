@@ -279,10 +279,10 @@ instance Foldable.Foldable (Edge s) where
     fold = fold1
     foldMap = foldMap1
     foldMap' = foldMap1'
-    foldr f x (_ :~> Tree val es) = Map.foldr (flip $ foldr f) (foldr f x val) es
-    foldr' f x (_ :~> Tree !val !es) = Map.foldr' (flip $! foldr' f) (foldr' f x val) es
-    foldl f x (_ :~> Tree val es) = foldl f (Map.foldl (foldl f) x es) val
-    foldl' f x (_ :~> Tree !val !es) = foldl' f (Map.foldl' (foldl' f) x es) val
+    foldr f x (_ :~> Tree val es) = foldr f (Map.foldr (flip $ foldr f) x es) val
+    foldr' f x (_ :~> Tree !val !es) = foldr' f (Map.foldr' (flip $! foldr' f) x es) val
+    foldl f x (_ :~> Tree val es) = Map.foldl (foldl f) (foldl f x val) es
+    foldl' f x (_ :~> Tree !val !es) = Map.foldl' (foldl' f) (foldl' f x val) es
     foldr1 = foldr1
     foldl1 = foldl1
     toList (_ :~> Tree (Just x) es) = x : foldMap toList es
