@@ -78,9 +78,10 @@ library:
   source-dirs: src
   exposed-modules:
     - Strings.Data.Partition
+    - Strings.Data.RadixTree
     - Strings.Data.String
-    - Strings.Data.String.Extra
     - Strings.Data.String.Deriving
+    - Strings.Data.String.Extra
     - Strings.Heuristics.Combine
     - Strings.System.Random
 
