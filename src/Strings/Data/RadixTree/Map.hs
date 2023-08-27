@@ -17,7 +17,9 @@ module Strings.Data.RadixTree.Map (
 
     -- * Modification
     insert,
+    insertWith,
     union,
+    unionWith,
     delete,
 ) where
 
@@ -29,12 +31,12 @@ import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
-import Data.Function (flip, id, ($), (.))
+import Data.Function (const, flip, id, ($), (.))
 import Data.Functor (Functor (fmap, (<$)), (<$>))
 import Data.Int (Int)
 import Data.List (map)
 import Data.List.NonEmpty (nonEmpty)
-import Data.Maybe (Maybe (Just, Nothing), isJust)
+import Data.Maybe (Maybe (Just, Nothing), isJust, maybe)
 import Data.Monoid (mempty, (<>))
 import Data.Ord (Ord, (>))
 import Data.String qualified as Text (String)
@@ -140,7 +142,7 @@ empty = Empty
 -- >>> construct [("abc", 1), ("def", 3), ("abb", 5)] :: RadixTreeMap Char Int
 -- Tree [ab :~> Tree [b :~> Tree (5) [],c :~> Tree (1) []],def :~> Tree (3) []]
 construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
-construct = foldr' (uncurry insert) empty
+construct = foldl' (flip $ uncurry insert) empty
 {-# INLINEABLE construct #-}
 
 -- ----- --
@@ -210,33 +212,46 @@ member k t = isJust (lookup k t)
 -- subtrees as children.
 -- * one label is a prefix of the other; then the other subtree is inserted into the prefix edge.
 -- * both label are equal; then the edge is replaced by the union of the subtrees.
-merge :: Ord a => Edge a v -> Edge a v -> Edge a v
-merge (kx :~> tx@(Tree vx ex)) (ky :~> ty@(Tree vy ey)) =
+mergeWith :: Ord a => (v -> v -> v) -> Edge a v -> Edge a v -> Edge a v
+mergeWith f (kx :~> tx@(Tree vx ex)) (ky :~> ty@(Tree vy ey)) =
     prefix :~> case (rkx, rky) of
         -- kx == prefix == ky
-        (Null, Null) -> tx `union` ty
+        (Null, Null) -> unionWith f tx ty
         -- prefix + rky == kx + rky == ky
-        (Null, Head hy) -> Tree vx (Map.insertWith merge hy (rky :~> ty) ex)
+        (Null, Head hy) -> Tree vx (Map.insertWith (mergeWith f) hy (rky :~> ty) ex)
         -- prefix + rkx == kx == ky + rkx
-        (Head hx, Null) -> Tree vy (Map.insertWith merge hx (rkx :~> tx) ey)
+        (Head hx, Null) -> Tree vy (Map.insertWith (mergeWith f) hx (rkx :~> tx) ey)
         -- rkx != rky
         (Head hx, Head hy) -> Tree Nothing (Map.fromList [(hx, rkx :~> tx), (hy, rky :~> ty)])
   where
     (prefix, rkx, rky) = splitCommonPrefix kx ky
 
+-- | Insert with a function, combining new value and old value.
+--
+-- @`insertWith` f key value tree@ will insert the pair @(key, value)@ into @tree@ if key does not exist in the map.
+-- If the key does exist, the function will insert the pair @(key, f new_value old_value)@.
+insertWith :: Ord a => (v -> v -> v) -> String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
+insertWith f Null x (Tree val es) = Tree (Just (maybe x (f x) val)) es
+insertWith f kx@(Head h) x (Tree val es) = Tree val (Map.insertWith (mergeWith f) h (kx :~> Leaf x) es)
+{-# INLINE insertWith #-}
+
 -- | /O(?)/ Insert a new key and value in the map.
 --
 --  If the key is already present in the map, the associated value is replaced with the supplied value.
 insert :: Ord a => String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
-insert Null x (Tree _ es) = Tree (Just x) es
-insert kx@(Head h) x (Tree val es) = Tree val (Map.insertWith merge h (kx :~> Leaf x) es)
+insert = insertWith const
 {-# INLINE insert #-}
 
--- | O(?)/ The expression (union t1 t2) takes the left-biased union of t1 and t2.
+-- | /O(?)/  Union with a combining function.
+unionWith :: Ord a => (v -> v -> v) -> RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
+unionWith f (Tree vx ex) (Tree vy ey) = Tree (liftA2 f vx vy) (Map.unionWith (mergeWith f) ex ey)
+{-# INLINE unionWith #-}
+
+-- | /O(?)/ The expression @union t1 t2@ takes the left-biased union of @t1@ and @t2@.
 --
--- It prefers t1 when duplicate keys are encountered.
+-- It prefers @t1@ when duplicate keys are encountered.
 union :: Ord a => RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
-union (Tree vx ex) (Tree _ ey) = Tree vx (Map.unionWith merge ex ey)
+union = unionWith const
 {-# INLINE union #-}
 
 -- -------- --
