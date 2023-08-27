@@ -60,7 +60,7 @@ test = do
     unless ok' (putStrLn "errors found in 'testWith (RadixTree Char)")
   where
     rtree s = do
-        s' <- generate (shuffle s)
+        s' <- generate (shuffle (s ++ s))
         pure (construct s')
 
 main :: IO ()
