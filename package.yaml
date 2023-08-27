@@ -84,6 +84,14 @@ library:
     - Strings.Heuristics.Combine
     - Strings.System.Random
 
+internal-libraries:
+  MCSP-Algorithms-test-lib:
+    source-dirs: test/lib
+    exposed-modules:
+      - TestLib.Heuristics
+    dependencies:
+      - MCSP-Algorithms
+
 executables:
   playground:
     main: Main.hs
@@ -107,3 +115,18 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - MCSP-Algorithms
+      - MCSP-Algorithms-test-lib
+
+benchmarks:
+  MCSP-Algorithms-bench:
+    main: Bench.hs
+    source-dirs: bench
+    ghc-options:
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - MCSP-Algorithms
+      - MCSP-Algorithms-test-lib
+      - criterion >= 1.6.3.0 && < 2

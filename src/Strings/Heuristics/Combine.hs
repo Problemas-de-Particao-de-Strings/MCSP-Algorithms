@@ -9,12 +9,9 @@ import Prelude hiding (String, (++))
 import Data.Bifunctor (first, second)
 import Data.Set (Set)
 
-import Strings.Data.Partition (chars)
+import Strings.Data.Partition (PartitionPair, chars)
 import Strings.Data.String (String, (++))
 import Strings.Data.String.Extra (hasOneOf, singletons)
-
--- | Two collections of blocks, used for represeting common partitions.
-type PartitionPair a = ([String a], [String a])
 
 -- | Applies a function until the result converges.
 converge :: Eq a => (a -> a) -> a -> a
@@ -76,7 +73,7 @@ combineAll decision (x : xs, ys) =
 -- | MCSP combine heuristic.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
-combineHeuristic :: Eq a => String a -> String a -> ([String a], [String a])
+combineHeuristic :: Eq a => String a -> String a -> PartitionPair a
 combineHeuristic x y = converge (combineAll AlwaysCombine) (chars x, chars y)
 
 -- | MSCP combine heuristic considering singleton analysis.
@@ -84,7 +81,7 @@ combineHeuristic x y = converge (combineAll AlwaysCombine) (chars x, chars y)
 -- Applies combination of blocks from left to right until a maximal solution is reached,
 -- combining first pairs in which both blocks have singletons, then pairs in which either
 -- block has singletons and finally all other possible pairs.
-combineHeuristicS :: Ord a => String a -> String a -> ([String a], [String a])
+combineHeuristicS :: Ord a => String a -> String a -> PartitionPair a
 combineHeuristicS x y
     | null singles = converge (combineAll AlwaysCombine) (chars x, chars y)
     | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars x, chars y)

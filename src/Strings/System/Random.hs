@@ -10,6 +10,7 @@ module Strings.System.Random (
     uniformR,
     uniformB,
     uniformE,
+    uniformRE,
     choose,
     shuffle,
     partitions,
