@@ -109,6 +109,7 @@ jobs:
         shell: sh
         run: |
           stack build --dry-run
+          stack build --only-configure
 
       - name: Generate Remaining Cache Keys
         id: cache-keys-2
