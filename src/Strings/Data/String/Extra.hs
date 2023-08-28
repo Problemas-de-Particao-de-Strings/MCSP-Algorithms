@@ -5,8 +5,10 @@ module Strings.Data.String.Extra (
     singletons,
     hasOneOf,
 
-    -- ** Prefix analysis
+    -- ** Substring analysis
     module Strings.Data.String.Prefix,
+    suffixes,
+    longestCommonSubstring,
 ) where
 
 import Data.Bool (Bool)
@@ -20,6 +22,7 @@ import Data.Ord (Ord)
 import Data.Set (Set, insert, member)
 import GHC.Num ((+))
 
+import Strings.Data.RadixTree.Suffix (construct, findMax, suffixes)
 import Strings.Data.String (String)
 import Strings.Data.String.Prefix
 
@@ -57,3 +60,16 @@ hasOneOf :: Ord a => String a -> Set a -> Bool
 hasOneOf str ls = any hasLetter str
   where
     hasLetter ch = member ch ls
+
+-- ------------------ --
+-- Substring analysis --
+
+-- | /O(?)/ Extracts the longest string that is a substring of both strings.
+--
+-- Returns `Just` the lexicographically largest of the maximal subtrings, or `Nothing` if strings are disjoint.
+--
+-- >>> longestCommonSubstring "ABABC" "ABCBA"
+-- Just ABC
+longestCommonSubstring :: Ord a => String a -> String a -> Maybe (String a)
+longestCommonSubstring s1 s2 = findMax (construct s1 s2)
+{-# INLINEABLE longestCommonSubstring #-}
