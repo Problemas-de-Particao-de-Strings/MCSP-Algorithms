@@ -21,6 +21,7 @@ module Strings.Data.RadixTree.Map (
     union,
     unionWith,
     delete,
+    updatePath,
 ) where
 
 import Control.Applicative (liftA2)
@@ -253,6 +254,14 @@ unionWith f (Tree vx ex) (Tree vy ey) = Tree (liftA2 f vx vy) (Map.unionWith (me
 union :: Ord a => RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
 union = unionWith const
 {-# INLINE union #-}
+
+-- | /O(n log r)/ Update values for all prefixes of key present in the map.
+updatePath :: Ord a => (v -> v) -> String a -> RadixTreeMap a v -> RadixTreeMap a v
+updatePath f Null (Tree val es) = Tree (f <$> val) es
+updatePath f k@(Head h) (Tree val es) = Tree (f <$> val) (Map.adjust updateEdgeOnPath h es)
+  where
+    updateEdgeOnPath (kx :~> tx) = kx :~> maybe id (updatePath f) (stripPrefix kx k) tx
+{-# INLINEABLE updatePath #-}
 
 -- -------- --
 -- Deletion --
