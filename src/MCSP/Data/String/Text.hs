@@ -1,7 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Textual conversion for strings.
-module Strings.Data.String.Text (
+module MCSP.Data.String.Text (
     ShowString (..),
     ReadString (..),
     readCharsPrec,

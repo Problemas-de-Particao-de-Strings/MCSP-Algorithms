@@ -1,5 +1,5 @@
 -- | A compressed trie of string suffixes.
-module Strings.Data.RadixTree.Suffix (
+module MCSP.Data.RadixTree.Suffix (
     SuffixTree,
     suffixes,
     construct,
@@ -16,8 +16,8 @@ import Data.Ord (Ord (..))
 import Data.Semigroup (Semigroup (..))
 import Text.Show (Show)
 
-import Strings.Data.RadixTree.Map qualified as Map
-import Strings.Data.String (String (..), length)
+import MCSP.Data.RadixTree.Map qualified as Map
+import MCSP.Data.String (String (..), length)
 
 -- --------------- --
 -- Data definition --

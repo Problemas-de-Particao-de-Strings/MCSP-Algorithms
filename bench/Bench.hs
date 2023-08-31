@@ -4,9 +4,9 @@ import Control.Monad (replicateM)
 import Criterion.Main (Benchmark, bench, bgroup, defaultMain, nf)
 import Data.String qualified as Text
 
-import Strings.Data.String (String)
-import Strings.Heuristics.Combine (combineHeuristic, combineHeuristicS)
-import Strings.System.Random (generate)
+import MCSP.Data.String (String)
+import MCSP.Heuristics.Combine (combineHeuristic, combineHeuristicS)
+import MCSP.System.Random (generate)
 
 import TestLib.Heuristics (MCSPHeuristic, StringParameters (..), genStringPair, testHeuristic)
 

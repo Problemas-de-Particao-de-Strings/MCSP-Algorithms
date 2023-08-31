@@ -1,5 +1,5 @@
 -- | Generic strings using backed by a contiguous array of unboxed characters.
-module Strings.Data.String (
+module MCSP.Data.String (
     -- * Unboxed string
     String (.., Unboxed, Null, NonNull, Head, Last, Singleton, (:<), (:>), (:<:), (:>:)),
     Unbox,
@@ -182,7 +182,7 @@ import Data.Vector.Generic qualified as Generic
 import Data.Vector.Generic.Mutable qualified as Mutable
 import Data.Vector.Unboxed (MVector, Unbox, Vector)
 
-import Strings.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
+import MCSP.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
 
 -- --------------- --
 -- Data definition --

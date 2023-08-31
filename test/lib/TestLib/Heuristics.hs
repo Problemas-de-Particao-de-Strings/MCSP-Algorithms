@@ -7,9 +7,9 @@ module TestLib.Heuristics (
 
 import Prelude hiding (String)
 
-import Strings.Data.Partition (PartitionPair, randomShuffledCharsWithSingletons)
-import Strings.Data.String (String)
-import Strings.System.Random (Random)
+import MCSP.Data.Partition (PartitionPair, randomShuffledCharsWithSingletons)
+import MCSP.Data.String (String)
+import MCSP.System.Random (Random)
 
 -- | Heuristic for the MCSP problem.
 type MCSPHeuristic a = String a -> String a -> PartitionPair a

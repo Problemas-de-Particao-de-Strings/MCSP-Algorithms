@@ -10,9 +10,9 @@ import Data.String qualified as Text
 import System.IO (IO, putStrLn)
 import Text.Show (Show, show)
 
-import Strings.Data.RadixTree (construct)
-import Strings.Data.String (String, concat)
-import Strings.System.Random (generate, shuffle)
+import MCSP.Data.RadixTree (construct)
+import MCSP.Data.String (String, concat)
+import MCSP.System.Random (generate, shuffle)
 
 assertEq :: (Show a, Eq a) => Text.String -> a -> a -> IO Bool
 assertEq function expected found

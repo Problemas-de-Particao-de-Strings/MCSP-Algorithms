@@ -1,5 +1,5 @@
 -- | Simplified `derivingUnbox`.
-module Strings.Data.String.Deriving (
+module MCSP.Data.String.Deriving (
     EnumLike,
     derivingUnboxVia,
 ) where

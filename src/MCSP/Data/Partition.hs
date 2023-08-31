@@ -1,5 +1,5 @@
 -- | Operations on partitions of `String`.
-module Strings.Data.Partition (
+module MCSP.Data.Partition (
     Partition,
     PartitionPair,
     SimpleEnum,
@@ -18,8 +18,8 @@ import Data.Int (Int)
 import GHC.Enum (Bounded, Enum)
 import GHC.Num ((-))
 
-import Strings.Data.String (String (Null, (:>), (:>:)), Unbox, concat, replicateM)
-import Strings.System.Random (Random, partitions, shuffle, uniformE, uniformRE)
+import MCSP.Data.String (String (Null, (:>), (:>:)), Unbox, concat, replicateM)
+import MCSP.System.Random (Random, partitions, shuffle, uniformE, uniformRE)
 
 -- | A collection of substrings of the same string.
 type Partition a = [String a]
