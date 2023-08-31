@@ -33,8 +33,7 @@ genStringPair params =
         (alphabetSize params)
         [3 .. (2 + nSingletons params)]
 
--- | Test an heuristic against a sample and return
--- the mean length of the resulting partitions.
+-- | Test an heuristic against a sample and return the mean length of the resulting partitions.
 testHeuristic :: MCSPHeuristic a -> [(String a, String a)] -> Double
 testHeuristic heuristic sample = fromIntegral (sum results) / fromIntegral (length sample)
   where

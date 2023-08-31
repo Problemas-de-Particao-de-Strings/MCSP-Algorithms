@@ -34,6 +34,6 @@ mkRandomE = unTypeCode . mkRandom
 -- | Generates a randomized literal `Word64` at compile time.
 --
 -- >>> $$mkWord64
--- 5802473051628008271
+-- 16480467108588357057
 mkWord64 :: CodeQ Word64
 mkWord64 = mkRandom uniformW64

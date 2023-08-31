@@ -62,6 +62,7 @@ instance ShowString Char where
 -- | Shows characters of a string separated by @sep@.
 --
 -- >>> import Data.Vector (fromList)
+-- >>> import Text.Show (showString)
 -- >>> showSeparated (showString ", ") shows (fromList [1, 2, 12 :: Int]) ""
 -- "1, 2, 12"
 showSeparated :: Vector v a => ShowS -> (a -> ShowS) -> v a -> ShowS
@@ -132,6 +133,7 @@ ignorePrec r = readPrec_to_P r minPrec
 --
 -- Returns `Nothing` if some text is left after the match.
 --
+-- >>> import Data.Eq ((==))
 -- >>> match (satisfy (== 'A')) ""
 -- Nothing
 -- >>> match (satisfy (== 'A')) "A"
