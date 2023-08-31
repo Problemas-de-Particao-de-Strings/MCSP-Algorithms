@@ -191,12 +191,12 @@ import MCSP.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
 -- | An unboxed string of characters @a@.
 --
 -- Implemented as a contiguous vector of unboxed characters.
-data String a where
-    -- | Construct a string from a unboxed vector.
-    --
-    -- Note that `Unbox` is only required for constructing the string. All other operations should
-    -- be possible without that constraint.
-    String :: Unbox a => !(Vector a) -> String a
+data String a
+    = -- | Construct a string from a unboxed vector.
+      --
+      -- Note that `Unbox` is only required for constructing the string. All other operations should
+      -- be possible without that constraint.
+      Unbox a => String !(Vector a)
     deriving newtype (Typeable)
 
 {-# COMPLETE Unboxed #-}
