@@ -83,17 +83,17 @@ showSpaced = showSeparated (showChar ' ') shows
 
 -- Implementation of string as space-separated values for multiple integer types.
 concatForM
-    [ ''Integer
-    , ''Int
-    , ''Int8
-    , ''Int16
-    , ''Int32
-    , ''Int64
-    , ''Word
-    , ''Word8
-    , ''Word16
-    , ''Word32
-    , ''Word64
+    [ ''Integer,
+      ''Int,
+      ''Int8,
+      ''Int16,
+      ''Int32,
+      ''Int64,
+      ''Word,
+      ''Word8,
+      ''Word16,
+      ''Word32,
+      ''Word64
     ]
     ( \name ->
         withDecsDoc
@@ -266,17 +266,17 @@ readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)
 
 -- Implementation of string as space-separated values for multiple integer types.
 concatForM
-    [ ''Integer
-    , ''Int
-    , ''Int8
-    , ''Int16
-    , ''Int32
-    , ''Int64
-    , ''Word
-    , ''Word8
-    , ''Word16
-    , ''Word32
-    , ''Word64
+    [ ''Integer,
+      ''Int,
+      ''Int8,
+      ''Int16,
+      ''Int32,
+      ''Int64,
+      ''Word,
+      ''Word8,
+      ''Word16,
+      ''Word32,
+      ''Word64
     ]
     ( \name ->
         withDecsDoc

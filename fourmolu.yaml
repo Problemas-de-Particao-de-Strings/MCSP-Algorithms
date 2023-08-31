@@ -5,10 +5,10 @@ indentation: 4
 column-limit: 100
 
 # Styling of arrows in type signatures (choices: trailing, leading, or leading-args)
-function-arrows: trailing
+function-arrows: leading-args
 
 # How to place commas in multi-line lists, records, etc. (choices: leading or trailing)
-comma-style: leading
+comma-style: trailing
 
 # Styling of import/export lists (choices: leading, trailing, or diff-friendly)
 import-export-style: diff-friendly
@@ -29,7 +29,7 @@ haddock-style: single-line
 haddock-style-module: multi-line
 
 # Styling of let blocks (choices: auto, inline, newline, or mixed)
-let-style: auto
+let-style: inline
 
 # How to align the 'in' keyword with respect to the 'let' keyword (choices: left-align, right-align,
 # or no-space)

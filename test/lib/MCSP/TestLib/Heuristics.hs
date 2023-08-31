@@ -19,9 +19,9 @@ type MCSPHeuristic a = String a -> String a -> PartitionPair a
 --
 -- Alphabet size does not include the elements included as singletons.
 data StringParameters = StringParameters
-    { stringSize :: Int
-    , alphabetSize :: Int
-    , nSingletons :: Int
+    { stringSize :: Int,
+      alphabetSize :: Int,
+      nSingletons :: Int
     }
 
 -- | Generate a pair of strings of integers using the given parameters.

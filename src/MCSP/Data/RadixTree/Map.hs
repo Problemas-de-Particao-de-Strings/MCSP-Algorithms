@@ -71,10 +71,10 @@ data RadixTreeMap a v
       -- be only a radix for its children. Note that all leaves must be terminating, except for
       -- empty tree maps.
       Tree
-      { value :: {-# UNPACK #-} !(Maybe v)
-    -- ^ The value for a terminating node.
-      , edges :: {-# UNPACK #-} !(EdgeSet a v)
-    -- ^ The set of labelled edges to its children.
+      { -- | The value for a terminating node.
+        value :: {-# UNPACK #-} !(Maybe v),
+        -- | The set of labelled edges to its children.
+        edges :: {-# UNPACK #-} !(EdgeSet a v)
       }
     deriving stock (Eq, Ord)
 

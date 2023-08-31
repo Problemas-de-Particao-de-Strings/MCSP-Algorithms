@@ -50,7 +50,9 @@ combineOne deicision (x1 : x2 : xs, y1 : y2 : ys)
     | otherwise = second (y1 :) <$> combineOne deicision (x1 : x2 : xs, y2 : ys)
 combineOne _ _ = Nothing
 -- Specilization for each `CombineDecision` possible.
-{-# SPECIALIZE combineOne :: Eq a => AlwaysCombine -> PartitionPair a -> Maybe (PartitionPair a) #-}
+{-# SPECIALIZE combineOne ::
+    Eq a => AlwaysCombine -> PartitionPair a -> Maybe (PartitionPair a)
+    #-}
 {-# SPECIALIZE combineOne ::
     Ord a => BothHaveSingleton a -> PartitionPair a -> Maybe (PartitionPair a)
     #-}

@@ -20,8 +20,8 @@ createBenchGroup name size params = do
     pure $ bgroup name (map (uncurry $ createBench sample) heuristics)
   where
     heuristics =
-        [ ("combine", combineHeuristic)
-        , ("combineS", combineHeuristicS)
+        [ ("combine", combineHeuristic),
+          ("combineS", combineHeuristicS)
         ]
 
 main :: IO ()
@@ -32,16 +32,16 @@ main =
                 "few-singletons"
                 100
                 StringParameters
-                    { stringSize = 100
-                    , alphabetSize = 2
-                    , nSingletons = 5
-                    }
-            , createBenchGroup
+                    { stringSize = 100,
+                      alphabetSize = 2,
+                      nSingletons = 5
+                    },
+              createBenchGroup
                 "lot-of-singletons"
                 100
                 StringParameters
-                    { stringSize = 100
-                    , alphabetSize = 2
-                    , nSingletons = 60
+                    { stringSize = 100,
+                      alphabetSize = 2,
+                      nSingletons = 60
                     }
             ]
