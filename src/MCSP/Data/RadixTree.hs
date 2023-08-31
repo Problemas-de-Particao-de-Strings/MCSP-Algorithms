@@ -1,5 +1,5 @@
 -- | A compressed trie of string radices.
-module Strings.Data.RadixTree (
+module MCSP.Data.RadixTree (
     -- * Data Types
     RadixTree,
     Map.RadixTreeMap,
@@ -26,8 +26,8 @@ import Data.List (map)
 import Data.Maybe (Maybe)
 import Data.Ord (Ord)
 
-import Strings.Data.RadixTree.Map qualified as Map
-import Strings.Data.String (String (..))
+import MCSP.Data.RadixTree.Map qualified as Map
+import MCSP.Data.String (String (..))
 
 -- | A set of `String`s represented by a [radix tree](https://en.wikipedia.org/wiki/Radix_tree).
 --

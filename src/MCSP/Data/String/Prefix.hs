@@ -1,5 +1,5 @@
 -- | Prefix operations on `String`.
-module Strings.Data.String.Prefix (
+module MCSP.Data.String.Prefix (
     stripPrefix,
     isPrefixOf,
     commonPrefix,
@@ -15,7 +15,7 @@ import Data.Ord (min)
 import Data.Tuple.Extra (fst3)
 import GHC.Num ((-))
 
-import Strings.Data.String (String, length, splitAt, take, unsafeIndex, unsafeSlice)
+import MCSP.Data.String (String, length, splitAt, take, unsafeIndex, unsafeSlice)
 
 -- ---------------------- --
 -- String prefix analysis --

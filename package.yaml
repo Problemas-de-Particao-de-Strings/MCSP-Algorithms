@@ -77,13 +77,13 @@ ghc-options:
 library:
   source-dirs: src
   exposed-modules:
-    - Strings.Data.Partition
-    - Strings.Data.RadixTree
-    - Strings.Data.String
-    - Strings.Data.String.Deriving
-    - Strings.Data.String.Extra
-    - Strings.Heuristics.Combine
-    - Strings.System.Random
+    - MCSP.Data.Partition
+    - MCSP.Data.RadixTree
+    - MCSP.Data.String
+    - MCSP.Data.String.Deriving
+    - MCSP.Data.String.Extra
+    - MCSP.Heuristics.Combine
+    - MCSP.System.Random
 
 internal-libraries:
   MCSP-Algorithms-test-lib:

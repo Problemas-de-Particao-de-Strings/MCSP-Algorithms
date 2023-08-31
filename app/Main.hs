@@ -6,10 +6,10 @@ import Data.Store (Size (ConstSize), Store (size), decodeIO, encode)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 
-import Strings.Data.Partition (randomShuffledBlocks)
-import Strings.Data.String (String)
-import Strings.Data.String.Deriving (derivingUnboxVia)
-import Strings.System.Random (generate)
+import MCSP.Data.Partition (randomShuffledBlocks)
+import MCSP.Data.String (String)
+import MCSP.Data.String.Deriving (derivingUnboxVia)
+import MCSP.System.Random (generate)
 
 data Letter = A | C | G | T
     deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)

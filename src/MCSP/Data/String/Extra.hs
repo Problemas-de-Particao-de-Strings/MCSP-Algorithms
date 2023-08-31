@@ -1,12 +1,12 @@
 -- | Custom operations for `String`.
-module Strings.Data.String.Extra (
+module MCSP.Data.String.Extra (
     -- ** Character set analysis
     frequency,
     singletons,
     hasOneOf,
 
     -- ** Substring analysis
-    module Strings.Data.String.Prefix,
+    module MCSP.Data.String.Prefix,
     suffixes,
     longestCommonSubstring,
 ) where
@@ -22,9 +22,9 @@ import Data.Ord (Ord)
 import Data.Set (Set, insert, member)
 import GHC.Num ((+))
 
-import Strings.Data.RadixTree.Suffix (construct, findMax, suffixes)
-import Strings.Data.String (String)
-import Strings.Data.String.Prefix
+import MCSP.Data.RadixTree.Suffix (construct, findMax, suffixes)
+import MCSP.Data.String (String)
+import MCSP.Data.String.Prefix
 
 -- ---------------------- --
 -- Character set analysis --

@@ -1,5 +1,5 @@
 -- | A map of `String` keys represented by a radix tree.
-module Strings.Data.RadixTree.Map (
+module MCSP.Data.RadixTree.Map (
     -- * Data Types
     RadixTreeMap (..),
     Edge (..),
@@ -51,8 +51,8 @@ import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 import Data.Map.Strict qualified as Map
 import Data.Map.Strict.Internal (Map (Bin))
 
-import Strings.Data.String (ShowString, String (..), Unbox, (++))
-import Strings.Data.String.Prefix (splitCommonPrefix, stripPrefix)
+import MCSP.Data.String (ShowString, String (..), Unbox, (++))
+import MCSP.Data.String.Prefix (splitCommonPrefix, stripPrefix)
 
 -- --------------- --
 -- Data definition --

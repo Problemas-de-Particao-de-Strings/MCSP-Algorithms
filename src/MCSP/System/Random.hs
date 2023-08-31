@@ -1,5 +1,5 @@
 -- | Randomized operations using a `Random` monad for "PCG" operations.
-module Strings.System.Random (
+module MCSP.System.Random (
     Random,
     Seed,
     staticSeed,
@@ -30,7 +30,7 @@ import System.Random.PCG qualified as PCG
 import System.Random.PCG.Class (Generator)
 import System.Random.Shuffle qualified as Shuffle (shuffle)
 
-import Strings.System.Random.Static (mkWord64)
+import MCSP.System.Random.Static (mkWord64)
 
 -- | A monad capable of producing random values of @a@.
 type Random a = forall g m. Generator g m => RandT g m a

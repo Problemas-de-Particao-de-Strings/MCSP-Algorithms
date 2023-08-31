@@ -1,5 +1,5 @@
 -- | Combine Heuristics for solving the MCSP problem.
-module Strings.Heuristics.Combine (
+module MCSP.Heuristics.Combine (
     combineHeuristic,
     combineHeuristicS,
 ) where
@@ -9,9 +9,9 @@ import Prelude hiding (String, (++))
 import Data.Bifunctor (first, second)
 import Data.Set (Set)
 
-import Strings.Data.Partition (PartitionPair, chars)
-import Strings.Data.String (String, (++))
-import Strings.Data.String.Extra (hasOneOf, singletons)
+import MCSP.Data.Partition (PartitionPair, chars)
+import MCSP.Data.String (String, (++))
+import MCSP.Data.String.Extra (hasOneOf, singletons)
 
 -- | Applies a function until the result converges.
 converge :: Eq a => (a -> a) -> a -> a
