@@ -86,10 +86,10 @@ library:
     - MCSP.System.Random
 
 internal-libraries:
-  MCSP-Algorithms-test-lib:
+  mcsp-test-lib:
     source-dirs: test/lib
     exposed-modules:
-      - TestLib.Heuristics
+      - MCSP.TestLib.Heuristics
     dependencies:
       - MCSP-Algorithms
 
@@ -106,7 +106,7 @@ executables:
       - MCSP-Algorithms
 
 tests:
-  MCSP-Algorithms-test:
+  spec:
     main: Spec.hs
     source-dirs: test
     ghc-options:
@@ -116,10 +116,10 @@ tests:
       - -with-rtsopts=-N
     dependencies:
       - MCSP-Algorithms
-      - MCSP-Algorithms-test-lib
+      - mcsp-test-lib
 
 benchmarks:
-  MCSP-Algorithms-bench:
+  bench:
     main: Bench.hs
     source-dirs: bench
     ghc-options:
@@ -129,5 +129,5 @@ benchmarks:
       - -with-rtsopts=-N
     dependencies:
       - MCSP-Algorithms
-      - MCSP-Algorithms-test-lib
+      - mcsp-test-lib
       - criterion >= 1.6.3.0 && < 2

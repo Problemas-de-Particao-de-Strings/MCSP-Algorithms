@@ -1,4 +1,4 @@
-module TestLib.Heuristics (
+module MCSP.TestLib.Heuristics (
     MCSPHeuristic,
     StringParameters (..),
     genStringPair,
