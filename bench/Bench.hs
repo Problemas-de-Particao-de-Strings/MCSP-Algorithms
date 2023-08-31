@@ -7,8 +7,7 @@ import Data.String qualified as Text
 import MCSP.Data.String (String)
 import MCSP.Heuristics.Combine (combineHeuristic, combineHeuristicS)
 import MCSP.System.Random (generate)
-
-import TestLib.Heuristics (MCSPHeuristic, StringParameters (..), genStringPair, testHeuristic)
+import MCSP.TestLib.Heuristics (MCSPHeuristic, StringParameters (..), genStringPair, testHeuristic)
 
 -- | Create a benchmark for one heuristic and one sample.
 createBench :: [(String a, String a)] -> Text.String -> MCSPHeuristic a -> Benchmark
