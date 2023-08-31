@@ -101,9 +101,9 @@ data Info a = Info {minVal :: !Int, maxVal :: !Int, name :: !String}
 info :: forall a. EnumLike a => Info a
 info =
     Info
-        { minVal = fromEnum (minBound :: a)
-        , maxVal = fromEnum (maxBound :: a)
-        , name = show $ typeRep (Proxy :: Proxy a)
+        { minVal = fromEnum (minBound :: a),
+          maxVal = fromEnum (maxBound :: a),
+          name = show $ typeRep (Proxy :: Proxy a)
         }
 
 -- | Checks if @a@ is safely convertible to @b@ via `Enum` and `Bounded`, then returns the casts.

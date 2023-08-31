@@ -90,10 +90,10 @@ splitCommonPrefix :: Eq a => String a -> String a -> (String a, String a, String
 splitCommonPrefix lhs rhs =
     -- SAFETY: commonPrefixLength is guaranteed to resolve to a length not bigger than
     -- any of the strings
-    ( unsafeSlice 0 prefix lhs
-    , -- SAFETY: again, '0 <= prefix <= length lhs' and '0 <= prefix <= length rhs'
-      unsafeSlice prefix (length lhs - prefix) lhs
-    , unsafeSlice prefix (length rhs - prefix) rhs
+    ( unsafeSlice 0 prefix lhs,
+      -- SAFETY: again, '0 <= prefix <= length lhs' and '0 <= prefix <= length rhs'
+      unsafeSlice prefix (length lhs - prefix) lhs,
+      unsafeSlice prefix (length rhs - prefix) rhs
     )
   where
     prefix = commonPrefixLength lhs rhs

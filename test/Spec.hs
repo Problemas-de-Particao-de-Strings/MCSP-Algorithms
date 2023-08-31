@@ -45,12 +45,12 @@ testWith :: Foldable t => ([String Char] -> IO (t (String Char))) -> IO Bool
 testWith gen = do
     target <- gen strs
     runTests
-        [ assertEq "toList" strs (toList target)
-        , assertEq "foldMap" strs (foldMapToList target)
-        , assertEq "foldMap'" strs (foldMap'ToList target)
-        , assertEq "foldr" strs (foldrToList target)
-        , assertEq "foldl" strs (foldlToList target)
-        , assertEq "fold" (concat strs) (foldConcat target)
+        [ assertEq "toList" strs (toList target),
+          assertEq "foldMap" strs (foldMapToList target),
+          assertEq "foldMap'" strs (foldMap'ToList target),
+          assertEq "foldr" strs (foldrToList target),
+          assertEq "foldl" strs (foldlToList target),
+          assertEq "fold" (concat strs) (foldConcat target)
         ]
 
 test :: IO ()
