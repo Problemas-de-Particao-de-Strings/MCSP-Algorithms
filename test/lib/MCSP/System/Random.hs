@@ -25,7 +25,7 @@ import Data.Vector.Generic qualified as Vector (length)
 import Data.Word (Word64, bitReverse64)
 import GHC.Exts (IsList (..))
 
-import Control.Monad.Random.Strict (RandT, evalRandT, liftRandT)
+import Control.Monad.Random (RandT, evalRandT, liftRandT)
 import System.Random.PCG qualified as PCG
 import System.Random.PCG.Class (Generator)
 import System.Random.Shuffle qualified as Shuffle (shuffle)
