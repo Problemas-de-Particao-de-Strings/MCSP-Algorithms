@@ -9,9 +9,8 @@ import Prelude hiding (String, (++))
 import Data.Bifunctor (first, second)
 import Data.Set (Set)
 
-import MCSP.Data.Partition (PartitionPair, chars)
 import MCSP.Data.String (String, (++))
-import MCSP.Data.String.Extra (hasOneOf, singletons)
+import MCSP.Data.String.Extra (PartitionPair, chars, hasOneOf, singletons)
 
 -- | Applies a function until the result converges.
 converge :: Eq a => (a -> a) -> a -> a

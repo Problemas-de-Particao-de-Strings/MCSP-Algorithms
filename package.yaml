@@ -36,7 +36,6 @@ default-extensions:
 library:
   source-dirs: src
   exposed-modules:
-    - MCSP.Data.Partition
     - MCSP.Data.RadixTree
     - MCSP.Data.String
     - MCSP.Data.String.Deriving
@@ -61,6 +60,7 @@ internal-libraries:
     source-dirs: test/lib
     exposed-modules:
       - MCSP.TestLib.Heuristics
+      - MCSP.TestLib.Random
     dependencies:
       - mcsp-algorithms
 
@@ -70,6 +70,7 @@ executables:
     source-dirs: app
     dependencies:
       - mcsp-algorithms
+      - mcsp-test-lib
     ghc-options:
       - -threaded
       - -feager-blackholing
