@@ -54,7 +54,8 @@ showMany showItem str text = foldr' showItem text str
 instance {-# OVERLAPPABLE #-} Show a => ShowString a where
     showStr = showMany shows
 
--- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes (@abcd@).
+-- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes
+-- (@abcd@).
 instance ShowString Char where
     showStr = showMany showChar
 
@@ -82,7 +83,18 @@ showSpaced = showSeparated (showChar ' ') shows
 
 -- Implementation of string as space-separated values for multiple integer types.
 concatForM
-    [''Integer, ''Int, ''Int8, ''Int16, ''Int32, ''Int64, ''Word, ''Word8, ''Word16, ''Word32, ''Word64]
+    [ ''Integer
+    , ''Int
+    , ''Int8
+    , ''Int16
+    , ''Int32
+    , ''Int64
+    , ''Word
+    , ''Word8
+    , ''Word16
+    , ''Word32
+    , ''Word64
+    ]
     ( \name ->
         withDecsDoc
             "`Strings.Data.String.String` represented by a sequence of space separated integers (@1 2 3@)."
@@ -176,8 +188,8 @@ fromJust = maybe pfail pure
 
 -- | Creates a partial parser that consumes the minimum amount of text possible.
 --
--- Parsers usually try to match on a full token at once. For Strings, partially matching on characters is more useful.
--- This parser will return a match even if it is part of a larger token.
+-- Parsers usually try to match on a full token at once. For Strings, partially matching on
+-- characters is more useful. This parser will return a match even if it is part of a larger token.
 --
 -- >>> readP_to_S (readPartialMinimal $ ignorePrec readPrec :: ReadP Int) "1234 5"
 -- [(1,"234 5")]
@@ -189,8 +201,9 @@ readPartialMinimal readItem = readUntilFirstMatch ""
 
 -- | Creates a partial parser that tries to increase a match as much as possible.
 --
--- Parsers usually try to match on a full token at once. For Strings, partially matching on characters is more useful.
--- This parser receives an initial match and the text it consumed and tries to make another match consuming more text.
+-- Parsers usually try to match on a full token at once. For Strings, partially matching on
+-- characters is more useful. This parser receives an initial match and the text it consumed and
+-- tries to make another match consuming more text.
 --
 -- >>> readP_to_S (readPartialFrom (ignorePrec readPrec :: ReadP Int) ("1", 1)) "234 5"
 -- [(1234," 5")]
@@ -203,11 +216,12 @@ readPartialFrom readItem (buffer, currentMatch) = readOr currentMatch $ do
 
 -- | Creates a partial parser that consumes the maximum amount of text possible.
 --
--- Parsers usually try to match on a full token at once. For Strings, partially matching on characters is more useful.
--- This parser changes its input parser to be character-based.
+-- Parsers usually try to match on a full token at once. For Strings, partially matching on
+-- characters is more useful. This parser changes its input parser to be character-based.
 --
--- Note that this parser may be very inefficient if the input parser is not simple enough. It sould only be used for
--- simple types the can be represented with a small number of characters (like Enums).
+-- Note that this parser may be very inefficient if the input parser is not simple enough. It sould
+-- only be used for simple types the can be represented with a small number of characters
+-- (like Enums).
 --
 --
 -- >>> readP_to_S (readPartial $ ignorePrec readPrec :: ReadP Int) "1234 5"
@@ -236,7 +250,8 @@ instance {-# OVERLAPPABLE #-} Read a => ReadString a where
 readNonSpace :: ReadP Char
 readNonSpace = satisfy (not . isSpace)
 
--- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes (@abcd@).
+-- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes
+-- (@abcd@).
 instance ReadString Char where
     readChars = do
         skipInLine
@@ -251,7 +266,18 @@ readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)
 
 -- Implementation of string as space-separated values for multiple integer types.
 concatForM
-    [''Integer, ''Int, ''Int8, ''Int16, ''Int32, ''Int64, ''Word, ''Word8, ''Word16, ''Word32, ''Word64]
+    [ ''Integer
+    , ''Int
+    , ''Int8
+    , ''Int16
+    , ''Int32
+    , ''Int64
+    , ''Word
+    , ''Word8
+    , ''Word16
+    , ''Word32
+    , ''Word64
+    ]
     ( \name ->
         withDecsDoc
             "`Strings.Data.String.String` represented by a sequence of space separated integers (@1 2 3@)."

@@ -60,15 +60,16 @@ import MCSP.Data.String.Extra.Prefix (splitCommonPrefix, stripPrefix)
 
 -- | A map of `String` keys represented by a [radix tree](https://en.wikipedia.org/wiki/Radix_tree).
 --
--- The tree structure uses the maximal substring possible to label edges so that each internal node has at least two
--- children. Even though a substrings are used, the trie property is maintained, that is, a node has at most @r@
--- children, where @r@ is the number of possible values for @a@. Given this property, substring are stored using a
--- sorted `Map.Map` which may improve performance.
+-- The tree structure uses the maximal substring possible to label edges so that each internal node
+-- has at least two children. Even though a substrings are used, the trie property is maintained,
+-- that is, a node has at most @r@ children, where @r@ is the number of possible values for @a@.
+-- Given this property, substring are stored using a sorted `Map.Map` which may improve performance.
 data RadixTreeMap a v
     = -- | A subtree or node in the map.
       --
-      -- Each node may contain a value and is considered a terminating node in that case, or it may be only a radix
-      -- for its children. Note that all leaves must be terminating, except for empty tree maps.
+      -- Each node may contain a value and is considered a terminating node in that case, or it may
+      -- be only a radix for its children. Note that all leaves must be terminating, except for
+      -- empty tree maps.
       Tree
       { value :: {-# UNPACK #-} !(Maybe v)
     -- ^ The value for a terminating node.
@@ -97,8 +98,9 @@ pattern WithSomeKey s <- (edges -> Bin _ _ (s@Unboxed :~> _) _ _)
 -- | A collection of uniquely labelled edges.
 --
 -- This could be @`Map.Map` (`String` a) (`Edge` a v)@, using the entire label as key, but the
--- [trie property](https://en.wikipedia.org/wiki/Trie) ensures that the first character of the label must also be
--- unique. This enables us to use a faster implementation and also helps to ensure the trie property.
+-- [trie property](https://en.wikipedia.org/wiki/Trie) ensures that the first character of the
+-- label must also be unique. This enables us to use a faster implementation and also helps to
+-- ensure the trie property.
 type EdgeSet a v = Map.Map a (Edge a v)
 
 -- | /O(1)/ Matches an empty `EdgeSet`.
@@ -209,8 +211,8 @@ member k t = isJust (lookup k t)
 -- | /O(?)/ Merge two edges into a single edge by their common prefix.
 --
 -- There are basically three situations:
--- * both edge labels are distinct, but share a common prefix; then the edge is replaced by a new edge with both
--- subtrees as children.
+-- * both edge labels are distinct, but share a common prefix; then the edge is replaced by a
+-- new edge with both subtrees as children.
 -- * one label is a prefix of the other; then the other subtree is inserted into the prefix edge.
 -- * both label are equal; then the edge is replaced by the union of the subtrees.
 mergeWith :: Ord a => (v -> v -> v) -> Edge a v -> Edge a v -> Edge a v
@@ -229,8 +231,9 @@ mergeWith f (kx :~> tx@(Tree vx ex)) (ky :~> ty@(Tree vy ey)) =
 
 -- | Insert with a function, combining new value and old value.
 --
--- @`insertWith` f key value tree@ will insert the pair @(key, value)@ into @tree@ if key does not exist in the map.
--- If the key does exist, the function will insert the pair @(key, f new_value old_value)@.
+-- @`insertWith` f key value tree@ will insert the pair @(key, value)@ into @tree@ if key does
+-- not exist in the map. If the key does exist, the function will insert the pair
+-- @(key, f new_value old_value)@.
 insertWith :: Ord a => (v -> v -> v) -> String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
 insertWith f Null x (Tree val es) = Tree (Just (maybe x (f x) val)) es
 insertWith f kx@(Head h) x (Tree val es) = Tree val (Map.insertWith (mergeWith f) h (kx :~> Leaf x) es)
@@ -238,7 +241,8 @@ insertWith f kx@(Head h) x (Tree val es) = Tree val (Map.insertWith (mergeWith f
 
 -- | /O(?)/ Insert a new key and value in the map.
 --
---  If the key is already present in the map, the associated value is replaced with the supplied value.
+--  If the key is already present in the map, the associated value is replaced with the supplied
+-- value.
 insert :: Ord a => String a -> v -> RadixTreeMap a v -> RadixTreeMap a v
 insert = insertWith const
 {-# INLINE insert #-}
@@ -315,8 +319,9 @@ instance (ShowString a, Show v) => Show (Edge a v) where
 
 -- | Extracts the element out of a `Just` and throws an error if its argument is `Nothing`.
 --
--- This is an adaptation of `Data.Maybe.fromJust` without capturing the call stack for traces. It should only be used
--- when the error should never happen, like an `Edge` pointing to a an empty subtree.
+-- This is an adaptation of `Data.Maybe.fromJust` without capturing the call stack for traces. It
+-- should only be used when the error should never happen, like an `Edge` pointing to a an empty
+-- subtree.
 unwrap :: Text.String -> Maybe a -> a
 unwrap _ (Just x) = x
 unwrap message Nothing = errorWithoutStackTrace message

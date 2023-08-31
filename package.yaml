@@ -16,10 +16,11 @@ extra-source-files:
 synopsis: Algorithms for Minimum Common String Partition (MCSP) in Haskell.
 category: College,MCSP,Algorithms,String,Partition
 
-# To avoid duplicated efforts in documentation and dealing with the complications of embedding Haddock markup inside
-# cabal files, it is common to point users to the README.md file.
+# To avoid duplicated efforts in documentation and dealing with the complications of embedding
+# Haddock markup inside cabal files, it is common to point users to the README.md file.
 description: |
-  Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/MCSP-Algorithms#readme>.
+  Please see the README on GitHub at
+  <https://github.com/Problemas-de-Particao-de-Strings/MCSP-Algorithms#readme>.
 
 # Using modern Haskell features
 language: GHC2021

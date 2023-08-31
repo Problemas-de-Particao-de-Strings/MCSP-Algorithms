@@ -110,7 +110,8 @@ info =
 safeCasts :: forall a b. (EnumLike a, EnumLike b) => (a -> b, b -> a)
 safeCasts
     | minVal rep <= minVal typ && maxVal typ <= maxVal rep = (cast, clamp)
-    | otherwise = error $ name typ ++ " is larger than " ++ name rep ++ " and cannot be safely converted"
+    | otherwise =
+        error $ name typ ++ " is larger than " ++ name rep ++ " and cannot be safely converted"
   where
     typ = info :: Info a
     rep = info :: Info b

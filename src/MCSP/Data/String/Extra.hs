@@ -90,7 +90,8 @@ hasOneOf str ls = any hasLetter str
 
 -- | /O(?)/ Extracts the longest string that is a substring of both strings.
 --
--- Returns `Just` the lexicographically largest of the maximal subtrings, or `Nothing` if strings are disjoint.
+-- Returns `Just` the lexicographically largest of the maximal subtrings, or `Nothing` if strings
+-- are disjoint.
 --
 -- >>> longestCommonSubstring "ABABC" "ABCBA"
 -- Just ABC
