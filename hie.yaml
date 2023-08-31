@@ -2,5 +2,3 @@ cradle:
   stack:
     - path: src
       component: mcsp-algorithms:lib
-    - path: app
-      component: mcsp-algorithms:exe:playground

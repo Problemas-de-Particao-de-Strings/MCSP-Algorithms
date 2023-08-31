@@ -1,7 +1,5 @@
 -- | Operations on partitions of `String`.
-module MCSP.Data.Partition (
-    Partition,
-    PartitionPair,
+module MCSP.TestLib.Random (
     SimpleEnum,
     concat,
     chars,
@@ -18,27 +16,12 @@ import Data.Int (Int)
 import GHC.Enum (Bounded, Enum)
 import GHC.Num ((-))
 
-import MCSP.Data.String (String (Null, (:>), (:>:)), Unbox, concat, replicateM)
+import MCSP.Data.String (String (..), Unbox, concat, replicateM)
+import MCSP.Data.String.Extra (PartitionPair, chars)
 import MCSP.System.Random (Random, partitions, shuffle, uniformE, uniformRE)
-
--- | A collection of substrings of the same string.
-type Partition a = [String a]
-
--- | A pair of partitions.
-type PartitionPair a = (Partition a, Partition a)
 
 -- | Common constraints for a character.
 type SimpleEnum a = (Enum a, Bounded a, Unbox a)
-
--- | /O(n)/ Split the string in substrings of 1 char each.
---
--- >>> chars "abcd"
--- [a,b,c,d]
-chars :: String a -> Partition a
-chars = go []
-  where
-    go p (rest :>: ch) = go (ch : p) rest
-    go p Null = p
 
 -- | Generates a pair of related strings by shuffling all the characters.
 --

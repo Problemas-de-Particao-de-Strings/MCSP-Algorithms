@@ -1,12 +1,17 @@
 -- | Custom operations for `String`.
 module MCSP.Data.String.Extra (
+    -- ** Partition operations
+    Partition,
+    PartitionPair,
+    chars,
+
     -- ** Character set analysis
     frequency,
     singletons,
     hasOneOf,
 
     -- ** Substring analysis
-    module MCSP.Data.String.Prefix,
+    module MCSP.Data.String.Extra.Prefix,
     suffixes,
     longestCommonSubstring,
 ) where
@@ -23,8 +28,27 @@ import Data.Set (Set, insert, member)
 import GHC.Num ((+))
 
 import MCSP.Data.RadixTree.Suffix (construct, findMax, suffixes)
-import MCSP.Data.String (String)
-import MCSP.Data.String.Prefix
+import MCSP.Data.String (String (..))
+import MCSP.Data.String.Extra.Prefix
+
+-- ------------------------ --
+-- Operations on partitions --
+
+-- | A collection of substrings of the same string.
+type Partition a = [String a]
+
+-- | A pair of partitions.
+type PartitionPair a = (Partition a, Partition a)
+
+-- | /O(n)/ Split the string in substrings of 1 char each.
+--
+-- >>> chars "abcd"
+-- [a,b,c,d]
+chars :: String a -> Partition a
+chars = go []
+  where
+    go p (rest :>: ch) = go (ch : p) rest
+    go p Null = p
 
 -- ---------------------- --
 -- Character set analysis --
