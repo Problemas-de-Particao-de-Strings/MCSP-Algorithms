@@ -55,7 +55,7 @@ generateWith (s1, s2) r = fst $ PCG.withFrozen seed (evalRandT r)
 -- | Use random seed to generate value in IO.
 --
 -- >>> generate uniform :: IO Int
--- 4619012372051643558  -- Could be any Int
+-- 3295836545219376626  -- Could be any Int
 generate :: Random a -> IO a
 generate r = PCG.withSystemRandom (evalRandT r)
 {-# INLINE generate #-}
@@ -117,10 +117,10 @@ uniformE = uniformRE minBound maxBound
 --
 -- It should be equivalent to `uniformR`, but for non-`PCG.Variate`.
 --
--- >>> generateWithSeed 1 2 $ uniformRE 0 10 :: Int
--- 2
--- >>> generateWithSeed 1 2 $ uniformRE 'a' 'z'
--- 'g'
+-- >>> generateWith (1,3) $ uniformRE 0 10 :: Int
+-- 5
+-- >>> generateWith (1,3) $ uniformRE 'a' 'z'
+-- 'n'
 uniformRE :: Enum a => a -> a -> Random a
 uniformRE lo hi = do
     let loNum = fromEnum lo

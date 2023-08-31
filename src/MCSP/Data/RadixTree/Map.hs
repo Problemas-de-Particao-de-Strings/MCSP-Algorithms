@@ -197,9 +197,9 @@ lookupMax (Tree _ es) = do
 
 -- | /O(n log r)/ Check if there is an associated value for the key.
 --
--- >>> member "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> member "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Bool
 -- True
--- >>> member "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> member "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Bool
 -- False
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)

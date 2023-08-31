@@ -778,7 +778,7 @@ replicate = Generic.replicate
 
 -- | /O(n)/ Construct a string of the given length by applying the function to each index.
 --
--- >>> import Prelude (head)
+-- >>> import Prelude (head, show)
 -- >>> generate 5 (\i -> Prelude.head (show i))
 -- 01234
 generate :: Unbox a => Int -> (Int -> a) -> String a

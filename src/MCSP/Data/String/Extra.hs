@@ -48,7 +48,7 @@ chars :: String a -> Partition a
 chars = go []
   where
     go p (rest :>: ch) = go (ch : p) rest
-    go p Null = p
+    go !p Null = p
 
 -- ---------------------- --
 -- Character set analysis --
@@ -75,10 +75,10 @@ singletons str = foldrWithKey' insertSingleton mempty (frequency str)
 -- | /O(n lg m)/ Check if at least one of the character of string is present in the given set.
 --
 -- >>> import Data.Set (fromList)
--- >>> hasOneOf "abca" (Data.Set.fromList "bdf")
+-- >>> hasOneOf "abca" (fromList "bdf")
 -- True
 -- >>> import Data.Set (fromList)
--- >>> hasOneOf "xxx" (Data.Set.fromList "bdf")
+-- >>> hasOneOf "xxx" (fromList "bdf")
 -- False
 hasOneOf :: Ord a => String a -> Set a -> Bool
 hasOneOf str ls = any hasLetter str
@@ -90,8 +90,8 @@ hasOneOf str ls = any hasLetter str
 
 -- | /O(?)/ Extracts the longest string that is a substring of both strings.
 --
--- Returns `Just` the lexicographically largest of the maximal subtrings, or `Nothing` if strings
--- are disjoint.
+-- Returns `Just` the lexicographically largest of the maximal subtrings, or `Data.Maybe.Nothing`
+-- if strings are disjoint.
 --
 -- >>> longestCommonSubstring "ABABC" "ABCBA"
 -- Just ABC
