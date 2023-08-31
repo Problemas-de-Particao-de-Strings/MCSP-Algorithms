@@ -6,8 +6,9 @@
 
 ## Building
 
-To compile the project, you'll need a recent release of the [Glasgow Haskell Compiler](https://www.haskell.org/ghc/).
-We recommend using [GHCup](https://www.haskell.org/ghcup/) for managing compiler versions. You'll also need
+To compile the project, you'll need a recent release of the
+[Glasgow Haskell Compiler](https://www.haskell.org/ghc/). We recommend using
+[GHCup](https://www.haskell.org/ghcup/) for managing compiler versions. You'll also need
 [stack](https://docs.haskellstack.org/en/stable/) for building. Then, you can just do:
 
 ```sh
@@ -35,8 +36,9 @@ pre-commit install
 
 ### Commit Message
 
-Commits should follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. Types in use can
-be found at [pvdlg/conventional-commit-types](https://github.com/pvdlg/conventional-commit-types).
+Commits should follow the [Conventional Commits](https://www.conventionalcommits.org/)
+specification. Types in use can be found at
+[pvdlg/conventional-commit-types](https://github.com/pvdlg/conventional-commit-types).
 
 ### Haddock
 

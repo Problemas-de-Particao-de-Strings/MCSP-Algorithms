@@ -17,7 +17,8 @@ import MCSP.System.Random (generate, shuffle)
 assertEq :: (Show a, Eq a) => Text.String -> a -> a -> IO Bool
 assertEq function expected found
     | expected == found = pure True
-    | otherwise = putStrLn (function ++ ": expected " ++ show expected ++ ", found " ++ show found) $> False
+    | otherwise =
+        putStrLn (function ++ ": expected " ++ show expected ++ ", found " ++ show found) $> False
 
 strs :: [String Char]
 strs = sort ["test", "suite", "", "check", "fold", "order"]

@@ -22,7 +22,8 @@ import MCSP.Data.String (String, length, splitAt, take, unsafeIndex, unsafeSlice
 
 -- | /O(min(m,n))/ Removes the given prefix from a string.
 --
--- Returns `Nothing` if the string does not start with the prefix given, or `Just` the string after the prefix.
+-- Returns `Nothing` if the string does not start with the prefix given, or `Just` the string after
+-- the prefix.
 --
 -- >>> stripPrefix "foo" "foobar"
 -- Just bar
@@ -57,7 +58,8 @@ commonPrefixLength lhs rhs = fromMaybe n (find notMatching indices)
   where
     n = min (length lhs) (length rhs)
     indices = [0 .. n - 1] :: [Int]
-    -- SAFETY: index i is in range [0, n = min(lhs, rhs)) and is guaranteed to be in bounds for both strings
+    -- SAFETY: index i is in range [0, n = min(lhs, rhs)) and is guaranteed to be in bounds for
+    -- both strings
     notMatching i = unsafeIndex lhs i /= unsafeIndex rhs i
 {-# INLINEABLE commonPrefixLength #-}
 
@@ -75,8 +77,8 @@ commonPrefix lhs rhs = fst3 (splitCommonPrefix lhs rhs)
 
 -- | /O(min(m,n))/ Returns the maximum common prefix of two strings and the remainder of each string.
 --
--- Note that `splitCommonPrefix a b` is equivalent to `let p = commonPrefix a b in (p, fromJust (splitPrefix p a),
--- fromJust (splitPrefix p b))`, but slightly more efficient.
+-- Note that `splitCommonPrefix a b` is equivalent to `let p = commonPrefix a b in
+-- (p, fromJust (splitPrefix p a), fromJust (splitPrefix p b))`, but slightly more efficient.
 --
 -- >>> splitCommonPrefix "abc" "abd"
 -- (ab,c,d)
@@ -86,7 +88,8 @@ commonPrefix lhs rhs = fst3 (splitCommonPrefix lhs rhs)
 -- (,def,ghi)
 splitCommonPrefix :: Eq a => String a -> String a -> (String a, String a, String a)
 splitCommonPrefix lhs rhs =
-    -- SAFETY: commonPrefixLength is guaranteed to resolve to a length not bigger than any of the strings
+    -- SAFETY: commonPrefixLength is guaranteed to resolve to a length not bigger than
+    -- any of the strings
     ( unsafeSlice 0 prefix lhs
     , -- SAFETY: again, '0 <= prefix <= length lhs' and '0 <= prefix <= length rhs'
       unsafeSlice prefix (length lhs - prefix) lhs

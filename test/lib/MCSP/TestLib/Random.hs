@@ -35,13 +35,15 @@ randomShuffledChars n = do
     s2 <- shuffle s1
     pure (s1, s2)
 
--- | Generates a pair of related strings with a defined number of singletons and shuffled characters.
+-- | Generates a pair of related strings with a defined number of singletons and shuffled
+-- characters.
 --
 -- >>> import Strings.System.Random (generateWith)
 -- >>> import Data.Word (Word8)
 -- >>> generateWith (1,2) $ randomShuffledCharsWithSingletons 10 1 3 [4, 5] :: (String Word8, String Word8)
 -- (1 2 2 5 3 1 4 3 1 3,5 3 1 1 2 1 3 4 2 3)
-randomShuffledCharsWithSingletons :: SimpleEnum a => Int -> a -> a -> [a] -> Random (String a, String a)
+randomShuffledCharsWithSingletons ::
+    SimpleEnum a => Int -> a -> a -> [a] -> Random (String a, String a)
 randomShuffledCharsWithSingletons n lo hi singles = do
     str <- replicateM (n - length singles) (uniformRE lo hi)
     let str' = foldl' (:>) str singles

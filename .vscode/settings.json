@@ -9,7 +9,7 @@
     "editor.formatOnSave": true,
     "editor.insertSpaces": true,
     "editor.rulers": [
-        120
+        100
     ],
     "editor.tabSize": 4,
     "editor.unicodeHighlight.includeComments": true,
@@ -33,7 +33,7 @@
     },
     "mergeEditor.diffAlgorithm": "advanced",
     "yaml.format.enable": true,
-    "yaml.format.printWidth": 120,
+    "yaml.format.printWidth": 100,
     "[yaml]": {
         "editor.tabSize": 2
     }

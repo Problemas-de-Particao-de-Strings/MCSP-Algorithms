@@ -42,7 +42,8 @@ instance Ord a => CombineDecision (EitherHasSingleton a) a where
     shouldCombine (EitherHasSingleton singles) xs ys = hasOneOf xs singles || hasOneOf ys singles
     {-# INLINE shouldCombine #-}
 
--- | /O(n^2)/ If possible, combines the first 2 blocks of a string and the first identical pair of another.
+-- | /O(n^2)/ If possible, combines the first 2 blocks of a string and the first identical pair of
+-- another.
 combineOne :: (CombineDecision h a, Eq a) => h -> PartitionPair a -> Maybe (PartitionPair a)
 combineOne deicision (x1 : x2 : xs, y1 : y2 : ys)
     | (x1, x2) == (y1, y2) && shouldCombine deicision x1 x2 = Just ((x1 ++ x2) : xs, (y1 ++ y2) : ys)
@@ -50,8 +51,12 @@ combineOne deicision (x1 : x2 : xs, y1 : y2 : ys)
 combineOne _ _ = Nothing
 -- Specilization for each `CombineDecision` possible.
 {-# SPECIALIZE combineOne :: Eq a => AlwaysCombine -> PartitionPair a -> Maybe (PartitionPair a) #-}
-{-# SPECIALIZE combineOne :: Ord a => BothHaveSingleton a -> PartitionPair a -> Maybe (PartitionPair a) #-}
-{-# SPECIALIZE combineOne :: Ord a => EitherHasSingleton a -> PartitionPair a -> Maybe (PartitionPair a) #-}
+{-# SPECIALIZE combineOne ::
+    Ord a => BothHaveSingleton a -> PartitionPair a -> Maybe (PartitionPair a)
+    #-}
+{-# SPECIALIZE combineOne ::
+    Ord a => EitherHasSingleton a -> PartitionPair a -> Maybe (PartitionPair a)
+    #-}
 
 -- | Combines pairs of blocks from left to right in 2 strings.
 combineAll :: (CombineDecision h a, Eq a) => h -> PartitionPair a -> PartitionPair a

@@ -31,8 +31,9 @@ import MCSP.Data.String (String (..))
 
 -- | A set of `String`s represented by a [radix tree](https://en.wikipedia.org/wiki/Radix_tree).
 --
--- This tree is implemented a `Map.RadixTreeMap` where each key is associated with itself, enabling key construction in
--- constant time (no need to concatenate radices) and some useful instances (like `Data.Foldable`).
+-- This tree is implemented a `Map.RadixTreeMap` where each key is associated with itself, enabling
+-- key construction in constant time (no need to concatenate radices) and some useful instances
+-- (like `Data.Foldable`).
 type RadixTree a = Map.RadixTreeMap a (String a)
 
 -- | /O(1)/ The empty tree.
@@ -86,7 +87,8 @@ findMax = Map.lookupMax
 
 -- | /O(?)/ Insert a string in a tree.
 --
--- If the tree already contains a string equal to the given value, it is replaced with the new value.
+-- If the tree already contains a string equal to the given value, it is replaced with the new
+-- value.
 --
 -- >>> insert "xyz" (construct ["abc"])
 -- Tree [abc :~> Tree (abc) [],xyz :~> Tree (xyz) []]

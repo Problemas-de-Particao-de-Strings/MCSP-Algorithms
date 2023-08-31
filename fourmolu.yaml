@@ -2,7 +2,7 @@
 indentation: 4
 
 # Max line length for automatic line breaking
-column-limit: 120
+column-limit: 100
 
 # Styling of arrows in type signatures (choices: trailing, leading, or leading-args)
 function-arrows: trailing
@@ -31,7 +31,8 @@ haddock-style-module: multi-line
 # Styling of let blocks (choices: auto, inline, newline, or mixed)
 let-style: auto
 
-# How to align the 'in' keyword with respect to the 'let' keyword (choices: left-align, right-align, or no-space)
+# How to align the 'in' keyword with respect to the 'let' keyword (choices: left-align, right-align,
+# or no-space)
 in-style: right-align
 
 # Whether to put parentheses around a single constraint (choices: auto, always, or never)

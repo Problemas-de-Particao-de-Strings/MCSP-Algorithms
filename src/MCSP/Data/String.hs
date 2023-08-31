@@ -194,8 +194,8 @@ import MCSP.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
 data String a where
     -- | Construct a string from a unboxed vector.
     --
-    -- Note that `Unbox` is only required for constructing the string. All other operations should be possible
-    -- without that constraint.
+    -- Note that `Unbox` is only required for constructing the string. All other operations should
+    -- be possible without that constraint.
     String :: Unbox a => !(Vector a) -> String a
     deriving newtype (Typeable)
 
@@ -819,8 +819,8 @@ create f = Generic.create (MString <$> f)
 
 -- | /O(n)/ Construct a string by repeatedly applying the generator function to a seed.
 --
--- The generator function yields -- `Just` the next character and the new seed or `Nothing` if there are no more
--- character.
+-- The generator function yields -- `Just` the next character and the new seed or `Nothing` if
+-- there are no more characters.
 --
 -- >>> unfoldr (\n -> if n == 0 then Nothing else Just (n, n-1)) (10 :: Int)
 -- 10 9 8 7 6 5 4 3 2 1
@@ -828,7 +828,8 @@ unfoldr :: Unbox a => (b -> Maybe (a, b)) -> b -> String a
 unfoldr = Generic.unfoldr
 {-# INLINE unfoldr #-}
 
--- | /O(n)/ Construct a vector with exactly @n@ characters by repeatedly applying the generator function to a seed.
+-- | /O(n)/ Construct a vector with exactly @n@ characters by repeatedly applying the generator
+-- function to a seed.
 --
 -- The generator function yields the next character and the new seed.
 --
@@ -840,8 +841,8 @@ unfoldrExactN = Generic.unfoldrExactN
 
 -- | /O(n)/ Construct a string by repeatedly applying the generator function to a seed.
 --
--- The generator function yields -- `Just` the next character and the new seed or `Nothing` if there are no more
--- character.
+-- The generator function yields -- `Just` the next character and the new seed or `Nothing` if
+-- there are no more characters.
 --
 -- >>> unfoldr (\n -> if n == 0 then Nothing else Just (n, n-1)) (10 :: Int)
 -- 10 9 8 7 6 5 4 3 2 1
@@ -849,7 +850,8 @@ unfoldrM :: (Unbox a, Monad m) => (b -> m (Maybe (a, b))) -> b -> m (String a)
 unfoldrM = Generic.unfoldrM
 {-# INLINE unfoldrM #-}
 
--- | /O(n)/ Construct a string with exactly @n@ characters by repeatedly applying the generator function to a seed.
+-- | /O(n)/ Construct a string with exactly @n@ characters by repeatedly applying the generator
+-- function to a seed.
 --
 -- The generator function yields the next character and the new seed.
 --
@@ -942,7 +944,8 @@ force s@Unboxed = Generic.force s
 -- ------------ --
 -- Bulk updates --
 
--- | /O(m+n)/ For each pair `(i,a)` from the list of index/value pairs, replace the character at position @i@ by @a@.
+-- | /O(m+n)/ For each pair `(i,a)` from the list of index/value pairs, replace the character at
+-- position @i@ by @a@.
 --
 -- >>> "test" // [(2,'x'),(0,'y'),(2,'z')]
 -- yezt
@@ -950,8 +953,8 @@ force s@Unboxed = Generic.force s
 s@Unboxed // idx = s Generic.// idx
 {-# INLINE (//) #-}
 
--- | /O(m+min(n1,n2))/ For each index @i@ from the index list and the corresponding value a from another string,
--- replace the character of the initial string at position @i@ by @a@.
+-- | /O(m+min(n1,n2))/ For each index @i@ from the index list and the corresponding value a from
+-- another string, replace the character of the initial string at position @i@ by @a@.
 --
 -- >>> update "test" [2,0,2] "xyz"
 -- yezt
@@ -1098,7 +1101,8 @@ forM :: Monad m => String a -> (a -> m b) -> m ()
 forM s@Unboxed = Generic.forM_ s
 {-# INLINE forM #-}
 
--- | /O(n)/ Apply the monadic action to all characters of a string and their indices and ignore the results.
+-- | /O(n)/ Apply the monadic action to all characters of a string and their indices and ignore
+-- the results.
 iforM :: Monad m => String a -> (Int -> a -> m b) -> m ()
 iforM s@Unboxed = Generic.iforM_ s
 {-# INLINE iforM #-}
@@ -1164,7 +1168,8 @@ filter :: (a -> Bool) -> String a -> String a
 filter f s@Unboxed = Generic.filter f s
 {-# INLINE filter #-}
 
--- | /O(n)/ Drop all characters that do not satisfy the predicate which is applied to the values and their indices.
+-- | /O(n)/ Drop all characters that do not satisfy the predicate which is applied to the values
+-- and their indices.
 ifilter :: (Int -> a -> Bool) -> String a -> String a
 ifilter f s@Unboxed = Generic.ifilter f s
 {-# INLINE ifilter #-}
@@ -1187,7 +1192,8 @@ mapMaybe :: Unbox b => (a -> Maybe b) -> String a -> String b
 mapMaybe f s@Unboxed = Generic.mapMaybe f s
 {-# INLINE mapMaybe #-}
 
--- | /O(n)/ Apply the monadic function to each element of the string and discard characters returning `Nothing`.
+-- | /O(n)/ Apply the monadic function to each element of the string and discard characters
+-- returning `Nothing`.
 mapMaybeM :: (Monad m, Unbox b) => (a -> m (Maybe b)) -> String a -> m (String b)
 mapMaybeM f s@Unboxed = Generic.mapMaybeM f s
 {-# INLINE mapMaybeM #-}
@@ -1207,47 +1213,49 @@ dropWhile f s@Unboxed = Generic.takeWhile f s
 -- ------------ --
 -- Partitioning --
 
--- | /O(n)/ Split the string in two parts, the first one containing those characters that satisfy the predicate and the
+-- | /O(n)/ Split the string in two parts, the first one containing those characters that satisfy
+-- the predicate and the
 -- second one those that don't.
 --
--- The relative order of the characters is preserved at the cost of a sometimes reduced performance compared to
--- `unstablePartition`.
+-- The relative order of the characters is preserved at the cost of a sometimes reduced performance
+-- compared to `unstablePartition`.
 partition :: (a -> Bool) -> String a -> (String a, String a)
 partition f s@Unboxed = Generic.partition f s
 {-# INLINE partition #-}
 
--- | /O(n)/ Split the string into two parts, the first one containing the `Prelude.Left` characters and the second
--- containing the `Prelude.Right` characters.
+-- | /O(n)/ Split the string into two parts, the first one containing the `Prelude.Left` characters
+-- and the second containing the `Prelude.Right` characters.
 --
 -- The relative order of the characters is preserved.
 partitionWith :: (Unbox b, Unbox c) => (a -> Either b c) -> String a -> (String b, String c)
 partitionWith f s@Unboxed = Generic.partitionWith f s
 {-# INLINE partitionWith #-}
 
--- | /O(n)/ Split the string in two parts, the first one containing those characters that satisfy the predicate and
--- the second one those that don't.
+-- | /O(n)/ Split the string in two parts, the first one containing those characters that satisfy
+-- the predicate and the second one those that don't.
 --
--- The order of the characters is not preserved, but the operation is often faster than `partition`.
+-- The order of the characters is not preserved, but the operation is often faster than
+-- `partition`.
 unstablePartition :: (a -> Bool) -> String a -> (String a, String a)
 unstablePartition f s@Unboxed = Generic.unstablePartition f s
 {-# INLINE unstablePartition #-}
 
--- | /O(n)/ Split the string into the longest prefix of characters that satisfy the predicate and the rest without
--- copying.
+-- | /O(n)/ Split the string into the longest prefix of characters that satisfy the predicate and
+-- the rest without copying.
 span :: (a -> Bool) -> String a -> (String a, String a)
 span f s@Unboxed = Generic.span f s
 {-# INLINE span #-}
 
--- | /O(n)/ Split the string into the longest prefix of characters that do not satisfy the predicate and the rest
--- without copying.
+-- | /O(n)/ Split the string into the longest prefix of characters that do not satisfy the
+-- predicate and the rest without copying.
 break :: (a -> Bool) -> String a -> (String a, String a)
 break f s@Unboxed = Generic.break f s
 {-# INLINE break #-}
 
 -- | /O(n)/ Split a string into a list of slices.
 --
--- The concatenation of this list of slices is equal to the argument string, and each slice contains only equal
--- characters, as determined by the equality predicate function.
+-- The concatenation of this list of slices is equal to the argument string, and each slice
+-- contains only equal characters, as determined by the equality predicate function.
 --
 -- >>> import Data.Char (isUpper)
 -- >>> groupBy (\x y -> isUpper x == isUpper y) "Rio Grande"
@@ -1258,8 +1266,8 @@ groupBy f s@Unboxed = Generic.groupBy f s
 
 -- | /O(n)/ Split a string into a list of slices.
 --
--- The concatenation of this list of slices is equal to the argument string, and each slice contains only equal
--- characters.
+-- The concatenation of this list of slices is equal to the argument string, and each slice
+-- contains only equal characters.
 --
 -- This is the equivalent of 'groupBy (==)'.
 --
@@ -1282,19 +1290,20 @@ notElem :: Eq a => a -> String a -> Bool
 notElem c s@Unboxed = Generic.notElem c s
 {-# INLINE notElem #-}
 
--- | /O(n)/ Yield `Just` the first character matching the predicate or `Nothing` if no such character exists.
+-- | /O(n)/ Yield `Just` the first character matching the predicate or `Nothing` if no such
+-- character exists.
 find :: (a -> Bool) -> String a -> Maybe a
 find f s@Unboxed = Generic.find f s
 {-# INLINE find #-}
 
--- | /O(n)/ Yield `Just` the index of the first character matching the predicate or `Nothing` if no such character
--- exists.
+-- | /O(n)/ Yield `Just` the index of the first character matching the predicate or `Nothing` if no
+-- such character exists.
 findIndex :: (a -> Bool) -> String a -> Maybe Int
 findIndex f s@Unboxed = Generic.findIndex f s
 {-# INLINE findIndex #-}
 
--- | /O(n)/ Yield `Just` the index of the last character matching the predicate or `Nothing` if no such character
--- exists.
+-- | /O(n)/ Yield `Just` the index of the last character matching the predicate or `Nothing` if no
+-- such character exists.
 findIndexR :: (a -> Bool) -> String a -> Maybe Int
 findIndexR f s@Unboxed = Generic.findIndexR f s
 {-# INLINE findIndexR #-}
@@ -1304,8 +1313,8 @@ findIndices :: (a -> Bool) -> String a -> String Int
 findIndices f s@Unboxed = Generic.findIndices f s
 {-# INLINE findIndices #-}
 
--- | /O(n)/ Yield `Just` the index of the first occurrence of the given character or `Nothing` if the vector does not
--- contain the character.
+-- | /O(n)/ Yield `Just` the index of the first occurrence of the given character or `Nothing` if
+-- the vector does not contain the character.
 --
 -- This is a specialised version of `findIndex`.
 elemIndex :: Eq a => a -> String a -> Maybe Int

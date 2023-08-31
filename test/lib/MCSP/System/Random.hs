@@ -93,8 +93,8 @@ uniformR lo hi = liftRandom $ PCG.uniformR (lo, hi)
 
 -- | /O(1)/ Generate a uniformly distributed random variate in the range [0,b).
 --
--- * For integral types the bound must be less than the max bound of `Data.Word.Word32` (4294967295). Behaviour is
--- undefined for negative bounds.
+-- * For integral types the bound must be less than the max bound of `Data.Word.Word32`
+-- (4294967295). Behaviour is undefined for negative bounds.
 --
 -- >>> generateWith (1,2) $ uniformB 200 :: Int
 -- 143
