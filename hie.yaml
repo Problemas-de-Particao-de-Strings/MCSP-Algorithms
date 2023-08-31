@@ -1,17 +1,6 @@
 cradle:
-  multi:
-    - path: "./bench"
-      config:
-        cradle:
-          cabal:
-            component: bench:MCSP-Algorithms-bench
-    - path: "./"
-      config:
-        cradle:
-          stack:
-            - path: "./src"
-              component: MCSP-Algorithms:lib
-            - path: "./test"
-              component: MCSP-Algorithms:test:MCSP-Algorithms-test
-            - path: "./app"
-              component: MCSP-Algorithms:exe:playground
+  stack:
+    - path: src
+      component: mcsp-algorithms:lib
+    - path: app
+      component: mcsp-algorithms:exe:playground
