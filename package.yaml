@@ -1,5 +1,5 @@
-name: MCSP-Algorithms
-version: 0.0.1
+name: mcsp-algorithms
+version: 0.0.2
 github: Problemas-de-Particao-de-Strings/MCSP-Algorithms
 license: MIT
 author:
@@ -16,10 +16,10 @@ extra-source-files:
 synopsis: Algorithms for Minimum Common String Partition (MCSP) in Haskell.
 category: College,MCSP,Algorithms,String,Partition
 
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-description: Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/MCSP-Algorithms#readme>
+# To avoid duplicated efforts in documentation and dealing with the complications of embedding Haddock markup inside
+# cabal files, it is common to point users to the README.md file.
+description: |
+  Please see the README on GitHub at <https://github.com/Problemas-de-Particao-de-Strings/MCSP-Algorithms#readme>.
 
 # Using modern Haskell features
 language: GHC2021
@@ -33,6 +33,17 @@ default-extensions:
   - TypeFamilies
   - ViewPatterns
 
+library:
+  source-dirs: src
+  exposed-modules:
+    - MCSP.Data.Partition
+    - MCSP.Data.RadixTree
+    - MCSP.Data.String
+    - MCSP.Data.String.Deriving
+    - MCSP.Data.String.Extra
+    - MCSP.Heuristics.Combine
+    - MCSP.System.Random
+
 dependencies:
   - base >= 4.18 && < 5
   - containers >= 0.6.7 && < 1
@@ -44,6 +55,53 @@ dependencies:
   - template-haskell > 2.20 && < 3
   - vector >= 0.13 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
+
+internal-libraries:
+  mcsp-test-lib:
+    source-dirs: test/lib
+    exposed-modules:
+      - MCSP.TestLib.Heuristics
+    dependencies:
+      - mcsp-algorithms
+
+executables:
+  playground:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - mcsp-algorithms
+    ghc-options:
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - mcsp-algorithms
+      - mcsp-test-lib
+    ghc-options:
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
+
+benchmarks:
+  bench:
+    main: Bench.hs
+    source-dirs: bench
+    dependencies:
+      - mcsp-algorithms
+      - mcsp-test-lib
+      - criterion >= 1.6.3.0 && < 2
+    ghc-options:
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
 
 ghc-options:
   # Optimization flags
@@ -73,61 +131,3 @@ ghc-options:
   - -Woverflowed-literals
   - -Wpartial-fields
   - -Wredundant-constraints
-
-library:
-  source-dirs: src
-  exposed-modules:
-    - MCSP.Data.Partition
-    - MCSP.Data.RadixTree
-    - MCSP.Data.String
-    - MCSP.Data.String.Deriving
-    - MCSP.Data.String.Extra
-    - MCSP.Heuristics.Combine
-    - MCSP.System.Random
-
-internal-libraries:
-  mcsp-test-lib:
-    source-dirs: test/lib
-    exposed-modules:
-      - MCSP.TestLib.Heuristics
-    dependencies:
-      - MCSP-Algorithms
-
-executables:
-  playground:
-    main: Main.hs
-    source-dirs: app
-    ghc-options:
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
-    dependencies:
-      - MCSP-Algorithms
-
-tests:
-  spec:
-    main: Spec.hs
-    source-dirs: test
-    ghc-options:
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
-    dependencies:
-      - MCSP-Algorithms
-      - mcsp-test-lib
-
-benchmarks:
-  bench:
-    main: Bench.hs
-    source-dirs: bench
-    ghc-options:
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
-    dependencies:
-      - MCSP-Algorithms
-      - mcsp-test-lib
-      - criterion >= 1.6.3.0 && < 2
