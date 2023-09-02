@@ -12,13 +12,12 @@ module MCSP.Data.String.Extra (
 
     -- ** Substring analysis
     module MCSP.Data.String.Extra.Radix,
-    suffixes,
     longestCommonSubstring,
 ) where
 
 import Data.Bool (Bool)
-import Data.Foldable (Foldable (foldr'), any)
-import Data.Function (id)
+import Data.Foldable (any, foldl')
+import Data.Function (flip, id, ($))
 import Data.Int (Int)
 import Data.Map.Strict (Map, alter, foldrWithKey')
 import Data.Maybe (Maybe (Just), fromMaybe)
@@ -27,7 +26,7 @@ import Data.Ord (Ord)
 import Data.Set (Set, insert, member)
 import GHC.Num ((+))
 
-import MCSP.Data.RadixTree.Suffix (construct, findMax, suffixes)
+import MCSP.Data.RadixTree.Suffix (construct, findMax)
 import MCSP.Data.String (String (..))
 import MCSP.Data.String.Extra.Radix
 
@@ -58,7 +57,7 @@ chars = go []
 -- >>> frequency "aabacabd"
 -- fromList [('a',4),('b',2),('c',1),('d',1)]
 frequency :: Ord a => String a -> Map a Int
-frequency = foldr' (alter increment) mempty
+frequency = foldl' (flip $ alter increment) mempty
   where
     increment x = Just (1 + fromMaybe 0 x)
 

@@ -1,7 +1,6 @@
 -- | A compressed trie of string suffixes.
 module MCSP.Data.RadixTree.Suffix (
     SuffixTree,
-    suffixes,
     construct,
     findMax,
 ) where
@@ -18,6 +17,7 @@ import Text.Show (Show)
 
 import MCSP.Data.RadixTree.Map qualified as Map
 import MCSP.Data.String (String (..), length)
+import MCSP.Data.String.Extra.Radix (suffixes)
 
 -- --------------- --
 -- Data definition --
@@ -70,15 +70,6 @@ type SuffixTree a = Map.RadixTreeMap a (Suffix a)
 -- --------------- --
 -- Tree operations --
 -- --------------- --
-
--- | /O(n)/ Extract all non-empty suffixes of a string.
---
--- >>> suffixes "Hello"
--- [Hello,ello,llo,lo,o]
-suffixes :: String a -> [String a]
-suffixes s@(_ :< rest) = s : suffixes rest
-suffixes Null = []
-{-# INLINE suffixes #-}
 
 -- | /O(1)/ Marks a new leaf for a suffix.
 markLeaf :: LeafKind -> Suffix a -> Suffix a
