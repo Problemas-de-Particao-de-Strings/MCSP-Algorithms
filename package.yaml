@@ -41,7 +41,7 @@ library:
     - MCSP.Data.String
     - MCSP.Data.String.Deriving
     - MCSP.Data.String.Extra
-    - MCSP.Heuristics.Combine
+    - MCSP.Heuristics
 
 dependencies:
   - base >= 4.18 && < 5
