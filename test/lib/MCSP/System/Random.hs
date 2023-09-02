@@ -30,7 +30,7 @@ import System.Random.PCG qualified as PCG
 import System.Random.PCG.Class (Generator)
 import System.Random.Shuffle qualified as Shuffle (shuffle)
 
-import MCSP.System.Random.Static (mkWord64)
+import MCSP.System.Random.TH (mkWord64)
 
 -- | A monad capable of producing random values of @a@.
 type Random a = forall g m. Generator g m => RandT g m a
