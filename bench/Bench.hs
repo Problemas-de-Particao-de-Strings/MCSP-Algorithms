@@ -5,9 +5,8 @@ import Criterion.Main (Benchmark, bench, bgroup, defaultMain, nf)
 import Data.String qualified as Text
 
 import MCSP.Data.String (String)
-import MCSP.Heuristics (Heuristic, combine, combineS)
 import MCSP.System.Random (generate)
-import MCSP.TestLib.Heuristics (testHeuristic)
+import MCSP.TestLib.Heuristics (Heuristic, heuristics, testHeuristic)
 import MCSP.TestLib.Sample (StringParameters (..), genStringPair)
 
 -- | Create a benchmark for one heuristic and one sample.
@@ -19,11 +18,6 @@ createBenchGroup :: Text.String -> Int -> StringParameters -> IO Benchmark
 createBenchGroup name size params = do
     sample :: [(String Word, String Word)] <- generate $ replicateM size $ genStringPair params
     pure $ bgroup name (map (uncurry $ createBench sample) heuristics)
-  where
-    heuristics =
-        [ ("combine", combine),
-          ("combineS", combineS)
-        ]
 
 main :: IO ()
 main =
