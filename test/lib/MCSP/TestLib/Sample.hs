@@ -1,9 +1,13 @@
 module MCSP.TestLib.Sample (
     StringParameters (..),
+    benchParams,
     genStringPair,
+    repr,
 ) where
 
 import Prelude hiding (String)
+
+import Data.String qualified as Text
 
 import MCSP.Data.String (String)
 import MCSP.System.Random (Random)
@@ -13,11 +17,19 @@ import MCSP.TestLib.Random (SimpleEnum, randomShuffledCharsWithSingletons)
 --
 -- Alphabet size does not include the elements included as singletons.
 data StringParameters = StringParameters
-    { stringSize :: Int,
-      alphabetSize :: Int,
+    { size :: Int,
+      nReplicated :: Int,
       nSingletons :: Int
     }
-    deriving stock (Eq, Show)
+    deriving stock (Show, Eq)
+
+-- | Short and formatted representation of @StringParameters@.
+--
+-- >>> repr $ StringParameters 100 3 4
+-- "(size=100 #rep=3 #sing=4)"
+repr :: StringParameters -> Text.String
+repr (StringParameters n reps sings) =
+    "(size=" ++ show n ++ " #rep=" ++ show reps ++ " #sing=" ++ show sings ++ ")"
 
 -- | Generate a pair of strings of integers using the given parameters.
 --
@@ -28,9 +40,16 @@ data StringParameters = StringParameters
 genStringPair :: forall a. SimpleEnum a => StringParameters -> Random (String a, String a)
 genStringPair params =
     randomShuffledCharsWithSingletons
-        (stringSize params)
+        (size params)
         (fromMinBound 0)
-        (fromMinBound (alphabetSize params - 1))
-        (fromMinBound (alphabetSize params - 1 + nSingletons params))
+        (fromMinBound (nReplicated params - 1))
+        (fromMinBound (nReplicated params - 1 + nSingletons params))
   where
     fromMinBound n = toEnum (fromEnum (minBound :: a) + n)
+
+-- | Parameters to generate strings for benchmarking.
+benchParams :: [StringParameters]
+benchParams =
+    [ StringParameters {size = 100, nReplicated = 2, nSingletons = 5},
+      StringParameters {size = 100, nReplicated = 2, nSingletons = 60}
+    ]

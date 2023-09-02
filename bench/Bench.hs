@@ -7,36 +7,17 @@ import Data.String qualified as Text
 import MCSP.Data.String (String)
 import MCSP.System.Random (generate)
 import MCSP.TestLib.Heuristics (Heuristic, heuristics, testHeuristic)
-import MCSP.TestLib.Sample (StringParameters (..), genStringPair)
+import MCSP.TestLib.Sample (StringParameters, benchParams, genStringPair, repr)
 
 -- | Create a benchmark for one heuristic and one sample.
 createBench :: [(String a, String a)] -> Text.String -> Heuristic a -> Benchmark
 createBench sample name heuristic = bench name $ nf (testHeuristic heuristic) sample
 
 -- | Create a benchmark group using string parameters and the size of sample.
-createBenchGroup :: Text.String -> Int -> StringParameters -> IO Benchmark
-createBenchGroup name size params = do
+createBenchGroup :: Int -> StringParameters -> IO Benchmark
+createBenchGroup size params = do
     sample :: [(String Word, String Word)] <- generate $ replicateM size $ genStringPair params
-    pure $ bgroup name (map (uncurry $ createBench sample) heuristics)
+    pure $ bgroup (repr params) (map (uncurry $ createBench sample) heuristics)
 
 main :: IO ()
-main =
-    defaultMain
-        =<< sequence
-            [ createBenchGroup
-                "few-singletons"
-                100
-                StringParameters
-                    { stringSize = 100,
-                      alphabetSize = 2,
-                      nSingletons = 5
-                    },
-              createBenchGroup
-                "lot-of-singletons"
-                100
-                StringParameters
-                    { stringSize = 100,
-                      alphabetSize = 2,
-                      nSingletons = 60
-                    }
-            ]
+main = defaultMain =<< mapM (createBenchGroup 100) benchParams
