@@ -5,7 +5,7 @@ import Criterion.Main (Benchmark, bench, bgroup, defaultMain, nf)
 import Data.String qualified as Text
 
 import MCSP.Data.String (String)
-import MCSP.Heuristics.Combine (combineHeuristic, combineHeuristicS)
+import MCSP.Heuristics.Combine (combine, combineS)
 import MCSP.System.Random (generate)
 import MCSP.TestLib.Heuristics (MCSPHeuristic, StringParameters (..), genStringPair, testHeuristic)
 
@@ -20,8 +20,8 @@ createBenchGroup name size params = do
     pure $ bgroup name (map (uncurry $ createBench sample) heuristics)
   where
     heuristics =
-        [ ("combine", combineHeuristic),
-          ("combineS", combineHeuristicS)
+        [ ("combine", combine),
+          ("combineS", combineS)
         ]
 
 main :: IO ()

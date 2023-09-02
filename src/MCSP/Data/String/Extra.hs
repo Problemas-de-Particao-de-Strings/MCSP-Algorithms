@@ -81,9 +81,7 @@ singletons str = foldrWithKey' insertSingleton mempty (frequency str)
 -- >>> hasOneOf "xxx" (fromList "bdf")
 -- False
 hasOneOf :: Ord a => String a -> Set a -> Bool
-hasOneOf str ls = any hasLetter str
-  where
-    hasLetter ch = member ch ls
+hasOneOf str ls = any (`member` ls) str
 
 -- ------------------ --
 -- Substring analysis --
