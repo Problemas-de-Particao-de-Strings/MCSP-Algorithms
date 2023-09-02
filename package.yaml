@@ -59,6 +59,7 @@ internal-libraries:
       - MCSP.System.Random
       - MCSP.System.Random.TH
       - MCSP.TestLib.Heuristics
+      - MCSP.TestLib.Heuristics.TH
       - MCSP.TestLib.Random
       - MCSP.TestLib.Sample
     dependencies:
