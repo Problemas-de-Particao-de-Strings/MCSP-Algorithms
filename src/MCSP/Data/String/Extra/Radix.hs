@@ -9,6 +9,11 @@ module MCSP.Data.String.Extra.Radix (
     -- * Infix
     stripInfix,
     isInfixOf,
+
+    -- * Suffix
+    stripSuffix,
+    isSuffixOf,
+    suffixes,
 ) where
 
 import Data.Bool (Bool (..), otherwise)
@@ -21,7 +26,7 @@ import Data.Ord (min)
 import Data.Tuple.Extra (fst3)
 import GHC.Num ((+), (-))
 
-import MCSP.Data.String (String, length, splitAt, take, unsafeIndex, unsafeSlice)
+import MCSP.Data.String (String (..), drop, length, splitAt, take, unsafeIndex, unsafeSlice)
 
 -- ---------------------- --
 -- String prefix analysis --
@@ -149,3 +154,45 @@ stripInfix needle haystack = firstJust (matchingNeedle . split) [0 .. n]
 -- False
 isInfixOf :: Eq a => String a -> String a -> Bool
 r `isInfixOf` str = isJust (stripInfix r str)
+{-# INLINEABLE isInfixOf #-}
+
+-- ---------------------- --
+-- String suffix analysis --
+
+-- | /O(min(m,n))/ Returns the prefix of the second string if its suffix matches the first string.
+--
+-- Returns `Nothing` if the string does not end with the suffix given, or `Just` the string before
+-- the suffix.
+--
+-- >>> stripSuffix "bar" "foobar"
+-- Just foo
+-- >>> stripSuffix "" "baz"
+-- Just baz
+-- >>> stripSuffix "foo" "quux"
+-- Nothing
+stripSuffix :: Eq a => String a -> String a -> Maybe (String a)
+stripSuffix s str
+    | s1 == s = Just s0
+    | otherwise = Nothing
+  where
+    (s0, s1) = splitAt (length str - length s) str
+{-# INLINEABLE stripSuffix #-}
+
+-- | /O(min(m,n))/ Returns `True` iff the first string is a prefix of the second.
+--
+-- >>> "ld!" `isSuffixOf` "Hello World!"
+-- True
+-- >>> "World" `isSuffixOf` "Hello World!"
+-- False
+isSuffixOf :: Eq a => String a -> String a -> Bool
+s `isSuffixOf` str = drop (length str - length s) str == s
+{-# INLINEABLE isSuffixOf #-}
+
+-- | /O(n)/ Extract all non-empty suffixes of a string.
+--
+-- >>> suffixes "Hello"
+-- [Hello,ello,llo,lo,o]
+suffixes :: String a -> [String a]
+suffixes s@(_ :< rest) = s : suffixes rest
+suffixes Null = []
+{-# INLINE suffixes #-}
