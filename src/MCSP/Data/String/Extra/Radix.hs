@@ -1,19 +1,25 @@
 -- | Radix operations on `String`.
 module MCSP.Data.String.Extra.Radix (
+    -- * Prefix
     stripPrefix,
     isPrefixOf,
     commonPrefix,
     splitCommonPrefix,
+
+    -- * Infix
+    stripInfix,
+    isInfixOf,
 ) where
 
 import Data.Bool (Bool (..), otherwise)
 import Data.Eq (Eq, (/=), (==))
+import Data.Function ((.))
 import Data.Int (Int)
-import Data.List (find)
-import Data.Maybe (Maybe (Just, Nothing), fromMaybe)
+import Data.List.Extra (find, firstJust)
+import Data.Maybe (Maybe (Just, Nothing), fromMaybe, isJust)
 import Data.Ord (min)
 import Data.Tuple.Extra (fst3)
-import GHC.Num ((-))
+import GHC.Num ((+), (-))
 
 import MCSP.Data.String (String, length, splitAt, take, unsafeIndex, unsafeSlice)
 
@@ -46,7 +52,7 @@ stripPrefix p str
 -- >>> "Hello" `isPrefixOf` "Wello Horld!"
 -- False
 isPrefixOf :: Eq a => String a -> String a -> Bool
-isPrefixOf p str = take (length p) str == p
+p `isPrefixOf` str = take (length p) str == p
 {-# INLINEABLE isPrefixOf #-}
 
 -- | /O(min(m,n))/ The length of maximum common prefix of two string.
@@ -77,8 +83,9 @@ commonPrefix lhs rhs = fst3 (splitCommonPrefix lhs rhs)
 
 -- | /O(min(m,n))/ Returns the maximum common prefix of two strings and the remainder of each string.
 --
--- Note that `splitCommonPrefix a b` is equivalent to `let p = commonPrefix a b in
--- (p, fromJust (splitPrefix p a), fromJust (splitPrefix p b))`, but slightly more efficient.
+-- Note that @splitCommonPrefix a b@ is equivalent to
+-- @let p = commonPrefix a b in (p, fromJust (splitPrefix p a), fromJust (splitPrefix p b))@, but
+-- slightly more efficient and cannot fail.
 --
 -- >>> splitCommonPrefix "abc" "abd"
 -- (ab,c,d)
@@ -98,3 +105,47 @@ splitCommonPrefix lhs rhs =
   where
     prefix = commonPrefixLength lhs rhs
 {-# INLINE splitCommonPrefix #-}
+
+-- --------------------- --
+-- String infix analysis --
+
+-- | /O(n m)/ Return the the string before (prefix) and after (suffix) the search string, or
+-- `Nothing` if the search string is not present.
+--
+-- A result of @`Just` (s1, s2) = `stripInfix` s r@ means that
+-- @s1 `Strings.Data.String.++` r `Strings.Data.String.++` s2 `==` s@.
+--
+-- >>> stripInfix "el" "Hello"
+-- Just (H,lo)
+-- >>> stripInfix "World!" "Hello"
+-- Nothing
+-- >>> stripInfix "si" "mississipi"
+-- Just (mis,ssipi)
+-- >>> stripInfix "chat" "hat"
+-- Nothing
+-- >>> stripInfix "word" "word"
+-- Just (,)
+stripInfix :: Eq a => String a -> String a -> Maybe (String a, String a)
+stripInfix needle haystack = firstJust (matchingNeedle . split) [0 .. n]
+  where
+    r = length needle
+    n = length haystack - r
+    matchingNeedle (a, candidate, c)
+        | candidate == needle = Just (a, c)
+        | otherwise = Nothing
+    -- SAFETY: given '0 <= i <= n` and `n = length str - length radix`, we'll have that always
+    -- `0 <= i + r <= length str` and `n - i = length str - r - i`, both being inbounds
+    split i =
+        ( unsafeSlice 0 i haystack, -- part before infix (prefix)
+          unsafeSlice i r haystack, -- candidate for infix
+          unsafeSlice (i + r) (n - i) haystack -- after matched infix (suffix)
+        )
+
+-- | /O(n m)/  Check if the first string is contained anywhere within the second string.
+--
+-- >>> isInfixOf "Haskell" "I really like Haskell."
+-- True
+-- >>> isInfixOf "Ial" "I really like Haskell."
+-- False
+isInfixOf :: Eq a => String a -> String a -> Bool
+r `isInfixOf` str = isJust (stripInfix r str)
