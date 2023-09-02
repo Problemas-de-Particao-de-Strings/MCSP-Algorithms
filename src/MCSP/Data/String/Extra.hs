@@ -11,7 +11,7 @@ module MCSP.Data.String.Extra (
     hasOneOf,
 
     -- ** Substring analysis
-    module MCSP.Data.String.Extra.Prefix,
+    module MCSP.Data.String.Extra.Radix,
     suffixes,
     longestCommonSubstring,
 ) where
@@ -29,7 +29,7 @@ import GHC.Num ((+))
 
 import MCSP.Data.RadixTree.Suffix (construct, findMax, suffixes)
 import MCSP.Data.String (String (..))
-import MCSP.Data.String.Extra.Prefix
+import MCSP.Data.String.Extra.Radix
 
 -- ------------------------ --
 -- Operations on partitions --

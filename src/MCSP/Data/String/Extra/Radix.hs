@@ -1,5 +1,5 @@
--- | Prefix operations on `String`.
-module MCSP.Data.String.Extra.Prefix (
+-- | Radix operations on `String`.
+module MCSP.Data.String.Extra.Radix (
     stripPrefix,
     isPrefixOf,
     commonPrefix,
