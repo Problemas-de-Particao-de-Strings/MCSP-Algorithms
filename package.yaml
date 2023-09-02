@@ -60,6 +60,7 @@ internal-libraries:
       - MCSP.System.Random.TH
       - MCSP.TestLib.Heuristics
       - MCSP.TestLib.Random
+      - MCSP.TestLib.Sample
     dependencies:
       - mcsp-algorithms
       - MonadRandom >= 0.6 && < 1
