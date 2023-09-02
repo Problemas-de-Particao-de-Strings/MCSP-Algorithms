@@ -1,5 +1,4 @@
 module MCSP.TestLib.Heuristics (
-    MCSPHeuristic,
     StringParameters (..),
     genStringPair,
     testHeuristic,
@@ -8,12 +7,9 @@ module MCSP.TestLib.Heuristics (
 import Prelude hiding (String)
 
 import MCSP.Data.String (String)
-import MCSP.Data.String.Extra (PartitionPair)
+import MCSP.Heuristics (Heuristic)
 import MCSP.System.Random (Random)
 import MCSP.TestLib.Random (randomShuffledCharsWithSingletons)
-
--- | Heuristic for the MCSP problem.
-type MCSPHeuristic a = String a -> String a -> PartitionPair a
 
 -- | Parameters to generate a string of integers.
 --
@@ -34,7 +30,7 @@ genStringPair params =
         [3 .. (2 + nSingletons params)]
 
 -- | Test an heuristic against a sample and return the mean length of the resulting partitions.
-testHeuristic :: MCSPHeuristic a -> [(String a, String a)] -> Double
+testHeuristic :: Heuristic a -> [(String a, String a)] -> Double
 testHeuristic heuristic sample = fromIntegral (sum results) / fromIntegral (length sample)
   where
     results = map (length . fst . uncurry heuristic) sample
