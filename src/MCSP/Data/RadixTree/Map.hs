@@ -52,7 +52,7 @@ import Data.Map.Strict qualified as Map
 import Data.Map.Strict.Internal (Map (Bin))
 
 import MCSP.Data.String (ShowString, String (..), Unbox, (++))
-import MCSP.Data.String.Extra.Prefix (splitCommonPrefix, stripPrefix)
+import MCSP.Data.String.Extra.Radix (splitCommonPrefix, stripPrefix)
 
 -- --------------- --
 -- Data definition --
