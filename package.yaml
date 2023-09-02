@@ -39,7 +39,7 @@ library:
   exposed-modules:
     - MCSP.Data.RadixTree
     - MCSP.Data.String
-    - MCSP.Data.String.Deriving
+    - MCSP.Data.String.TH
     - MCSP.Data.String.Extra
     - MCSP.Heuristics
 
@@ -57,7 +57,7 @@ internal-libraries:
     source-dirs: test/lib
     exposed-modules:
       - MCSP.System.Random
-      - MCSP.System.Random.Static
+      - MCSP.System.Random.TH
       - MCSP.TestLib.Heuristics
       - MCSP.TestLib.Random
     dependencies:

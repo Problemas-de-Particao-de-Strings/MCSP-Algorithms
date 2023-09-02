@@ -1,5 +1,5 @@
 -- | Compile time random value generation.
-module MCSP.System.Random.Static (
+module MCSP.System.Random.TH (
     mkWord64,
     RandomIO,
     mkRandomQ,
