@@ -17,7 +17,7 @@ createBench sample name heuristic = bench name $ nf (testHeuristic heuristic) sa
 -- | Create a benchmark group using string parameters and the size of sample.
 createBenchGroup :: Text.String -> Int -> StringParameters -> IO Benchmark
 createBenchGroup name size params = do
-    sample <- generate $ replicateM size $ genStringPair params
+    sample :: [(String Word, String Word)] <- generate $ replicateM size $ genStringPair params
     pure $ bgroup name (map (uncurry $ createBench sample) heuristics)
   where
     heuristics =
