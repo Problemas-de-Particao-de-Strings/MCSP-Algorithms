@@ -102,9 +102,20 @@ tests:
       - -with-rtsopts=-N
 
 benchmarks:
-  bench:
+  blocks:
     main: Bench.hs
-    source-dirs: bench
+    source-dirs: bench/blocks
+    dependencies:
+      - mcsp-algorithms
+      - mcsp-test-lib
+    ghc-options:
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
+  time:
+    main: Bench.hs
+    source-dirs: bench/time
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
