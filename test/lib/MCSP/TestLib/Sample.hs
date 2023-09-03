@@ -1,7 +1,7 @@
 module MCSP.TestLib.Sample (
     StringParameters (..),
     benchParams,
-    genStringPair,
+    randomPairWith,
     repr,
 ) where
 
@@ -35,15 +35,15 @@ repr (StringParameters n reps sings) =
 --
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> import Data.Word (Word)
--- >>> generateWith (1,2) (genStringPair (StringParameters 10 2 2)) :: (String Word, String Word)
+-- >>> generateWith (1,2) $ randomPairWith (StringParameters 10 2 2) :: (String Word, String Word)
 -- (0 0 1 3 1 0 2 1 0 1,3 1 0 0 0 0 1 2 1 1)
-genStringPair :: forall a. SimpleEnum a => StringParameters -> Random (String a, String a)
-genStringPair params =
+randomPairWith :: forall a. SimpleEnum a => StringParameters -> Random (String a, String a)
+randomPairWith (StringParameters {..}) =
     randomShuffledCharsWithSingletons
-        (size params)
+        size
         (fromMinBound 0)
-        (fromMinBound (nReplicated params - 1))
-        (fromMinBound (nReplicated params - 1 + nSingletons params))
+        (fromMinBound (nReplicated - 1))
+        (fromMinBound (nReplicated - 1 + nSingletons))
   where
     fromMinBound n = toEnum (fromEnum (minBound :: a) + n)
 
