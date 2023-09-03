@@ -13,6 +13,7 @@ import MCSP.Heuristics (
     Heuristic,
     combine,
     combineS,
+    greedy,
  )
 
 import MCSP.TestLib.Heuristics.TH (mkNamedList)
@@ -25,4 +26,4 @@ testHeuristic heuristic sample = fromIntegral (sum results) / fromIntegral (leng
 
 -- | List of all heuristics implemented and their names.
 heuristics :: Ord a => [(Text.String, Heuristic a)]
-heuristics = $(mkNamedList ['combine, 'combineS])
+heuristics = $(mkNamedList ['combine, 'combineS, 'greedy])
