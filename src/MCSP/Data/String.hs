@@ -153,6 +153,7 @@ module MCSP.Data.String (
 import Control.Applicative (Alternative, (<$>))
 import Control.Applicative qualified as Applicative (empty)
 import Control.Arrow ((&&&))
+import Control.DeepSeq (NFData (..), NFData1 (..))
 import Control.Monad (Monad)
 import Control.Monad.ST (ST)
 import Data.Bool (Bool (False, True), otherwise, (&&))
@@ -475,11 +476,25 @@ instance (Store a, Unbox a) => Store (String a) where
     poke s = do
         poke (Generic.length s)
         Generic.forM_ s poke
-    {-# INLINE poke #-}
+    {-# INLINEABLE poke #-}
     peek = do
         n <- peek
         Generic.replicateM n peek
-    {-# INLINE peek #-}
+    {-# INLINEABLE peek #-}
+
+-- --------------------- --
+-- Evalutation (DeepSeq) --
+
+instance NFData (String a) where
+    {-# SPECIALIZE instance NFData (String Char) #-}
+    {-# SPECIALIZE instance NFData (String Int) #-}
+    {-# SPECIALIZE instance NFData (String Word8) #-}
+    rnf (String v) = rnf v
+    {-# INLINE rnf #-}
+
+instance NFData1 String where
+    liftRnf seq (String v) = liftRnf seq v
+    {-# INLINE liftRnf #-}
 
 -- --------------------------------- --
 -- Generic Vector instance and types --
