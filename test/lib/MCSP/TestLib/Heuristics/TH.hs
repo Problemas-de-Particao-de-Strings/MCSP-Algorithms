@@ -1,5 +1,6 @@
 -- | Template to extract name and value of a list of items.
 module MCSP.TestLib.Heuristics.TH (
+    mkNamed,
     mkNamedList,
 ) where
 
@@ -15,7 +16,7 @@ import Data.String qualified as Text
 import Text.Show (show)
 
 import Data.Map.Strict (alter, filter, keysSet)
-import Data.Set (Set, member)
+import Data.Set (Set, member, singleton)
 
 import Language.Haskell.TH (ExpQ, Name, Q, listE, nameBase, nameModule, varE)
 
@@ -54,14 +55,15 @@ getUnambiguous uniq name
     base = nameBase name
     mod = fromMaybe "" (nameModule name)
 
--- | Create an expression that evaluates to @(name, value)@ for the given named item.
+-- | Create an expression that evaluates to @(name, value)@ for the given named item, considering
+-- the set of unique base names.
 --
 -- >>> (x, y) = (2, 3)
 -- >>> names = uniqueBase ['x]
--- >>> $(mkNamed names 'x)
+-- >>> $(mkNamedWith names 'x)
 -- ("x",2)
-mkNamed :: Set Text.String -> Name -> ExpQ
-mkNamed uniq name = do
+mkNamedWith :: Set Text.String -> Name -> ExpQ
+mkNamedWith uniq name = do
     uniqName <- getUnambiguous uniq name
     [e|(uniqName, $(varE name))|]
 
@@ -72,4 +74,12 @@ mkNamed uniq name = do
 -- >>> $(mkNamedList ['x, 'y]) :: [(Text.String, Int)]
 -- [("x",2),("y",3)]
 mkNamedList :: [Name] -> ExpQ
-mkNamedList names = listE (map (mkNamed (uniqueBase names)) names)
+mkNamedList names = listE (map (mkNamedWith (uniqueBase names)) names)
+
+-- | Create an expression that evaluates to @(name, value)@ for the given named item.
+--
+-- >>> someVal = 12
+-- >>> $(mkNamed 'someVal)
+-- ("someVal",12)
+mkNamed :: Name -> ExpQ
+mkNamed name = mkNamedWith (singleton (nameBase name)) name

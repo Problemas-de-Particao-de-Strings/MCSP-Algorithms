@@ -6,26 +6,20 @@ import Prelude hiding (String)
 import Data.String qualified as Text
 
 import Control.Monad (forM_)
-import MCSP.Data.String (String)
 import MCSP.System.Random (generate)
-import MCSP.TestLib.Heuristics (Heuristic, heuristics)
+import MCSP.TestLib.Heuristics (Heuristic, Measured, heuristics, measure, score)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
-
-withRelativeDistance :: Heuristic a -> (String a, String a) -> Double
-withRelativeDistance heuristic pair = len (uncurry heuristic pair) / len pair
-  where
-    len (x, y) = fromIntegral (length x + length y)
 
 -- | String type used for benchmarking.
 type Target = Word
 
-runHeuristc :: StringParameters -> (Text.String, Heuristic Target) -> IO Double
+runHeuristc :: StringParameters -> (Text.String, Heuristic Target) -> IO Measured
 runHeuristc params (name, heuristic) = do
     putStr ("    " ++ name ++ ": ")
     pair <- generate (randomPairWith params)
-    let relDist = withRelativeDistance heuristic pair
-    print relDist
-    pure relDist
+    let meas = measure (name, heuristic) pair
+    print (score meas)
+    pure meas
 
 main :: IO ()
 main =
