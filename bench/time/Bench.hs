@@ -5,20 +5,17 @@ import Prelude hiding (String)
 
 import Criterion.Main (Benchmark, bench, bgroup, defaultMain, perRunEnv)
 import Data.String qualified as Text
-import Data.Tuple.Extra (both)
 
 import MCSP.Data.String (String)
 import MCSP.System.Random (generate)
 import MCSP.TestLib.Heuristics (Heuristic, heuristics)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
--- | Run a heuristic and returns the number of partitions generated.
-withSize :: Heuristic a -> (String a, String a) -> IO Int
-withSize heuristic = pure . uncurry max . both length . uncurry heuristic
-
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
 benchHeuristic :: IO (String a, String a) -> (Text.String, Heuristic a) -> Benchmark
-benchHeuristic pair (name, heuristic) = bench name $ perRunEnv pair (withSize heuristic)
+benchHeuristic genPair (name, heuristic) = bench name $ perRunEnv genPair runHeuristic
+  where
+    runHeuristic = pure . uncurry heuristic
 
 -- | String type used for benchmarking.
 type Target = String Word
