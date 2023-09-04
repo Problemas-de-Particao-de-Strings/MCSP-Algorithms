@@ -1,9 +1,13 @@
 -- | Heuristic for the MCSP problem.
 module MCSP.Heuristics (
+    -- * Main heuristics
     Heuristic,
-    checked,
     module MCSP.Heuristics.Combine,
     module MCSP.Heuristics.Greedy,
+
+    -- * Correctness checking
+    Debug,
+    checked,
 ) where
 
 import Data.Bool (otherwise)
