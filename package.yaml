@@ -78,12 +78,11 @@ executables:
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
-    ghc-options:
+    ghc-options: &binary-ghc-options
       - -threaded
       - -feager-blackholing
       - -rtsopts
       - -with-rtsopts=-N
-
 tests:
   spec:
     main: Spec.hs
@@ -95,11 +94,7 @@ tests:
       - MonadRandom >= 0.6 && < 1
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
-    ghc-options:
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
+    ghc-options: *binary-ghc-options
 
 benchmarks:
   blocks:
@@ -108,11 +103,7 @@ benchmarks:
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
-    ghc-options:
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
+    ghc-options: *binary-ghc-options
   time:
     main: Bench.hs
     source-dirs: bench/time
@@ -120,11 +111,7 @@ benchmarks:
       - mcsp-algorithms
       - mcsp-test-lib
       - criterion >= 1.6.3.0 && < 2
-    ghc-options:
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
+    ghc-options: *binary-ghc-options
 
 ghc-options:
   # Optimization flags
