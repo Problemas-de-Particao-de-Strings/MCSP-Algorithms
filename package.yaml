@@ -103,6 +103,7 @@ benchmarks:
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
+      - statistics >= 0.16.2.0 && < 1
     ghc-options: *binary-ghc-options
   time:
     main: Bench.hs
