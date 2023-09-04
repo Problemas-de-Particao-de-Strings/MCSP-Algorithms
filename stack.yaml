@@ -62,3 +62,10 @@ require-stack-version: ">= 2.11"
 
 # Allow a newer minor version of GHC than the snapshot specifies
 compiler-check: newer-minor
+
+# Extra build options
+build:
+  keep-tmp-files: true
+  # Always build tests and benchmarks
+  test: true
+  bench: true

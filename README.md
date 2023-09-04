@@ -12,8 +12,8 @@ To compile the project, you'll need a recent release of the
 [stack](https://docs.haskellstack.org/en/stable/) for building. Then, you can just do:
 
 ```sh
-stack build
-stack exec playground
+stack build --no-run-benchmarks --no-run-tests
+stack --silent exec playground
 ```
 
 ## Development
@@ -39,6 +39,18 @@ pre-commit install
 Commits should follow the [Conventional Commits](https://www.conventionalcommits.org/)
 specification. Types in use can be found at
 [pvdlg/conventional-commit-types](https://github.com/pvdlg/conventional-commit-types).
+
+### Running Tests
+
+```sh
+stack test --no-run-benchmarks
+```
+
+### Running Benchmarks
+
+```sh
+stack bench --no-run-tests
+```
 
 ### Haddock
 
