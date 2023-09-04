@@ -8,6 +8,7 @@ module MCSP.Data.String.Extra (
     -- ** Character set analysis
     frequency,
     singletons,
+    repeated,
     hasOneOf,
 
     -- ** Substring analysis
@@ -71,6 +72,16 @@ singletons str = foldrWithKey' insertSingleton mempty (frequency str)
   where
     insertSingleton k 1 = insert k
     insertSingleton _ _ = id
+
+-- | /O(n lg n)/ Extracts the set of repeated characters in a string.
+--
+-- >>> repeated "aabacabd"
+-- fromList "ab"
+repeated :: Ord a => String a -> Set a
+repeated str = foldrWithKey' insertRepeated mempty (frequency str)
+  where
+    insertRepeated _ 1 = id
+    insertRepeated k _ = insert k
 
 -- | /O(n lg m)/ Check if at least one of the character of string is present in the given set.
 --
