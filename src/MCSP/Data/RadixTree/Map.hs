@@ -261,10 +261,11 @@ union :: Ord a => RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
 union = unionWith const
 {-# INLINE union #-}
 
--- | /O(n log r)/ Update values for all prefixes of key present in the map.
-updatePath :: Ord a => (v -> v) -> String a -> RadixTreeMap a v -> RadixTreeMap a v
-updatePath f Null (Tree val es) = Tree (f <$> val) es
-updatePath f k@(Head h) (Tree val es) = Tree (f <$> val) (Map.adjust updateEdgeOnPath h es)
+-- | /O(n log r)/ Update values for all prefixes of key in the map, present or not.
+updatePath ::
+    Ord a => (String a -> Maybe v -> Maybe v) -> String a -> RadixTreeMap a v -> RadixTreeMap a v
+updatePath f k@Null (Tree val es) = Tree (f k val) es
+updatePath f k@(Head h) (Tree val es) = Tree (f k val) (Map.adjust updateEdgeOnPath h es)
   where
     updateEdgeOnPath (kx :~> tx) = kx :~> maybe id (updatePath f) (stripPrefix kx k) tx
 {-# INLINEABLE updatePath #-}

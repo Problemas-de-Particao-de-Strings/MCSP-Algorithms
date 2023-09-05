@@ -15,12 +15,13 @@ module MCSP.Data.String.Extra (
     longestCommonSubstring,
 ) where
 
+import Control.Monad ((>>=))
 import Data.Bool (Bool)
 import Data.Foldable (any, foldl')
 import Data.Function (flip, id, ($))
 import Data.Int (Int)
 import Data.Map.Strict (Map, alter, foldrWithKey')
-import Data.Maybe (Maybe (Just), fromMaybe)
+import Data.Maybe (Maybe (Just, Nothing), fromMaybe)
 import Data.Monoid (mempty)
 import Data.Ord (Ord)
 import Data.Set (Set, insert, member)
@@ -92,6 +93,11 @@ hasOneOf str ls = any (`member` ls) str
 --
 -- >>> longestCommonSubstring "ABABC" "ABCBA"
 -- Just ABC
+-- >>> longestCommonSubstring "13" "1400"
+-- Just 1
 longestCommonSubstring :: Ord a => String a -> String a -> Maybe (String a)
-longestCommonSubstring s1 s2 = findMax (construct s1 s2)
+longestCommonSubstring s1 s2 = findMax (construct s1 s2) >>= nonEmpty
+  where
+    nonEmpty (NonNull s) = Just s
+    nonEmpty Null = Nothing
 {-# INLINEABLE longestCommonSubstring #-}
