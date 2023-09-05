@@ -9,17 +9,19 @@ module MCSP.TestLib.Random (
 
 import Control.Applicative (pure, (<$>))
 import Data.Bifunctor (Bifunctor (bimap))
+import Data.Eq (Eq)
+import Data.Function (($))
 import Data.Int (Int)
 import GHC.Enum (Bounded, Enum, succ)
 import GHC.IsList (fromList)
 import GHC.Num ((-))
 
-import MCSP.Data.String (String (..), Unbox, concat, length, replicateM, (++))
+import MCSP.Data.String (String (..), Unbox, concat, elem, empty, length, replicateM, (!), (++))
 import MCSP.Data.String.Extra (PartitionPair)
-import MCSP.System.Random (Random, partitions, shuffle, uniformE, uniformRE)
+import MCSP.System.Random (Random, partitions, shuffle, uniformB, uniformE, uniformRE)
 
 -- | Common constraints for a character.
-type SimpleEnum a = (Enum a, Bounded a, Unbox a)
+type SimpleEnum a = (Enum a, Bounded a, Unbox a, Eq a)
 
 -- | Generates a pair of related strings by shuffling all the characters.
 --
@@ -33,13 +35,35 @@ randomShuffledChars n = do
     s2 <- shuffle s1
     pure (s1, s2)
 
+-- | Generates a string with random characters and guarantees absence of singletons.
+--
+-- >>> import MCSP.System.Random (generateWith)
+-- >>> import Data.Word (Word8)
+-- >>> import MCSP.Data.String (empty)
+-- >>> generateWith (1,2) (randomReplicated 5 1 8) :: (String Word8)
+-- 2 2 5 5 5
+-- >>> generateWith (1,2) (randomReplicated 10 1 6) :: (String Word8)
+-- 1 1 4 4 1 5 5 3 3 4
+randomReplicated :: SimpleEnum a => Int -> a -> a -> Random (String a)
+randomReplicated size lo hi = go size lo hi empty
+  where
+    go 0 _ _ old = pure old
+    go 1 _ _ old = do
+        index <- uniformB $ length old
+        pure $ old :> (old ! index)
+    go n lo' hi' old = do
+        value <- uniformRE lo' hi'
+        if value `elem` old
+            then go (n - 1) lo' hi' (old :> value)
+            else go (n - 2) lo' hi' (old :> value :> value)
+
 -- | Generates a pair of related strings with a fixed range of singletons and shuffled
 -- characters.
 --
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> import Data.Char (Char)
 -- >>> generateWith (1,2) (randomShuffledCharsWithSingletons 10 'a' 'c' 'e') :: (String Char, String Char)
--- (abbecadcac,ecaabacdbc)
+-- (dbacaacebc,adeacbbcac)
 randomShuffledCharsWithSingletons ::
     SimpleEnum a =>
     Int
@@ -48,7 +72,7 @@ randomShuffledCharsWithSingletons ::
     -> a
     -> Random (String a, String a)
 randomShuffledCharsWithSingletons n lo mid hi = do
-    str <- replicateM (n - length singletons) (uniformRE lo mid)
+    str <- randomReplicated (n - length singletons) lo mid
     let str' = str ++ singletons
     s1 <- shuffle str'
     s2 <- shuffle str'
