@@ -9,6 +9,7 @@ import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
 import Data.Foldable (foldl', maximum, null)
 import Data.Function ((.))
+import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Ord (Ord (..))
@@ -17,7 +18,7 @@ import Text.Show (Show)
 
 import MCSP.Data.RadixTree.Map qualified as Map
 import MCSP.Data.String (String (..), length)
-import MCSP.Data.String.Extra.Radix (suffixes)
+import MCSP.Data.String.Extra.Radix (stripSuffix, suffixes)
 
 -- --------------- --
 -- Data definition --
@@ -72,8 +73,9 @@ type SuffixTree a = Map.RadixTreeMap a (Suffix a)
 -- --------------- --
 
 -- | /O(1)/ Marks a new leaf for a suffix.
-markLeaf :: LeafKind -> Suffix a -> Suffix a
-markLeaf m (Suffix l s) = Suffix (m <> l) s
+markLeaf :: Eq a => LeafKind -> String a -> String a -> Maybe (Suffix a) -> Maybe (Suffix a)
+markLeaf m _ _ (Just (Suffix l s)) = Just (Suffix (m <> l) s)
+markLeaf m k s Nothing = Suffix m <$> stripSuffix s k
 
 -- | /O(1)/ Marks leaves when merging suffixes.
 mergeSuffix :: Suffix a -> Suffix a -> Suffix a
@@ -92,7 +94,7 @@ mark :: Ord a => String a -> String a -> SuffixTree a -> SuffixTree a
 mark s1 s2 = markAll Second s2 . markAll First s1
   where
     markAll l s t = foldl' (markPrefixes l) t (suffixes s)
-    markPrefixes l t s = Map.updatePath (markLeaf l) s t
+    markPrefixes l t s = Map.updatePath (markLeaf l s) s t
 
 -- | /O(?)/ Constructs suffix tree for a pair of strings.
 --
