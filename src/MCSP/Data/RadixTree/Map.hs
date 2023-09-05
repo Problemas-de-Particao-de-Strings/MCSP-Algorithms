@@ -4,6 +4,7 @@ module MCSP.Data.RadixTree.Map (
     RadixTreeMap (..),
     Edge (..),
     EdgeSet,
+    debug,
 
     -- * Construction
     empty,
@@ -46,6 +47,7 @@ import Data.Tuple (snd, uncurry)
 import Data.Word (Word8)
 import GHC.Base (($!))
 import GHC.Err (error, errorWithoutStackTrace)
+import GHC.Num ((+), (-))
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
@@ -312,6 +314,22 @@ instance (ShowString a, Show v) => Show (RadixTreeMap a v) where
 
 instance (ShowString a, Show v) => Show (Edge a v) where
     showsPrec _ (s :~> t) = shows s . showString " :~> " . shows t
+
+-- | Show `RadixTreeMap` in a readable, idented format.
+debug :: (ShowString a, Show v) => RadixTreeMap a v -> Text.String
+debug root = go (0 :: Int) root ""
+  where
+    -- recursive printers
+    go n (Tree val es) = showString "Tree" . showSpace . showVal val . showLn . showEdges n es
+    showEdges n es = foldr (\(_, e) s -> showEdge (n + 1) e . s) id $ Map.toAscList es
+    showEdge n (s :~> t) = ident n . shows s . showString " :~> " . go n t
+    -- additional printers
+    showSpace = showChar ' '
+    showLn = showChar '\n'
+    showVal v = showParen (isJust v) (shows v)
+    -- identation for each edge
+    ident 0 = id
+    ident n = showString "    " . ident (n - 1)
 
 -- ------------------ --
 -- Foldable instances --
