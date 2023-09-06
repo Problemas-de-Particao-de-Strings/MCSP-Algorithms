@@ -8,6 +8,7 @@ import Control.Monad (forM_)
 import Data.String qualified as Text
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
+import Data.Word (Word8)
 import Statistics.ConfidenceInt (binomialCI)
 import Statistics.Regression (olsRegress)
 import Statistics.Types (CL, cl95, confidenceInterval)
@@ -94,8 +95,8 @@ regress f v = first G.head (olsRegress [iters] target)
 -- -------------------------- --
 -- Benchmark groups and setup --
 
--- | String type used for benchmarking.
-type Target = Word
+-- | Character type used for benchmarking.
+type Target = Word8
 
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
 measuring :: StringParameters -> (Text.String, Heuristic Target) -> IO Measured
