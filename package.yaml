@@ -72,6 +72,7 @@ internal-libraries:
   mcsp-test-lib:
     source-dirs: test/lib
     exposed-modules:
+      - MCSP.System.Path
       - MCSP.System.Random
       - MCSP.System.Random.TH
       - MCSP.TestLib.Heuristics
@@ -80,9 +81,12 @@ internal-libraries:
       - MCSP.TestLib.Sample
     dependencies:
       - mcsp-algorithms
+      - directory >= 1.3.8.1 && < 2
+      - filepath >= 1.4.100.1 && < 2
       - MonadRandom >= 0.6 && < 1
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
+      - time >= 1.12.2 && < 2
 
 tests:
   spec:
@@ -92,9 +96,12 @@ tests:
       - mcsp-algorithms
       - mcsp-test-lib
       # these dependencies are repeated here for Haskell Language Server to work in 'mcsp-test-lib'
+      - directory >= 1.3.8.1 && < 2
+      - filepath >= 1.4.100.1 && < 2
       - MonadRandom >= 0.6 && < 1
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
+      - time >= 1.12.2 && < 2
     ghc-options: *binary-ghc-options
 
 benchmarks:
@@ -113,6 +120,7 @@ benchmarks:
       - mcsp-algorithms
       - mcsp-test-lib
       - criterion >= 1.6.3.0 && < 2
+      - statistics >= 0.16.2.0 && < 1
     ghc-options: *binary-ghc-options
 
 ghc-options:
