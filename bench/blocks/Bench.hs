@@ -13,7 +13,7 @@ import Statistics.Regression (olsRegress)
 import Statistics.Types (CL, cl95, confidenceInterval)
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 
-import MCSP.System.Path (createDirectory, directory, getCurrentTimestamp, thisFile, (<.>), (</>))
+import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
@@ -144,14 +144,6 @@ type PutStrLn = String -> IO ()
 withFileWriter :: String -> (Handle -> PutStrLn) -> (PutStrLn -> IO a) -> IO a
 withFileWriter filename putLn run = withFile filename AppendMode (run . putLn)
 
--- | Path to directory where benchmarks outputs.
---
--- >>> lastN n = reverse . take n . reverse
--- >>> lastN 28 outputDir
--- "MCSP-Algorithms/bench/output"
-outputDir :: FilePath
-outputDir = directory (directory $$thisFile) </> "output"
-
 -- | Print line and flush file.
 hPutStrLn' :: Handle -> String -> IO ()
 hPutStrLn' file s = hPutStrLn file s >> hFlush file
@@ -159,6 +151,7 @@ hPutStrLn' file s = hPutStrLn file s >> hFlush file
 -- | Configure outputs and run the benchmarks.
 main :: IO ()
 main = do
+    let outputDir = packageRoot </> "bench" </> "output"
     createDirectory outputDir
     timestamp <- getCurrentTimestamp
     -- CSV with the results of each execution

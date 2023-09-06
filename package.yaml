@@ -73,6 +73,7 @@ internal-libraries:
     source-dirs: test/lib
     exposed-modules:
       - MCSP.System.Path
+      - MCSP.System.Path.TH
       - MCSP.System.Random
       - MCSP.TestLib.Heuristics
       - MCSP.TestLib.Heuristics.TH
