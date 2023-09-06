@@ -4,14 +4,17 @@ module MCSP.TestLib.Heuristics (
     heuristics,
     Measured (..),
     measure,
+    csvHeader,
+    toCsvRow,
 ) where
 
 import Prelude hiding (String)
 
 import Control.DeepSeq (NFData)
+import Data.List (intercalate)
 import Data.Ratio ((%))
 import Data.String qualified as Text
-import Data.Tuple.Extra (both)
+import Data.Tuple.Extra (both, second)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
@@ -26,7 +29,7 @@ import MCSP.Heuristics (
     greedy,
  )
 
-import MCSP.TestLib.Heuristics.TH (mkNamedList)
+import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
 -- | List of all heuristics implemented and their names.
 heuristics :: Ord a => [(Text.String, Heuristic a)]
@@ -90,3 +93,34 @@ measure (name, heuristic) pair =
     sing = checkedLen "singletons" (both singletons pair)
     reps = checkedLen "repeated" (both repeated pair)
     x `divR` y = fromRational (toInteger x % toInteger y)
+
+-- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
+--
+-- >>> map fst csvColumns
+-- ["size","repeats","singles","heuristic","blocks","score"]
+csvColumns :: [(Text.String, Measured -> Text.String)]
+csvColumns =
+    [ second (show .) $(mkNamed 'size),
+      second (show .) $(mkNamed 'repeats),
+      second (show .) $(mkNamed 'singles),
+      $(mkNamed 'heuristic),
+      second (show .) $(mkNamed 'blocks),
+      second (show .) $(mkNamed 'score)
+    ]
+
+-- | The CSV header for the columns of `Measured`.
+--
+-- >>> csvHeader
+-- "size,repeats,singles,heuristic,blocks,score"
+csvHeader :: Text.String
+csvHeader = intercalate "," (map fst csvColumns)
+
+-- | The CSV row representing the values of a `Measured`.
+--
+-- >>> result = measure $(mkNamed 'combine) ("abcd", "cdab")
+-- >>> toCsvRow result
+-- "4,0,4,combine,2,0.6666666666666666"
+toCsvRow :: Measured -> Text.String
+toCsvRow measured = intercalate "," (map getValue csvColumns)
+  where
+    getValue (_, showColumn) = showColumn measured
