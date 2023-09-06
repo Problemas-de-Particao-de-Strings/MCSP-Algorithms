@@ -1,22 +1,32 @@
 -- | Benchmark measuring size of partitions created by MCSP heuristics.
 module Main (main) where
 
-import Prelude hiding (String)
+import Prelude
 
 import Control.Arrow (first)
 import Control.Monad (forM_)
-import Data.String qualified as Text
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
 import Data.Word (Word8)
 import Statistics.ConfidenceInt (binomialCI)
 import Statistics.Regression (olsRegress)
 import Statistics.Types (CL, cl95, confidenceInterval)
-import System.IO (hFlush, stdout)
+import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 
+import MCSP.System.Path (createDirectory, directory, getTimeString, thisFile, (<.>), (</>))
 import MCSP.System.Random (generate)
-import MCSP.TestLib.Heuristics (Heuristic, Measured, blocks, heuristics, measure, size)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
+
+import MCSP.TestLib.Heuristics (
+    Heuristic,
+    Measured,
+    blocks,
+    csvHeader,
+    heuristics,
+    measure,
+    size,
+    toCsvRow,
+ )
 
 -- ----------------------------- --
 -- Benchmarking and Measurements --
@@ -99,24 +109,64 @@ regress f v = first G.head (olsRegress [iters] target)
 type Target = Word8
 
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
-measuring :: StringParameters -> (Text.String, Heuristic Target) -> IO Measured
-measuring params heuristic = measure heuristic <$> generate (randomPairWith params)
+measuring :: StringParameters -> (String, Heuristic Target) -> (String -> IO ()) -> IO Measured
+measuring params heuristic writeLn = do
+    pair <- generate (randomPairWith params)
+    let result = measure heuristic pair
+    writeLn (toCsvRow result)
+    pure result
 
--- | Print line and flush `stdout`.
-putStrLn' :: Text.String -> IO ()
-putStrLn' s = putStrLn s >> hFlush stdout
-
--- | Run a matrix of benchmarks for each parameter set and heuristic.
-main :: IO ()
-main = forM_ benchParams (forM_ heuristics . run)
+-- | Run a matrix of benchmarks for each parameter set and heuristic, writing output and results to
+-- the with the input writers.
+report :: PutStrLn -> PutStrLn -> IO ()
+report putLn writeCsv = writeCsv csvHeader >> forM_ benchParams (forM_ heuristics . run)
   where
     run params heuristic = do
-        putStrLn' $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
+        putLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
         -- run benchmark and analyse results
-        results <- runBenchmark $ measuring params heuristic
+        results <- runBenchmark $ measuring params heuristic writeCsv
         let (blks, r2) = regress (fromIntegral . blocks) results
         -- formatted output
-        putStrLn' $ "blocks:     \t" ++ show blks
-        putStrLn' $ "            \t" ++ show r2 ++ " R²"
-        putStrLn' $ "data points:\t" ++ show (G.length results)
-        putStrLn' ""
+        putLn $ "blocks:     \t" ++ show blks
+        putLn $ "            \t" ++ show r2 ++ " R²"
+        putLn $ "data points:\t" ++ show (G.length results)
+        putLn ""
+
+-- -------------------------- --
+-- Output and saving to files --
+
+-- | A line writer.
+--
+-- Functions that write a single line to some output handle.
+type PutStrLn = String -> IO ()
+
+-- Open a file, run a function that writes to the file using the custom writer and closes it.
+withFileWriter :: String -> (Handle -> PutStrLn) -> (PutStrLn -> IO a) -> IO a
+withFileWriter filename putLn run = withFile filename AppendMode (run . putLn)
+
+-- | Path to directory where benchmarks outputs.
+--
+-- >>> lastN n = reverse . take n . reverse
+-- >>> lastN 28 outputDir
+-- "MCSP-Algorithms/bench/output"
+outputDir :: FilePath
+outputDir = directory (directory $$thisFile) </> "output"
+
+-- | Print line and flush file.
+hPutStrLn' :: Handle -> String -> IO ()
+hPutStrLn' file s = hPutStrLn file s >> hFlush file
+
+-- | Configure outputs and run the benchmarks.
+main :: IO ()
+main = do
+    createDirectory outputDir
+    datetime <- getTimeString
+    -- CSV with the results of each execution
+    let csvFile = outputDir </> datetime ++ "-blocks" <.> "csv"
+    -- the same output that is shown in stdout, but saved in a file
+    let reportFile = outputDir </> datetime ++ "-blocks-report" <.> "txt"
+
+    withFileWriter reportFile pipeToStdout (withFileWriter csvFile hPutStrLn . report)
+  where
+    -- write a line to both a file and to stdout
+    pipeToStdout file line = hPutStrLn' stdout line >> hPutStrLn' file line
