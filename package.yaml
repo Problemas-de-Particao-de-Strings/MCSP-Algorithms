@@ -55,6 +55,19 @@ dependencies:
   - vector >= 0.13 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
 
+executables:
+  playground:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - mcsp-algorithms
+      - mcsp-test-lib
+    ghc-options: &binary-ghc-options
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
+
 internal-libraries:
   mcsp-test-lib:
     source-dirs: test/lib
@@ -71,18 +84,6 @@ internal-libraries:
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
 
-executables:
-  playground:
-    main: Main.hs
-    source-dirs: app
-    dependencies:
-      - mcsp-algorithms
-      - mcsp-test-lib
-    ghc-options: &binary-ghc-options
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
 tests:
   spec:
     main: Spec.hs
