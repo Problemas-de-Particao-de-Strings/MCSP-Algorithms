@@ -1,6 +1,7 @@
 module MCSP.System.Path (
     FilePath,
     thisFile,
+    packageRoot,
     directory,
     (<.>),
     (</>),
@@ -13,24 +14,15 @@ import Data.Functor ((<$>))
 import Data.String (String)
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Time.LocalTime (getZonedTime)
-import Language.Haskell.TH (CodeQ, bindCode, loc_filename, location)
-import Language.Haskell.TH.Syntax (Lift (liftTyped))
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory, (<.>), (</>))
 import System.IO (FilePath, IO)
 
--- | Path to the file that evaluates this template.
---
--- >>> import Data.List (reverse, take)
--- >>> lastN n s = reverse (take n (reverse s))
--- >>> lastN 44 $$thisFile
--- "MCSP-Algorithms/test/lib/MCSP/System/Path.hs"
-thisFile :: CodeQ FilePath
-thisFile = bindCode (loc_filename <$> location) liftTyped
+import MCSP.System.Path.TH (mkPackageRoot, thisFile)
 
--- | Creates the directory and all of its parents if missing.
-createDirectory :: FilePath -> IO ()
-createDirectory = createDirectoryIfMissing True
+-- | Path to the root directory of the MCSP package.
+packageRoot :: FilePath
+packageRoot = $$mkPackageRoot
 
 -- | The directory name of a path.
 --
@@ -47,6 +39,10 @@ createDirectory = createDirectoryIfMissing True
 directory :: FilePath -> FilePath
 directory = takeDirectory
 {-# INLINE directory #-}
+
+-- | Creates the directory and all of its parents if missing.
+createDirectory :: FilePath -> IO ()
+createDirectory = createDirectoryIfMissing True
 
 -- | A string for the current time and date in ISO8601 format.
 --

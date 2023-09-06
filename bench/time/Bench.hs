@@ -8,18 +8,10 @@ import Criterion.Types (Benchmark, Config (..), Verbosity (Verbose))
 import Data.Word (Word8)
 import Statistics.Types (cl95)
 
-import MCSP.System.Path (createDirectory, directory, getCurrentTimestamp, thisFile, (<.>), (</>))
+import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.TestLib.Heuristics (Heuristic, heuristics)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
-
--- | Path to directory where benchmarks outputs.
---
--- >>> lastN n = reverse . take n . reverse
--- >>> lastN 28 outputDir
--- "MCSP-Algorithms/bench/output"
-outputDir :: FilePath
-outputDir = directory (directory $$thisFile) </> "output"
 
 -- | Generates a configuration for Criterion that saves the outputs by default.
 --
@@ -29,6 +21,7 @@ outputDir = directory (directory $$thisFile) </> "output"
 -- "MCSP-Algorithms/bench/output/time-2023-09-06T00:20:21.292946511-03:00.html"
 getDefaultConfig :: IO Config
 getDefaultConfig = do
+    let outputDir = packageRoot </> "bench" </> "output"
     createDirectory outputDir
     timestamp <- getCurrentTimestamp
     pure
