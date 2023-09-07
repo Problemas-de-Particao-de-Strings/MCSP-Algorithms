@@ -32,7 +32,7 @@ import Data.Char (Char)
 import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
 import Data.Foldable qualified as Foldable (Foldable (..))
-import Data.Foldable1 (Foldable1 (..), foldl1, foldr1)
+import Data.Foldable1 qualified as Foldable1 (Foldable1 (..), foldl1, foldr1)
 import Data.Function (const, flip, id, ($), (.))
 import Data.Functor (Functor (fmap, (<$)), (<$>))
 import Data.Int (Int)
@@ -364,15 +364,15 @@ instance Foldable.Foldable (RadixTreeMap s) where
     {-# SPECIALIZE instance Foldable.Foldable (RadixTreeMap Word8) #-}
     fold Empty = mempty
     fold (Leaf v) = v
-    fold t@(WithSomeKey k) = fold1 (k :~> t)
+    fold t@(WithSomeKey k) = Foldable1.fold1 (k :~> t)
     {-# INLINEABLE fold #-}
     foldMap _ Empty = mempty
     foldMap f (Leaf v) = f v
-    foldMap f t@(WithSomeKey k) = foldMap1 f (k :~> t)
+    foldMap f t@(WithSomeKey k) = Foldable1.foldMap1 f (k :~> t)
     {-# INLINEABLE foldMap #-}
     foldMap' _ Empty = mempty
     foldMap' f (Leaf !v) = f v
-    foldMap' f t@(WithSomeKey !k) = foldMap1' f (k :~> t)
+    foldMap' f t@(WithSomeKey !k) = Foldable1.foldMap1' f (k :~> t)
     {-# INLINEABLE foldMap' #-}
     foldr _ x Empty = x
     foldr f x (Leaf v) = f v x
@@ -392,11 +392,11 @@ instance Foldable.Foldable (RadixTreeMap s) where
     {-# INLINEABLE foldl' #-}
     foldr1 _ Empty = error "foldr1.RadixTreeMap: empty tree"
     foldr1 _ (Leaf v) = v
-    foldr1 f t@(WithSomeKey k) = foldr1 f (k :~> t)
+    foldr1 f t@(WithSomeKey k) = Foldable1.foldr1 f (k :~> t)
     {-# INLINEABLE foldr1 #-}
     foldl1 _ Empty = error "foldl1.RadixTreeMap: empty tree"
     foldl1 _ (Leaf v) = v
-    foldl1 f t@(WithSomeKey k) = foldl1 f (k :~> t)
+    foldl1 f t@(WithSomeKey k) = Foldable1.foldl1 f (k :~> t)
     {-# INLINEABLE foldl1 #-}
     toList Empty = []
     toList (Leaf v) = [v]
@@ -415,11 +415,11 @@ instance Foldable.Foldable (RadixTreeMap s) where
     {-# INLINEABLE elem #-}
     maximum Empty = error "maximum.RadixTreeMap: empty tree"
     maximum (Leaf v) = v
-    maximum t@(WithSomeKey k) = maximum (k :~> t)
+    maximum t@(WithSomeKey k) = Foldable1.maximum (k :~> t)
     {-# INLINEABLE maximum #-}
     minimum Empty = error "minimum.RadixTreeMap: empty tree"
     minimum (Leaf v) = v
-    minimum t@(WithSomeKey k) = minimum (k :~> t)
+    minimum t@(WithSomeKey k) = Foldable1.minimum (k :~> t)
     {-# INLINEABLE minimum #-}
     sum Empty = 0
     sum (Leaf v) = v
@@ -435,11 +435,11 @@ instance Foldable.Foldable (Edge s) where
     {-# SPECIALIZE instance Foldable.Foldable (Edge Char) #-}
     {-# SPECIALIZE instance Foldable.Foldable (Edge Int) #-}
     {-# SPECIALIZE instance Foldable.Foldable (Edge Word8) #-}
-    fold = fold1
+    fold = Foldable1.fold1
     {-# INLINE fold #-}
-    foldMap = foldMap1
+    foldMap = Foldable1.foldMap1
     {-# INLINE foldMap #-}
-    foldMap' = foldMap1'
+    foldMap' = Foldable1.foldMap1'
     {-# INLINE foldMap' #-}
     foldr f x (_ :~> Tree val es) = foldr f (Map.foldr (flip $ foldr f) x es) val
     {-# INLINEABLE foldr #-}
@@ -449,24 +449,24 @@ instance Foldable.Foldable (Edge s) where
     {-# INLINEABLE foldl #-}
     foldl' f x (_ :~> Tree !val !es) = Map.foldl' (foldl' f) (foldl' f x val) es
     {-# INLINEABLE foldl' #-}
-    foldr1 = foldr1
+    foldr1 = Foldable1.foldr1
     {-# INLINE foldr1 #-}
-    foldl1 = foldl1
+    foldl1 = Foldable1.foldl1
     {-# INLINE foldl1 #-}
     toList (_ :~> Tree (Just x) es) = x : foldMap toList es
     toList (_ :~> Tree Nothing es) = foldMap toList es
     {-# INLINEABLE toList #-}
     null _ = False
     {-# INLINE null #-}
-    maximum = maximum
+    maximum = Foldable1.maximum
     {-# INLINE maximum #-}
-    minimum = minimum
+    minimum = Foldable1.minimum
     {-# INLINE minimum #-}
 
-instance Foldable1 (Edge s) where
-    {-# SPECIALIZE instance Foldable1 (Edge Char) #-}
-    {-# SPECIALIZE instance Foldable1 (Edge Int) #-}
-    {-# SPECIALIZE instance Foldable1 (Edge Word8) #-}
+instance Foldable1.Foldable1 (Edge s) where
+    {-# SPECIALIZE instance Foldable1.Foldable1 (Edge Char) #-}
+    {-# SPECIALIZE instance Foldable1.Foldable1 (Edge Int) #-}
+    {-# SPECIALIZE instance Foldable1.Foldable1 (Edge Word8) #-}
     fold1 = unwrap "Edge.fold1: unexpected empty subtree" . go
       where
         go (_ :~> Tree val es) = val <> foldMap go es

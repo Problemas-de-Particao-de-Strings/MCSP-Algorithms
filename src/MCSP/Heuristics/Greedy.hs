@@ -6,12 +6,13 @@ module MCSP.Heuristics.Greedy (
 import Control.Applicative (pure)
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
-import Data.Function (on, ($), (.))
+import Data.Function (on, (.))
 import Data.Int (Int)
 import Data.List (map)
-import Data.Maybe (Maybe (..), fromJust, maybe)
+import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
 import Data.Tuple.Extra (both, first, snd, uncurry)
+import GHC.Err (errorWithoutStackTrace)
 import GHC.Num ((+))
 import Text.Show (Show)
 
@@ -106,10 +107,12 @@ breakAt ::
     -> String a
     -> IndexedPartition a
     -> (IndexedString a, IndexedPartition a)
-breakAt (n, v) s m = insertItems (fromJust $ stripInfix s v) (n, delete n m)
+breakAt (n, v) s m = case stripInfix s v of
+    Just (prefix, suffix) -> insertItems prefix suffix (n, delete n m)
+    Nothing -> errorWithoutStackTrace "greedy: given LCS was not part of the input string."
   where
     -- insert each item, updating the indices if needed
-    insertItems (s1, s2) = first (,s) . insert2 s2 . insert1 s1
+    insertItems s1 s2 = first (,s) . insert2 s2 . insert1 s1
     insert1 Null pp = pp
     insert1 s1 (i, p) = (i + length s1, insert i s1 p)
     insert2 Null pp = pp

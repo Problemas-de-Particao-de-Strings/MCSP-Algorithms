@@ -181,12 +181,12 @@ readOr x readItem = readItem <++ pure x
 --
 -- No text is consumed, but the parser will fail in case of `Nothing`.
 --
--- >>> readP_to_S (fromJust (Just 12)) "text"
+-- >>> readP_to_S (fromJustP (Just 12)) "text"
 -- [(12,"text")]
--- >>> readP_to_S (fromJust (Nothing)) "text"
+-- >>> readP_to_S (fromJustP (Nothing)) "text"
 -- []
-fromJust :: Maybe a -> ReadP a
-fromJust = maybe pfail pure
+fromJustP :: Maybe a -> ReadP a
+fromJustP = maybe pfail pure
 
 -- | Creates a partial parser that consumes the minimum amount of text possible.
 --
@@ -198,7 +198,7 @@ fromJust = maybe pfail pure
 readPartialMinimal :: ReadP a -> ReadP a
 readPartialMinimal readItem = readUntilFirstMatch ""
   where
-    readUntilFirstMatch acc = fromJust (match readItem acc) <++ continueMatchSearch acc
+    readUntilFirstMatch acc = fromJustP (match readItem acc) <++ continueMatchSearch acc
     continueMatchSearch acc = getInLine >>= readUntilFirstMatch . snoc acc
 
 -- | Creates a partial parser that tries to increase a match as much as possible.
@@ -213,7 +213,7 @@ readPartialFrom :: ReadP a -> (String, a) -> ReadP a
 readPartialFrom readItem (buffer, currentMatch) = readOr currentMatch $ do
     ch <- getInLine
     let text = snoc buffer ch
-    nextMatch <- fromJust (match readItem text)
+    nextMatch <- fromJustP (match readItem text)
     readPartialFrom readItem (text, nextMatch)
 
 -- | Creates a partial parser that consumes the maximum amount of text possible.

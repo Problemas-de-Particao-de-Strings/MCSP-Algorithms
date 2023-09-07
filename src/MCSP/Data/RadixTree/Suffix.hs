@@ -5,15 +5,14 @@ module MCSP.Data.RadixTree.Suffix (
     findMax,
 ) where
 
-import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
-import Data.Foldable (foldl', maximum, null)
+import Data.Foldable (Foldable, foldMap', foldl')
 import Data.Function ((.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Ord (Ord (..))
-import Data.Semigroup (Semigroup (..))
+import Data.Semigroup (Max (..), Semigroup (..))
 import Text.Show (Show)
 
 import MCSP.Data.RadixTree.Map qualified as Map
@@ -104,15 +103,20 @@ construct :: Ord a => String a -> String a -> SuffixTree a
 construct s1 s2 = mark s1 s2 (insert s1 s2 Map.empty)
 {-# INLINE construct #-}
 
+-- | /O(n)/ Extracts the maximum if the collection is non empty.
+--
+-- >>> getMaximum ([1, 2, 3] :: [Int])
+-- Just 3
+-- >>> getMaximum ([] :: [Int])
+-- Nothing
+getMaximum :: (Foldable t, Ord a) => t a -> Maybe a
+getMaximum xs = getMax <$> foldMap' (Just . Max) xs
+
 -- | /O(n log r)/ Retrieves the maximum common prefix of all suffixes.
 --
 -- >>> findMax (construct "abab" "baba")
 -- Just bab
 findMax :: Ord a => SuffixTree a -> Maybe (String a)
-findMax t
-    | null t = Nothing
-    | otherwise = getBoth (maximum t)
-  where
-    getBoth (Suffix Both s) = Just s
-    getBoth _ = Nothing
+findMax t | Just (Suffix Both s) <- getMaximum t = Just s
+findMax _ = Nothing
 {-# INLINE findMax #-}
