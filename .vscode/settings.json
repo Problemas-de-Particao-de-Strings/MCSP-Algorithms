@@ -1,9 +1,9 @@
 {
     "diffEditor.diffAlgorithm": "advanced",
-    "diffEditor.experimental.collapseUnchangedRegions": true,
     "diffEditor.experimental.useVersion2": true,
     "diffEditor.experimental.showEmptyDecorations": true,
     "diffEditor.experimental.showMoves": true,
+    "diffEditor.hideUnchangedRegions.enabled": true,
     "diffEditor.ignoreTrimWhitespace": false,
     "editor.detectIndentation": false,
     "editor.formatOnSave": true,
