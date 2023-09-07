@@ -24,6 +24,9 @@
 #
 # - functions:
 #   - {name: unsafePerformIO, within: []} # unsafePerformIO can only appear in no modules
+- extensions:
+    - default: false
+    - { name: UndecidableInstances, within: [MCSP.Data.String.Text] }
 
 # Add custom hints for this project
 #
@@ -56,7 +59,9 @@
 - group: { name: future, enabled: true }
 - group: { name: generalize, enabled: true }
 - group: { name: monomorphic, enabled: true }
+- group: { name: partial, enabled: true }
 - group: { name: teaching, enabled: true }
+- group: { name: use-th-quotes, enabled: true }
 #
 # Ignore some builtin hints
 # - ignore: {name: Use let}
