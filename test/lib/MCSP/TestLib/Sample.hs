@@ -1,4 +1,5 @@
 module MCSP.TestLib.Sample (
+    ShuffleMethod (..),
     StringParameters (..),
     benchParams,
     randomPairWith,
@@ -11,7 +12,16 @@ import Data.String qualified as Text
 
 import MCSP.Data.String (String)
 import MCSP.System.Random (Random)
-import MCSP.TestLib.Random (SimpleEnum, randomShuffledCharsWithSingletons)
+import MCSP.TestLib.Random (
+    SimpleEnum,
+    pairShufflingBlocks,
+    pairShufflingChars,
+    randomWithSingletons,
+ )
+
+-- | Method of shuffling a string.
+data ShuffleMethod = Chars | Blocks
+    deriving stock (Show, Eq)
 
 -- | Parameters to generate a string of integers.
 --
@@ -19,37 +29,49 @@ import MCSP.TestLib.Random (SimpleEnum, randomShuffledCharsWithSingletons)
 data StringParameters = StringParameters
     { size :: Int,
       nReplicated :: Int,
-      nSingletons :: Int
+      nSingletons :: Int,
+      shuffle :: ShuffleMethod
     }
     deriving stock (Show, Eq)
 
 -- | Short and formatted representation of @StringParameters@.
 --
--- >>> repr $ StringParameters 100 3 4
--- "(size=100 #rep=3 #sing=4)"
+-- >>> repr $ StringParameters 100 3 4 Chars
+-- "(size=100 #rep=3 #sing=4 shuffle=Chars)"
 repr :: StringParameters -> Text.String
-repr (StringParameters n reps sings) =
-    "(size=" ++ show n ++ " #rep=" ++ show reps ++ " #sing=" ++ show sings ++ ")"
+repr (StringParameters n reps sings shuffle) =
+    parenthesized
+        [ "size=" ++ show n,
+          "#rep=" ++ show reps,
+          "#sing=" ++ show sings,
+          "shuffle=" ++ show shuffle
+        ]
+  where
+    parenthesized ws = "(" ++ unwords ws ++ ")"
 
 -- | Generate a pair of strings of integers using the given parameters.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> import Data.Word (Word)
--- >>> generateWith (1,2) $ randomPairWith (StringParameters 10 2 2) :: (String Word, String Word)
--- (0 0 1 3 1 0 2 1 0 1,3 1 0 0 0 0 1 2 1 1)
+-- >>> import Data.Word (Word8)
+-- >>> generateWith (1,2) $ randomPairWith (StringParameters 10 2 2 Chars) :: (String Word8, String Word8)
+-- (0 0 0 0 1 3 1 0 1 2,1 1 0 1 2 0 0 3 0 0)
 randomPairWith :: forall a. SimpleEnum a => StringParameters -> Random (String a, String a)
-randomPairWith (StringParameters {..}) =
-    randomShuffledCharsWithSingletons
-        size
-        (fromMinBound 0)
-        (fromMinBound (nReplicated - 1))
-        (fromMinBound (nReplicated - 1 + nSingletons))
+randomPairWith (StringParameters {..}) = do
+    str <-
+        randomWithSingletons
+            size
+            (fromMinBound 0)
+            (fromMinBound (nReplicated - 1))
+            (fromMinBound (nReplicated - 1 + nSingletons))
+    case shuffle of
+        Chars -> pairShufflingChars str
+        Blocks -> pairShufflingBlocks str
   where
     fromMinBound n = toEnum (fromEnum (minBound :: a) + n)
 
 -- | Parameters to generate strings for benchmarking.
 benchParams :: [StringParameters]
 benchParams =
-    [ StringParameters {size = 100, nReplicated = 2, nSingletons = 5},
-      StringParameters {size = 100, nReplicated = 2, nSingletons = 60}
+    [ StringParameters {size = 100, nReplicated = 2, nSingletons = 5, shuffle = Chars},
+      StringParameters {size = 100, nReplicated = 2, nSingletons = 60, shuffle = Chars}
     ]

@@ -8,15 +8,21 @@ import Data.Word (Word8)
 import MCSP.Data.String (String)
 import MCSP.System.Random (generate, uniformR)
 import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, toCsvRow)
-import MCSP.TestLib.Sample qualified as S (StringParameters (..), randomPairWith)
+import MCSP.TestLib.Sample (ShuffleMethod (..), StringParameters (..), randomPairWith)
 
 genPair :: IO (String Word8, String Word8)
 genPair = do
     r <- generate $ uniformR 1 10
     s <- generate $ uniformR 2 50
     n <- generate $ uniformR (r + s + 10) 200
-    let params = S.StringParameters {size = n, nReplicated = r, nSingletons = s}
-    generate (S.randomPairWith params)
+    let params =
+            StringParameters
+                { size = n,
+                  nReplicated = r,
+                  nSingletons = s,
+                  shuffle = Chars
+                }
+    generate (randomPairWith params)
 
 run :: IO ()
 run = do
