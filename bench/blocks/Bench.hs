@@ -11,16 +11,15 @@ import Data.Word (Word8)
 import Numeric (showFFloat)
 import Numeric.Extra (showDP)
 import Statistics.Regression (bootstrapRegress, olsRegress)
+import Statistics.Resampling (Estimator (Mean, StdDev), resample)
+import Statistics.Resampling.Bootstrap (bootstrapBCA)
 import Statistics.Types (CL, ConfInt, Estimate (Estimate), confidenceInterval, confidenceLevel)
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 import System.Random.MWC (createSystemRandom)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
-
 import MCSP.System.Statistics (absolute, cl99, sampleCI)
-import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
-
 import MCSP.TestLib.Heuristics (
     Measured,
     NamedHeuristic,
@@ -31,6 +30,7 @@ import MCSP.TestLib.Heuristics (
     score,
     toCsvRow,
  )
+import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
 -- ----------------------------- --
 -- Benchmarking and Measurements --
@@ -96,11 +96,22 @@ runBenchmark = go (take (max $: runs) series) G.empty G.empty
 -- --------------- --
 -- Result Analysis --
 
--- | Non-Generic version of `Estimate`.
-type Estimated = Estimate ConfInt Double
+-- | A bunch of processed information about the collected measurements.
+data Estimated = Estimated
+    { -- | Angular coefficient of the linear regression.
+      linearCoefficient :: Estimate ConfInt Double,
+      -- | Vertical intercept for the regressed line.
+      yIntercept :: Estimate ConfInt Double,
+      -- | Correlation coefficient squared.
+      rSquared :: Estimate ConfInt Double,
+      -- | Intrinsic mean of the heuristic.
+      mean :: Estimate ConfInt Double,
+      -- | Intrinsic standard deviation of the heuristic.
+      stdDev :: Estimate ConfInt Double
+    }
 
 -- | Format a value with unit and confidence interval.
-showEstimate :: String -> Estimated -> String
+showEstimate :: String -> Estimate ConfInt Double -> String
 showEstimate unit estimate@(Estimate value _) =
     withUnit value ++ "\t(" ++ lowerBound ++ " .. " ++ upperBound ++ ")"
   where
@@ -112,19 +123,35 @@ showEstimate unit estimate@(Estimate value _) =
     withWidth n pad "" = replicate n pad
     withWidth n pad (x : xs) = x : withWidth (n - 1) pad xs
 
--- | Make a regression of measurements against a value of the measurements.
+-- | Runs linear regression against a measured field of the collected measurements.
 --
--- Returns both coefficients @(a, b)@ (for @y = a x + b@) of the regression and the R^2.
-regress :: Real a => (m -> a) -> V.Vector (V.Vector m) -> IO ((Estimated, Estimated), Estimated)
+-- Returns the estimated information about the data.
+regress :: Real a => (m -> a) -> V.Vector (V.Vector m) -> IO Estimated
 regress f v = do
     rng <- createSystemRandom
-    (coef, r2) <- bootstrapRegress rng resamples confLevel olsRegress [iters] target
-    case coef of
-        [a, b] -> pure ((a, b), r2)
-        _ -> fail "unexpected mismatch in bootstrapRegress parameters"
+    -- linear regression
+    let iters = convert (fromIntegral . G.length) v
+    let target = convert (sumOn field) v
+    (coefs, r2) <- bootstrapRegress rng resamples confLevel olsRegress [iters] target
+    (linear, intercept) <- unwrap "bootstrapRegress" coefs
+    -- mean and standard deviation
+    let values = G.convert (G.concatMap (G.map field) v)
+    samples <- resample rng [Mean, StdDev] resamples values
+    let estimates = bootstrapBCA confLevel values samples
+    (mean, std) <- unwrap "bootstrapBCA" estimates
+    pure
+        Estimated
+            { linearCoefficient = linear,
+              yIntercept = intercept,
+              rSquared = r2,
+              mean = mean,
+              stdDev = std
+            }
   where
-    iters = convert (fromIntegral . G.length) v
-    target = convert (sumOn (fromRational . toRational . f)) v
+    field = fromRational . toRational . f
+    -- used in bootstrap, where the number of parameters is know to be two
+    unwrap _ [x, y] = pure (x, y)
+    unwrap loc _ = fail ("unexpected mismatch in " ++ loc ++ " results")
 
 -- -------------------------- --
 -- Benchmark groups and setup --
@@ -146,12 +173,15 @@ report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics 
         printLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
         -- run benchmark and analyse results
         results <- runBenchmark $ measuring params heuristic >>= writeCsv putRow
-        ((blks, _), r2) <- regress blocks results
+        Estimated {..} <- regress blocks results
         -- formatted output
-        printLn $ "blocks:     \t" ++ showEstimate "" blks
-        printLn $ "            \t" ++ showEstimate "R²" r2
-        let ci = showDP 3 (confidenceLevel confLevel)
-        printLn $ "data points:\t" ++ show (G.length results) ++ ", ci = " ++ ci
+        printLn $ "blocks:     \t" ++ showEstimate "" linearCoefficient
+        printLn $ "y-intercept:\t" ++ showEstimate "" yIntercept
+        printLn $ "            \t" ++ showEstimate "R²" rSquared
+        printLn $ "mean:       \t" ++ showEstimate "" mean
+        printLn $ "std dev:    \t" ++ showEstimate "" stdDev
+        let ci = " ci: " ++ showDP 3 (confidenceLevel confLevel)
+        printLn $ "data points:\t" ++ show (G.length results) ++ "        \t" ++ ci
         printLn ""
 
 -- -------------------------- --
