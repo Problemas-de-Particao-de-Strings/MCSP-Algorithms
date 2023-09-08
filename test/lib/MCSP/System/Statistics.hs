@@ -6,6 +6,7 @@ module MCSP.System.Statistics (
     mkCL,
 
     -- * Confidence Interval
+    confidenceInterval,
     absolute,
     distCI,
     normalCI,

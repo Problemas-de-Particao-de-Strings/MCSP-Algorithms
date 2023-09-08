@@ -116,6 +116,7 @@ benchmarks:
       - mcsp-test-lib
       - mwc-random >= 0.15.0.2 && < 1
       - statistics >= 0.16.2.0 && < 1
+      - time >= 1.12.2 && < 2
     ghc-options: *binary-ghc-options
   time:
     main: Bench.hs
