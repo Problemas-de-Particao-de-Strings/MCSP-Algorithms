@@ -47,7 +47,7 @@ checkPart :: Debug a => String a -> [String a] -> [String a]
 checkPart s@Unboxed p
     -- a valid partition must have the same substrings in the same order
     | concat p == s = p
-    -- otherwise, check if at least the all the characters are there
+    -- otherwise, check if at least nothing was left out and all the characters are there
     | f1 == f2 = mismatch header p s
     -- if some characters were erased, show another error message
     | otherwise = mismatch header f1 f2

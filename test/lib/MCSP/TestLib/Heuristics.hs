@@ -1,6 +1,7 @@
 -- | Tools for testing heuristics.
 module MCSP.TestLib.Heuristics (
     Heuristic,
+    NamedHeuristic,
     heuristics,
     Measured (..),
     measure,
@@ -31,8 +32,11 @@ import MCSP.Heuristics (
 
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
+-- | The heuristic with its defined name.
+type NamedHeuristic a = (Text.String, Heuristic a)
+
 -- | List of all heuristics implemented and their names.
-heuristics :: Ord a => [(Text.String, Heuristic a)]
+heuristics :: Ord a => [NamedHeuristic a]
 heuristics = $(mkNamedList ['combine, 'combineS, 'greedy])
 
 -- | A collection of information made on a single execution of a `Heuristic`.
@@ -77,7 +81,7 @@ checkedLen name (x, y)
 -- >>> trivial x y = (chars x, chars y)
 -- >>> measure $(mkNamed 'trivial) ("abcd", "cdab")
 -- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, singles = 4, repeats = 0}
-measure :: Debug a => (Text.String, Heuristic a) -> (String a, String a) -> Measured
+measure :: Debug a => NamedHeuristic a -> (String a, String a) -> Measured
 measure (name, heuristic) pair =
     Measured
         { heuristic = name,

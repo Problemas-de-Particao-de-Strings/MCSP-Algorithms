@@ -19,8 +19,8 @@ import MCSP.System.Statistics (absolute, sampleCI)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
 import MCSP.TestLib.Heuristics (
-    Heuristic,
     Measured,
+    NamedHeuristic,
     blocks,
     csvHeader,
     heuristics,
@@ -99,11 +99,8 @@ regress f v = first G.head (olsRegress [iters] target)
 -- -------------------------- --
 -- Benchmark groups and setup --
 
--- | Character type used for benchmarking.
-type Target = Word8
-
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
-measuring :: StringParameters -> (String, Heuristic Target) -> (String -> IO ()) -> IO Measured
+measuring :: StringParameters -> NamedHeuristic Word8 -> (String -> IO ()) -> IO Measured
 measuring params heuristic writeLn = do
     pair <- generate (randomPairWith params)
     let result = measure heuristic pair
