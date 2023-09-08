@@ -100,28 +100,28 @@ regress f v = first G.head (olsRegress [iters] target)
 -- Benchmark groups and setup --
 
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
-measuring :: StringParameters -> NamedHeuristic Word8 -> (String -> IO ()) -> IO Measured
-measuring params heuristic writeLn = do
-    pair <- generate (randomPairWith params)
-    let result = measure heuristic pair
-    writeLn (toCsvRow result)
-    pure result
+measuring :: StringParameters -> NamedHeuristic Word8 -> IO Measured
+measuring params heuristic = measure heuristic <$> generate (randomPairWith params)
+
+-- | Writes the measured information in CSV format and returns it unchanged.
+writeCsv :: PutStrLn -> Measured -> IO Measured
+writeCsv writeLn result = writeLn (toCsvRow result) >> pure result
 
 -- | Run a matrix of benchmarks for each parameter set and heuristic, writing output and results to
 -- the with the input writers.
 report :: PutStrLn -> PutStrLn -> IO ()
-report putLn writeCsv = writeCsv csvHeader >> forM_ benchParams (forM_ heuristics . run)
+report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics . run)
   where
     run params heuristic = do
-        putLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
+        printLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
         -- run benchmark and analyse results
-        results <- runBenchmark $ measuring params heuristic writeCsv
+        results <- runBenchmark $ measuring params heuristic >>= writeCsv putRow
         let (blks, r2) = regress (fromIntegral . blocks) results
         -- formatted output
-        putLn $ "blocks:     \t" ++ show blks
-        putLn $ "            \t" ++ show r2 ++ " R²"
-        putLn $ "data points:\t" ++ show (G.length results)
-        putLn ""
+        printLn $ "blocks:     \t" ++ show blks
+        printLn $ "            \t" ++ show r2 ++ " R²"
+        printLn $ "data points:\t" ++ show (G.length results)
+        printLn ""
 
 -- -------------------------- --
 -- Output and saving to files --
