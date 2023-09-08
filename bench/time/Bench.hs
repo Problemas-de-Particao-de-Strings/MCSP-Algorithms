@@ -10,7 +10,7 @@ import Data.Word (Word8)
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (cl95)
-import MCSP.TestLib.Heuristics (Heuristic, heuristics)
+import MCSP.TestLib.Heuristics (NamedHeuristic, heuristics)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
 -- | Generates a configuration for Criterion that saves the outputs by default.
@@ -45,11 +45,8 @@ defaultMain benchmarks = do
     config <- getDefaultConfig
     defaultMainWith config benchmarks
 
--- | Character type used for benchmarking.
-type Target = Word8
-
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
-benchHeuristic :: StringParameters -> (String, Heuristic Target) -> Benchmark
+benchHeuristic :: StringParameters -> NamedHeuristic Word8 -> Benchmark
 benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair runHeuristic
   where
     genPair = generate (randomPairWith params)
