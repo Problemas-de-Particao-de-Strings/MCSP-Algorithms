@@ -4,6 +4,7 @@ module Main (main) where
 import Prelude
 
 import Control.Monad (forM_)
+import Data.Time.Clock.System (SystemTime (..), getSystemTime)
 import Data.Tuple.Extra (both)
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
@@ -13,13 +14,13 @@ import Numeric.Extra (showDP)
 import Statistics.Regression (bootstrapRegress, olsRegress)
 import Statistics.Resampling (Estimator (Mean, StdDev), resample)
 import Statistics.Resampling.Bootstrap (bootstrapBCA)
-import Statistics.Types (CL, ConfInt, Estimate (Estimate), confidenceInterval, confidenceLevel)
+import Statistics.Types (CL, ConfInt, Estimate (Estimate), Sample, confidenceLevel)
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 import System.Random.MWC (createSystemRandom)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
-import MCSP.System.Statistics (absolute, cl99, sampleCI)
+import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
 import MCSP.TestLib.Heuristics (
     Measured,
     NamedHeuristic,
@@ -32,8 +33,18 @@ import MCSP.TestLib.Heuristics (
  )
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
--- ----------------------------- --
--- Benchmarking and Measurements --
+-- ---------------- --
+-- Benchmark Limits --
+
+-- | Maximum execution time of a benchmark in seconds.
+timeLimit :: Double
+timeLimit = 10.0
+{-# INLINE timeLimit #-}
+
+-- | Lower and upper limit on the number of runs for a single benchmark.
+runs :: (Int, Int)
+runs = (6, 60)
+{-# INLINE runs #-}
 
 -- | Confidence level expected for each benchmark.
 confLevel :: CL Double
@@ -43,16 +54,10 @@ confLevel = cl99
 -- | Number of resamples for bootstrapping regression.
 resamples :: Int
 resamples = 1000
+{-# INLINE resamples #-}
 
--- | Lower and upper limit on the number of runs for a single benchmark.
-runs :: (Int, Int)
-runs = (5, 40)
-{-# INLINE runs #-}
-
--- | Apply a function to a pair of arguments.
-($:) :: (a -> b -> c) -> (a, b) -> c
-($:) = uncurry
-{-# INLINE ($:) #-}
+-- ----------------------------- --
+-- Benchmarking and Measurements --
 
 -- | The x-axis of the regression, counting the number of iterations to run for each data point.
 series :: Integral a => [a]
@@ -70,28 +75,44 @@ sumOn f = G.foldl' (\s m -> s + f m) 0
 convert :: (G.Vector v a, G.Vector w b) => (a -> b) -> v a -> w b
 convert f vec = G.generate (G.length vec) (f . G.unsafeIndex vec)
 
+-- | Calculates elapsed seconds as a float, from UNIX timestamps.
+elapsedSeconds :: SystemTime -> SystemTime -> Double
+elapsedSeconds s e = max (secs + nsecs * 1e-9) 0
+  where
+    secs = fromIntegral (systemSeconds e - systemSeconds s)
+    nsecs = fromIntegral (systemNanoseconds e - systemNanoseconds s)
+
+-- | Estimate the confidence interval via traditional inference statistics.
+estimateCI :: Sample -> Double
+estimateCI = absolute . sampleCI confLevel
+
 -- | Run a single benchmark until the estimated confidence interval is low enough for `confLevel`.
 --
 -- Returns a vector of data points (@`V.Vector` `Measured`@), such that the x-axis is the number of
 -- iterations for that point (given by `G.length`) and the y-axis should be a fold over the
 -- measurements in the data fold.
 runBenchmark :: IO Measured -> IO (V.Vector (V.Vector Measured))
-runBenchmark = go (take (max $: runs) series) G.empty G.empty
+runBenchmark = go (take maxRuns series) G.empty 0 G.empty
   where
-    go [] _ acc _ = pure acc
-    go (it : iters) scores acc m = do
-        -- current iteration index
-        let run = G.length acc + 1
-
-        -- run the heuristic multiple times and collect the measurements
+    (minRuns, maxRuns) = (uncurry min runs, uncurry max runs)
+    go [] _ _ acc _ = pure acc
+    go (it : iters) scores runningTime acc m = do
+        let run = G.length acc
+        -- run the heuristic multiple times, measure time and collect the data
+        startTime <- getSystemTime
         value <- G.replicateM it m
+        endTime <- getSystemTime
+        let totalElapsed = runningTime + elapsedSeconds startTime endTime
+        -- update collected results, skip the first high variance results
         let scores' = scores G.++ convert score value
-
         let result = G.snoc acc value
-        -- stop after a minimum number of runs and the confidence interval is smaller than 1% score
-        if run >= min $: runs && absolute (sampleCI confLevel scores') < 0.01
+        -- stop after either the maximum number of runs is reached or all of:
+        -- \* a minimum number of runs is executed
+        -- \* the time limit ran out and
+        -- \* the confidence interval is less than 1% score
+        if run >= minRuns && totalElapsed > timeLimit && estimateCI scores' < 0.01
             then pure result
-            else go iters scores' result m
+            else go iters scores' totalElapsed result m
 
 -- --------------- --
 -- Result Analysis --
@@ -181,7 +202,8 @@ report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics 
         printLn $ "mean:       \t" ++ showEstimate "" mean
         printLn $ "std dev:    \t" ++ showEstimate "" stdDev
         let ci = " ci: " ++ showDP 3 (confidenceLevel confLevel)
-        printLn $ "data points:\t" ++ show (G.length results) ++ "        \t" ++ ci
+        let n = G.length results
+        printLn $ "data points:\t" ++ show n ++ "        \t" ++ ci
         printLn ""
 
 -- -------------------------- --
