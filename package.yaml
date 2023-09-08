@@ -114,6 +114,7 @@ benchmarks:
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
+      - mwc-random >= 0.15.0.2 && < 1
       - statistics >= 0.16.2.0 && < 1
     ghc-options: *binary-ghc-options
   time:
