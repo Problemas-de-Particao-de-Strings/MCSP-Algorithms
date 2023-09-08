@@ -3,19 +3,22 @@ module Main (main) where
 
 import Prelude
 
-import Control.Arrow (first)
 import Control.Monad (forM_)
+import Data.Tuple.Extra (both)
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
 import Data.Word (Word8)
-import Statistics.Regression (olsRegress)
-import Statistics.Types (CL, cl99)
+import Numeric (showFFloat)
+import Numeric.Extra (showDP)
+import Statistics.Regression (bootstrapRegress, olsRegress)
+import Statistics.Types (CL, ConfInt, Estimate (Estimate), confidenceInterval, confidenceLevel)
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
+import System.Random.MWC (createSystemRandom)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 
-import MCSP.System.Statistics (absolute, sampleCI)
+import MCSP.System.Statistics (absolute, cl99, sampleCI)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
 import MCSP.TestLib.Heuristics (
@@ -36,6 +39,10 @@ import MCSP.TestLib.Heuristics (
 confLevel :: CL Double
 confLevel = cl99
 {-# INLINE confLevel #-}
+
+-- | Number of resamples for bootstrapping regression.
+resamples :: Int
+resamples = 1000
 
 -- | Lower and upper limit on the number of runs for a single benchmark.
 runs :: (Int, Int)
@@ -89,12 +96,35 @@ runBenchmark = go (take (max $: runs) series) G.empty G.empty
 -- --------------- --
 -- Result Analysis --
 
+-- | Non-Generic version of `Estimate`.
+type Estimated = Estimate ConfInt Double
+
+-- | Format a value with unit and confidence interval.
+showEstimate :: String -> Estimated -> String
+showEstimate unit estimate@(Estimate value _) =
+    withUnit value ++ "\t(" ++ lowerBound ++ " .. " ++ upperBound ++ ")"
+  where
+    (lowerBound, upperBound) = both withUnit (confidenceInterval estimate)
+    -- formatting numbers and strings
+    withUnit n = fixed n ++ " " ++ withWidth 2 ' ' unit
+    fixed n = withWidth 5 '0' (showFFloat Nothing n "")
+    withWidth 0 _ _ = ""
+    withWidth n pad "" = replicate n pad
+    withWidth n pad (x : xs) = x : withWidth (n - 1) pad xs
+
 -- | Make a regression of measurements against a value of the measurements.
-regress :: (Measured -> Double) -> V.Vector (V.Vector Measured) -> (Double, Double)
-regress f v = first G.head (olsRegress [iters] target)
+--
+-- Returns both coefficients @(a, b)@ (for @y = a x + b@) of the regression and the R^2.
+regress :: Real a => (m -> a) -> V.Vector (V.Vector m) -> IO ((Estimated, Estimated), Estimated)
+regress f v = do
+    rng <- createSystemRandom
+    (coef, r2) <- bootstrapRegress rng resamples confLevel olsRegress [iters] target
+    case coef of
+        [a, b] -> pure ((a, b), r2)
+        _ -> fail "unexpected mismatch in bootstrapRegress parameters"
   where
     iters = convert (fromIntegral . G.length) v
-    target = convert (sumOn f) v
+    target = convert (sumOn (fromRational . toRational . f)) v
 
 -- -------------------------- --
 -- Benchmark groups and setup --
@@ -116,11 +146,12 @@ report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics 
         printLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
         -- run benchmark and analyse results
         results <- runBenchmark $ measuring params heuristic >>= writeCsv putRow
-        let (blks, r2) = regress (fromIntegral . blocks) results
+        ((blks, _), r2) <- regress blocks results
         -- formatted output
-        printLn $ "blocks:     \t" ++ show blks
-        printLn $ "            \t" ++ show r2 ++ " R²"
-        printLn $ "data points:\t" ++ show (G.length results)
+        printLn $ "blocks:     \t" ++ showEstimate "" blks
+        printLn $ "            \t" ++ showEstimate "R²" r2
+        let ci = showDP 3 (confidenceLevel confLevel)
+        printLn $ "data points:\t" ++ show (G.length results) ++ ", ci = " ++ ci
         printLn ""
 
 -- -------------------------- --
@@ -132,7 +163,7 @@ report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics 
 type PutStrLn = String -> IO ()
 
 -- Open a file, run a function that writes to the file using the custom writer and closes it.
-withFileWriter :: String -> (Handle -> PutStrLn) -> (PutStrLn -> IO a) -> IO a
+withFileWriter :: String -> (Handle -> f) -> (f -> IO a) -> IO a
 withFileWriter filename putLn run = withFile filename AppendMode (run . putLn)
 
 -- | Print line and flush file.
