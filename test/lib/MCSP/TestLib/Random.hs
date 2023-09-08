@@ -1,7 +1,6 @@
 -- | Operations on partitions of `String`.
 module MCSP.TestLib.Random (
     SimpleEnum,
-    randomString,
     randomWithSingletons,
     pairShufflingChars,
     pairShufflingBlocks,
@@ -16,9 +15,9 @@ import GHC.Enum (Bounded, Enum, succ)
 import GHC.IsList (fromList)
 import GHC.Num ((-))
 
-import MCSP.Data.String (String (..), Unbox, concat, elem, empty, length, replicateM, (!), (++))
+import MCSP.Data.String (String (..), Unbox, concat, elem, empty, length, (!), (++))
 import MCSP.Data.String.Extra (PartitionPair)
-import MCSP.System.Random (Random, partitions, shuffle, uniformB, uniformE, uniformRE)
+import MCSP.System.Random (Random, partitions, shuffle, uniformB, uniformRE)
 
 -- | Common constraints for a character.
 type SimpleEnum a = (Enum a, Bounded a, Unbox a, Eq a)
@@ -26,15 +25,6 @@ type SimpleEnum a = (Enum a, Bounded a, Unbox a, Eq a)
 -- ----------------- --
 -- String generation --
 -- ----------------- --
-
--- | Generates a random string with the given length.
---
--- >>> import MCSP.System.Random (generateWith)
--- >>> import Data.Word (Word8)
--- >>> generateWith (1,2) (randomString 5) :: (String Word8)
--- 38 147 20 189 107
-randomString :: SimpleEnum a => Int -> Random (String a)
-randomString n = replicateM n uniformE
 
 -- | Generates a string with random characters and guarantees absence of singletons.
 --
@@ -93,7 +83,7 @@ partitionsShufflingBlocks str@Unboxed = do
     p2 <- shuffle p
     pure (p1, p2)
 
--- | Generates a pair of related strings by shuffling the randomly broken blocks
+-- | Generates a pair of related strings by shuffling randomly broken blocks
 -- of the input string.
 --
 -- >>> import MCSP.System.Random (generateWith)
