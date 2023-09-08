@@ -9,7 +9,7 @@ import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
 import Data.Word (Word8)
 import Statistics.Regression (olsRegress)
-import Statistics.Types (CL, cl95)
+import Statistics.Types (CL, cl99)
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
@@ -25,6 +25,7 @@ import MCSP.TestLib.Heuristics (
     csvHeader,
     heuristics,
     measure,
+    score,
     toCsvRow,
  )
 
@@ -33,12 +34,12 @@ import MCSP.TestLib.Heuristics (
 
 -- | Confidence level expected for each benchmark.
 confLevel :: CL Double
-confLevel = cl95
+confLevel = cl99
 {-# INLINE confLevel #-}
 
 -- | Lower and upper limit on the number of runs for a single benchmark.
 runs :: (Int, Int)
-runs = (4, 30)
+runs = (5, 40)
 {-# INLINE runs #-}
 
 -- | Apply a function to a pair of arguments.
@@ -71,19 +72,19 @@ runBenchmark :: IO Measured -> IO (V.Vector (V.Vector Measured))
 runBenchmark = go (take (max $: runs) series) G.empty G.empty
   where
     go [] _ acc _ = pure acc
-    go (it : iters) blks acc m = do
+    go (it : iters) scores acc m = do
         -- current iteration index
         let run = G.length acc + 1
 
         -- run the heuristic multiple times and collect the measurements
         value <- G.replicateM it m
-        let totalBlks = blks G.++ convert (fromIntegral . blocks) value
+        let scores' = scores G.++ convert score value
 
         let result = G.snoc acc value
-        -- stop after a minimum number of runs and the confidence interval is smaller than 1 block
-        if run >= min $: runs && absolute (sampleCI confLevel totalBlks) < 1
+        -- stop after a minimum number of runs and the confidence interval is smaller than 1% score
+        if run >= min $: runs && absolute (sampleCI confLevel scores') < 0.01
             then pure result
-            else go iters totalBlks result m
+            else go iters scores' result m
 
 -- --------------- --
 -- Result Analysis --
