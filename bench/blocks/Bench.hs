@@ -8,13 +8,14 @@ import Control.Monad (forM_)
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
 import Data.Word (Word8)
-import Statistics.ConfidenceInt (binomialCI)
 import Statistics.Regression (olsRegress)
-import Statistics.Types (CL, cl95, confidenceInterval)
+import Statistics.Types (CL, cl95)
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
+
+import MCSP.System.Statistics (absolute, sampleCI)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
 import MCSP.TestLib.Heuristics (
@@ -24,7 +25,6 @@ import MCSP.TestLib.Heuristics (
     csvHeader,
     heuristics,
     measure,
-    size,
     toCsvRow,
  )
 
@@ -54,18 +54,13 @@ series = squish $ map truncate $ iterate (ratio *) 1
     squish = foldr dropRepeated []
     dropRepeated x xs = x : dropWhile (x ==) xs
 
--- | Estimate the confidence interval for the running heuristic, returning the expected error in
--- number of blocks.
-estimateCI :: CL Double -> Int -> Int -> Int -> Double
-estimateCI cl maxBlocks generatedBlocks minBlocks =
-    crange * fromIntegral maxBlocks / fromIntegral minBlocks
-  where
-    ci = confidenceInterval (binomialCI cl (maxBlocks - minBlocks) (generatedBlocks - minBlocks))
-    crange = abs ((-) $: ci)
-
 -- | Evaluate each element in a vector and sum the results.
 sumOn :: Num b => (a -> b) -> V.Vector a -> b
 sumOn f = G.foldl' (\s m -> s + f m) 0
+
+-- | Converts all the values and the output vector type.
+convert :: (G.Vector v a, G.Vector w b) => (a -> b) -> v a -> w b
+convert f vec = G.generate (G.length vec) (f . G.unsafeIndex vec)
 
 -- | Run a single benchmark until the estimated confidence interval is low enough for `confLevel`.
 --
@@ -73,24 +68,22 @@ sumOn f = G.foldl' (\s m -> s + f m) 0
 -- iterations for that point (given by `G.length`) and the y-axis should be a fold over the
 -- measurements in the data fold.
 runBenchmark :: IO Measured -> IO (V.Vector (V.Vector Measured))
-runBenchmark = go (take (max $: runs) series) 0 0 0 G.empty
+runBenchmark = go (take (max $: runs) series) G.empty G.empty
   where
-    go [] _ _ _ acc _ = pure acc
-    go (it : iters) totalStr totalChr totalBlk acc m = do
+    go [] _ acc _ = pure acc
+    go (it : iters) blks acc m = do
         -- current iteration index
         let run = G.length acc + 1
 
         -- run the heuristic multiple times and collect the measurements
         value <- G.replicateM it m
-        let strs = totalStr + G.length value
-        let chrs = totalChr + sumOn size value
-        let blks = totalBlk + sumOn blocks value
+        let totalBlks = blks G.++ convert (fromIntegral . blocks) value
 
         let result = G.snoc acc value
         -- stop after a minimum number of runs and the confidence interval is smaller than 1 block
-        if run >= min $: runs && estimateCI confLevel chrs blks strs < 1
+        if run >= min $: runs && absolute (sampleCI confLevel totalBlks) < 1
             then pure result
-            else go iters strs chrs blks result m
+            else go iters totalBlks result m
 
 -- --------------- --
 -- Result Analysis --
@@ -99,8 +92,8 @@ runBenchmark = go (take (max $: runs) series) 0 0 0 G.empty
 regress :: (Measured -> Double) -> V.Vector (V.Vector Measured) -> (Double, Double)
 regress f v = first G.head (olsRegress [iters] target)
   where
-    iters = G.convert $ G.map (fromIntegral . G.length) v
-    target = G.convert $ G.map (sumOn f) v
+    iters = convert (fromIntegral . G.length) v
+    target = convert (sumOn f) v
 
 -- -------------------------- --
 -- Benchmark groups and setup --
