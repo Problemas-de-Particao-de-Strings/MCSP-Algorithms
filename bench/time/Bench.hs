@@ -36,7 +36,7 @@ getDefaultConfig = do
               jsonFile = Nothing,
               junitFile = Nothing,
               verbosity = Verbose,
-              template = "default"
+              template = packageRoot </> "bench" </> "time" </> "report-template.tpl"
             }
 
 -- | Run Criterion with a default configuration from `getDefaultConfig`.
