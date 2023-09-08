@@ -46,6 +46,14 @@ runs :: (Int, Int)
 runs = (6, 60)
 {-# INLINE runs #-}
 
+-- | Number of initial data points to be ignored.
+--
+-- Data points with small number of iterations are much more susceptible to high variance, yet they
+-- have the same weight in linear regression. This is a way of reducing their impact.
+skip :: Int
+skip = 2
+{-# INLINE skip #-}
+
 -- | Confidence level expected for each benchmark.
 confLevel :: CL Double
 confLevel = cl99
@@ -66,6 +74,11 @@ series = squish $ map truncate $ iterate (ratio *) 1
     ratio = 1.05 :: Double
     squish = foldr dropRepeated []
     dropRepeated x xs = x : dropWhile (x ==) xs
+
+-- | Yield the elements wth its index in the list, starting from the given integer.
+indexed :: Int -> [a] -> [(Int, a)]
+indexed _ [] = []
+indexed i (x : xs) = (i, x) : indexed (i + 1) xs
 
 -- | Evaluate each element in a vector and sum the results.
 sumOn :: Num b => (a -> b) -> V.Vector a -> b
@@ -92,20 +105,21 @@ estimateCI = absolute . sampleCI confLevel
 -- iterations for that point (given by `G.length`) and the y-axis should be a fold over the
 -- measurements in the data fold.
 runBenchmark :: IO Measured -> IO (V.Vector (V.Vector Measured))
-runBenchmark = go (take maxRuns series) G.empty 0 G.empty
+runBenchmark = go (indexed 1 $ take maxRuns series) G.empty 0 G.empty
   where
     (minRuns, maxRuns) = (uncurry min runs, uncurry max runs)
     go [] _ _ acc _ = pure acc
-    go (it : iters) scores runningTime acc m = do
-        let run = G.length acc
+    go ((run, it) : iters) scores runningTime acc m = do
         -- run the heuristic multiple times, measure time and collect the data
         startTime <- getSystemTime
         value <- G.replicateM it m
         endTime <- getSystemTime
         let totalElapsed = runningTime + elapsedSeconds startTime endTime
         -- update collected results, skip the first high variance results
-        let scores' = scores G.++ convert score value
-        let result = G.snoc acc value
+        let (scores', result) =
+                if run > skip
+                    then (scores G.++ convert score value, G.snoc acc value)
+                    else (scores, acc)
         -- stop after either the maximum number of runs is reached or all of:
         -- \* a minimum number of runs is executed
         -- \* the time limit ran out and
@@ -203,7 +217,7 @@ report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics 
         printLn $ "std dev:    \t" ++ showEstimate "" stdDev
         let ci = " ci: " ++ showDP 3 (confidenceLevel confLevel)
         let n = G.length results
-        printLn $ "data points:\t" ++ show n ++ "        \t" ++ ci
+        printLn $ "data points:\t" ++ show n ++ " (" ++ show (n + skip) ++ ")        \t" ++ ci
         printLn ""
 
 -- -------------------------- --
