@@ -75,6 +75,7 @@ internal-libraries:
       - MCSP.System.Path
       - MCSP.System.Path.TH
       - MCSP.System.Random
+      - MCSP.System.Statistics
       - MCSP.TestLib.Heuristics
       - MCSP.TestLib.Heuristics.TH
       - MCSP.TestLib.Random
@@ -86,6 +87,7 @@ internal-libraries:
       - MonadRandom >= 0.6 && < 1
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
+      - statistics >= 0.16.2.0 && < 1
       - time >= 1.12.2 && < 2
 
 tests:
@@ -101,6 +103,7 @@ tests:
       - MonadRandom >= 0.6 && < 1
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
+      - statistics >= 0.16.2.0 && < 1
       - time >= 1.12.2 && < 2
     ghc-options: *binary-ghc-options
 
@@ -120,7 +123,6 @@ benchmarks:
       - mcsp-algorithms
       - mcsp-test-lib
       - criterion >= 1.6.3.0 && < 2
-      - statistics >= 0.16.2.0 && < 1
     ghc-options: *binary-ghc-options
 
 ghc-options:

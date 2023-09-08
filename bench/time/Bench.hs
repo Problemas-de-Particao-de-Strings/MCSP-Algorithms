@@ -6,10 +6,10 @@ import Prelude
 import Criterion.Main (bench, bgroup, defaultMainWith, perRunEnv)
 import Criterion.Types (Benchmark, Config (..), Verbosity (Verbose))
 import Data.Word (Word8)
-import Statistics.Types (cl95)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
+import MCSP.System.Statistics (cl95)
 import MCSP.TestLib.Heuristics (Heuristic, heuristics)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
