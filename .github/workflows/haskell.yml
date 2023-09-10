@@ -65,15 +65,16 @@ jobs:
       - name: Generate Cache Keys
         id: cache-keys
         shell: sh
+        env:
+          CACHE_SETUP: ${{ runner.os }}-stack-setup-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+          CACHE_PACKAGES: ${{ runner.os }}-stack-packages-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+          CACHE_INDEX: ${{ runner.os }}-stack-index-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
+          CACHE_WORK: ${{ runner.os }}-stack-work-${{ hashFiles('package.yaml') }}-${{ hashFiles('**/*.hs') }}
         run: |
-          CACHE_SETUP=${{ runner.os }}-stack-setup-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
-          echo "cache-setup=$CACHE_SETUP" >> $GITHUB_OUTPUT
-          CACHE_PACKAGES=${{ runner.os }}-stack-packages-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
-          echo "cache-packages=$CACHE_PACKAGES" >> $GITHUB_OUTPUT
-          CACHE_INDEX=${{ runner.os }}-stack-index-${{ hashFiles('stack.yaml') }}-${{ hashFiles('package.yaml') }}
-          echo "cache-index=$CACHE_INDEX" >> $GITHUB_OUTPUT
-          CACHE_WORK=${{ runner.os }}-stack-work-${{ hashFiles('package.yaml') }}-${{ hashFiles('**/*.hs') }}
-          echo "cache-work=$CACHE_WORK" >> $GITHUB_OUTPUT
+          echo "cache-setup=${CACHE_SETUP}" >> $GITHUB_OUTPUT
+          echo "cache-packages=${CACHE_PACKAGES}" >> $GITHUB_OUTPUT
+          echo "cache-index=${CACHE_INDEX}" >> $GITHUB_OUTPUT
+          echo "cache-work=${CACHE_WORK}" >> $GITHUB_OUTPUT
 
       - name: Cache Stack Setup
         uses: actions/cache@v3
@@ -156,7 +157,7 @@ jobs:
           stack build --no-run-benchmarks --no-run-tests
 
   test:
-    name: Test
+    name: Tests
     needs: build
     runs-on: ubuntu-latest
 
@@ -216,9 +217,13 @@ jobs:
           stack test --no-run-benchmarks
 
   docs:
-    name: Build Documentation
+    name: Build Docs
     needs: build
     runs-on: ubuntu-latest
+
+    env:
+      # if internal items should be exposed in the documentation
+      INTERNAL_DOCUMENTATION: true
 
     outputs:
       cache-dist: ${{ steps.cache-keys.outputs.cache-dist }}
@@ -262,9 +267,10 @@ jobs:
       - name: Generate Cache Keys
         id: cache-keys
         shell: sh
+        env:
+          CACHE_DIST: ${{ runner.os }}-cabal-dist-${{ hashFiles('*.cabal') }}-${{ hashFiles('**/*.hs') }}
         run: |
-          CACHE_DIST=${{ runner.os }}-cabal-dist-${{ hashFiles('*.cabal') }}-${{ hashFiles('**/*.hs') }}
-          echo "cache-dist=$CACHE_DIST" >> $GITHUB_OUTPUT
+          echo "cache-dist=${CACHE_DIST}" >> $GITHUB_OUTPUT
 
       - name: Cache Cabal Dist
         uses: actions/cache@v3
@@ -284,13 +290,15 @@ jobs:
 
       - name: Configure Cabal
         shell: sh
+        env:
+          HADDOCK_INTERNAL: ${{ env.INTERNAL_DOCUMENTATION && '--haddock-internal' || '' }}
         run: |
           SNAPSHOT_DB=$(stack path --snapshot-pkg-db)
           LOCAL_DB=$(stack path --local-pkg-db)
           cabal configure --disable-backup --package-db=clear \
             --package-db=global --package-db=${SNAPSHOT_DB} --package-db=${LOCAL_DB} \
             --enable-documentation --disable-tests --disable-benchmarks \
-            --haddock-internal --haddock-hyperlink-source --haddock-quickjump \
+            ${HADDOCK_INTERNAL} --haddock-hyperlink-source --haddock-quickjump \
             --haddock-html-location='https://hackage.haskell.org/package/$pkg-$version/docs'
 
       - name: Build Documentation
@@ -306,10 +314,10 @@ jobs:
             awk '{print$6,$7,$9}' | sort -r | head -n 1 | awk '{print$3}')
           OUTPUT_DIR=$(dirname "$INDEX_HTML")
           echo "Documentation should be at $OUTPUT_DIR"
-          echo "html-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+          echo "html-dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
 
   deploy:
-    name: Deploy Documentation
+    name: Deploy Docs
     needs: docs
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
