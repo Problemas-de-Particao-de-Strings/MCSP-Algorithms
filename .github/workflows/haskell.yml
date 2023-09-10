@@ -216,8 +216,101 @@ jobs:
           stack test --no-run-benchmarks
 
   docs:
-    name: Update Documentation
+    name: Build Documentation
     needs: build
+    runs-on: ubuntu-latest
+
+    outputs:
+      cache-dist: ${{ steps.cache-keys.outputs.cache-dist }}
+      html-dir: ${{ steps.index.outputs.html-dir }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Haskell
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-setup-ghc: true
+          stack-version: latest
+          ghc-version: latest
+          cabal-version: latest
+
+      - name: Restore Cache Stack Setup
+        uses: actions/cache/restore@v3
+        with:
+          key: ${{ needs.build.outputs.cache-setup }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.stack/*
+            !~/.stack/pantry
+            ~/.cabal
+            *.cabal
+            cabal.*
+
+      - name: Restore Cache Stack Work Directory
+        uses: actions/cache/restore@v3
+        with:
+          key: ${{ needs.build.outputs.cache-work }}
+          fail-on-cache-miss: true
+          path: |
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Generate Cache Keys
+        id: cache-keys
+        shell: sh
+        run: |
+          CACHE_DIST=${{ runner.os }}-cabal-dist-${{ hashFiles('*.cabal') }}-${{ hashFiles('**/*.hs') }}
+          echo "cache-dist=$CACHE_DIST" >> $GITHUB_OUTPUT
+
+      - name: Cache Cabal Dist
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.cache-keys.outputs.cache-dist }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-dist-${{ hashFiles('*.cabal') }}-
+            ${{ runner.os }}-cabal-dist-
+            ${{ runner.os }}-cabal-
+            ${{ runner.os }}-stack-work-
+            ${{ runner.os }}-stack-
+            ${{ runner.os }}-
+          path: |
+            dist-newstyle
+            *.cabal
+            cabal.*
+
+      - name: Configure Cabal
+        shell: sh
+        run: |
+          SNAPSHOT_DB=$(stack path --snapshot-pkg-db)
+          LOCAL_DB=$(stack path --local-pkg-db)
+          cabal configure --disable-backup --package-db=clear \
+            --package-db=global --package-db=${SNAPSHOT_DB} --package-db=${LOCAL_DB} \
+            --enable-documentation --disable-tests --disable-benchmarks \
+            --haddock-internal --haddock-hyperlink-source --haddock-quickjump \
+            --haddock-html-location='https://hackage.haskell.org/package/$pkg-$version/docs'
+
+      - name: Build Documentation
+        shell: sh
+        run: |
+          cabal haddock
+
+      - name: Find Documentation Index
+        id: index
+        shell: bash
+        run: |
+          INDEX_HTML=$(ls -l -1 --full-time dist-newstyle/build/*/ghc-*/*-*/doc/html/*/index.html |\
+            awk '{print$6,$7,$9}' | sort -r | head -n 1 | awk '{print$3}')
+          OUTPUT_DIR=$(dirname "$INDEX_HTML")
+          echo "Documentation should be at $OUTPUT_DIR"
+          echo "html-dir=$OUTPUT_DIR" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy Documentation
+    needs: docs
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
@@ -228,21 +321,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Restore Cabal-Dist Cache
-        uses: actions/cache@v3
+      - name: Restore Cache Cabal Dist
+        uses: actions/cache/restore@v3
         with:
-          key: ${{ needs.build.outputs.cache-dist }}
+          key: ${{ needs.docs.outputs.cache-dist }}
           fail-on-cache-miss: true
           path: |
             dist-newstyle
-            .stack-work
             *.cabal
             cabal.*
 
       - uses: actions/configure-pages@v3
       - uses: actions/upload-pages-artifact@v2
         with:
-          path: ${{ needs.build.outputs.html-dir }}
+          path: ${{ needs.docs.outputs.html-dir }}
 
       - name: Deploy to GitHub Pages
         id: deployment
