@@ -213,8 +213,109 @@ jobs:
             cabal.*
 
       - name: Run Tests
+        shell: sh
         run: |
           stack test --no-run-benchmarks
+
+  bench:
+    name: Benchmarks
+    needs: build
+    runs-on: ubuntu-latest
+
+    env:
+      BENCHMARKS_ARTIFACT: benchmarks
+      BENCHMARKS_ARCHIVE: benchmarks.tar
+      BENCHMARKS_PATH: bench/output
+
+    outputs:
+      artifact: ${{ env.BENCHMARKS_ARTIFACT }}
+      archive: ${{ env.BENCHMARKS_ARCHIVE }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Haskell
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-setup-ghc: true
+          stack-version: latest
+          ghc-version: latest
+
+      - name: Restore Cache Stack Setup
+        uses: actions/cache/restore@v3
+        with:
+          key: ${{ needs.build.outputs.cache-setup }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.stack/*
+            !~/.stack/pantry
+            ~/.cabal
+            *.cabal
+            cabal.*
+
+      - name: Restore Cache Stack Packages Database
+        uses: actions/cache/restore@v3
+        with:
+          key: ${{ needs.build.outputs.cache-packages }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.stack/pantry/*
+            !~/.stack/pantry/hackage
+
+      - name: Restore Cache Stack Packages Index
+        uses: actions/cache/restore@v3
+        with:
+          key: ${{ needs.build.outputs.cache-packages }}
+          fail-on-cache-miss: true
+          path: |
+            ~/.stack/pantry/hackage
+
+      - name: Restore Cache Stack Work Directory
+        uses: actions/cache/restore@v3
+        with:
+          key: ${{ needs.build.outputs.cache-work }}
+          fail-on-cache-miss: true
+          path: |
+            dist-newstyle
+            .stack-work
+            *.cabal
+            cabal.*
+
+      - name: Download Previous Benchmarks
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: ${{ env.BENCHMARKS_ARTIFACT }}
+          path: .
+        continue-on-error: true
+
+      - name: Extract Previous Benchmarks
+        shell: sh
+        run: |
+          if [ -f "${BENCHMARKS_ARCHIVE}" ]
+          then
+            mkdir -p "${BENCHMARKS_PATH}"
+            tar -xvf "${BENCHMARKS_ARCHIVE}" -C "${BENCHMARKS_PATH}"
+            rm -f "${BENCHMARKS_ARCHIVE}"
+          fi
+
+      - name: Run benchmarks
+        shell: sh
+        run: |
+          stack bench --no-run-tests
+
+      - name: Pack Benchmarks Results
+        shell: sh
+        run: |
+          tar -cvf "${BENCHMARKS_ARCHIVE}" -C "${BENCHMARKS_PATH}" .
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.BENCHMARKS_ARTIFACT }}
+          path: ${{ env.BENCHMARKS_ARCHIVE }}
+          if-no-files-found: error
 
   docs:
     name: Build Docs
@@ -296,7 +397,7 @@ jobs:
           SNAPSHOT_DB=$(stack path --snapshot-pkg-db)
           LOCAL_DB=$(stack path --local-pkg-db)
           cabal configure --disable-backup --package-db=clear \
-            --package-db=global --package-db=${SNAPSHOT_DB} --package-db=${LOCAL_DB} \
+            --package-db=global --package-db="${SNAPSHOT_DB}" --package-db="${LOCAL_DB}" \
             --enable-documentation --disable-tests --disable-benchmarks \
             ${HADDOCK_INTERNAL} --haddock-hyperlink-source --haddock-quickjump \
             --haddock-html-location='https://hackage.haskell.org/package/$pkg-$version/docs'
