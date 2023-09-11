@@ -419,17 +419,21 @@ jobs:
 
   deploy:
     name: Deploy Docs
-    needs: docs
+    needs: [docs, bench]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+
+    env:
+      # Directory where the static assets will be found
+      PAGES_DIR: site
+      # Directory for the benchmark results
+      BENCHMARKS: site/benchmarks
 
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - uses: actions/checkout@v3
-
       - name: Restore Cache Cabal Dist
         uses: actions/cache/restore@v3
         with:
@@ -440,10 +444,38 @@ jobs:
             *.cabal
             cabal.*
 
-      - uses: actions/configure-pages@v3
+      - name: Copy Documentation to Page
+        shell: sh
+        env:
+          BUILD_DIR: ${{ needs.docs.outputs.html-dir }}
+        run: |
+          cp -r "${BUILD_DIR}" "${PAGES_DIR}"
+
+      - name: Download Benchmark Results
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.bench.outputs.artifact }}
+          path: .
+
+      - name: Copy Benchmarks to page
+        shell: sh
+        env:
+          ARCHIVE: ${{ needs.bench.outputs.archive }}
+        run: |
+          mkdir -p "${BENCHMARKS}"
+          tar -xvf "${ARCHIVE}" -C "${BENCHMARKS}"
+
+      - name: Construct Benchamrks Index
+        uses: Exponential-Workload/create-index-action@master
+        with:
+          path: ${{ env.HOME }}/create-index
+          dir: ${{ env.BENCHMARKS }}
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v3
       - uses: actions/upload-pages-artifact@v2
         with:
-          path: ${{ needs.docs.outputs.html-dir }}
+          path: ${{ env.PAGES_DIR }}
 
       - name: Deploy to GitHub Pages
         id: deployment
