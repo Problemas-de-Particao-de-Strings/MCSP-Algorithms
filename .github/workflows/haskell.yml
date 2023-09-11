@@ -282,21 +282,21 @@ jobs:
             *.cabal
             cabal.*
 
+      - name: Run benchmarks
+        shell: sh
+        run: |
+          stack bench --no-run-tests
+
       - name: Cache Benchmark Results
         uses: actions/cache@v3
         with:
-          key: ${{ runner.os }}-stack-bench-${{ hashFiles('bench') }}
+          key: ${{ runner.os }}-stack-bench-${{ hashFiles('bench/output/*') }}
           restore-keys: |
             ${{ runner.os }}-stack-bench-
             ${{ runner.os }}-stack-
             ${{ runner.os }}-
           path: |
             ${{ env.BENCHMARKS_PATH }}
-
-      - name: Run benchmarks
-        shell: sh
-        run: |
-          stack bench --no-run-tests
 
       - name: Pack Benchmarks Results
         shell: sh
@@ -466,7 +466,7 @@ jobs:
           mkdir -p "${TOOLS}"
           echo "tools=${TOOLS}" >> $GITHUB_OUTPUT
 
-      - name: Construct Benchamrks Index
+      - name: Construct Benchmarks Index
         uses: Exponential-Workload/create-index-action@master
         with:
           path: ${{ steps.temp.outputs.tools }}/create-index
