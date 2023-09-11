@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up HLint
         uses: haskell/actions/hlint-setup@v2
@@ -52,7 +52,7 @@ jobs:
       cache-work: ${{ steps.cache-keys.outputs.cache-work }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Haskell
         uses: haskell/actions/setup@v2
@@ -162,7 +162,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Haskell
         uses: haskell/actions/setup@v2
@@ -232,7 +232,7 @@ jobs:
       archive: ${{ env.BENCHMARKS_ARCHIVE }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Haskell
         uses: haskell/actions/setup@v2
@@ -331,7 +331,7 @@ jobs:
       html-dir: ${{ steps.index.outputs.html-dir }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Haskell
         uses: haskell/actions/setup@v2
