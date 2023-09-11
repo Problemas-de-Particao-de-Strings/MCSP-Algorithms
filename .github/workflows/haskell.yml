@@ -282,23 +282,16 @@ jobs:
             *.cabal
             cabal.*
 
-      - name: Download Previous Benchmarks
-        uses: actions/download-artifact@v3
-        id: download
+      - name: Cache Benchmark Results
+        uses: actions/cache@v3
         with:
-          name: ${{ env.BENCHMARKS_ARTIFACT }}
-          path: .
-        continue-on-error: true
-
-      - name: Extract Previous Benchmarks
-        shell: sh
-        run: |
-          if [ -f "${BENCHMARKS_ARCHIVE}" ]
-          then
-            mkdir -p "${BENCHMARKS_PATH}"
-            tar -xvf "${BENCHMARKS_ARCHIVE}" -C "${BENCHMARKS_PATH}"
-            rm -f "${BENCHMARKS_ARCHIVE}"
-          fi
+          key: ${{ runner.os }}-stack-bench-${{ hashFiles('bench') }}
+          restore-keys: |
+            ${{ runner.os }}-stack-bench-
+            ${{ runner.os }}-stack-
+            ${{ runner.os }}-
+          path: |
+            ${{ env.BENCHMARKS_PATH }}
 
       - name: Run benchmarks
         shell: sh
