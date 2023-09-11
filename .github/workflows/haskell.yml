@@ -60,7 +60,7 @@ jobs:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: latest
+          ghc-version: 9.6.2
 
       - name: Generate Cache Keys
         id: cache-keys
@@ -170,7 +170,7 @@ jobs:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: latest
+          ghc-version: 9.6.2
 
       - name: Restore Cache Stack Setup
         uses: actions/cache/restore@v3
@@ -240,7 +240,7 @@ jobs:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: latest
+          ghc-version: 9.6.2
 
       - name: Restore Cache Stack Setup
         uses: actions/cache/restore@v3
@@ -339,7 +339,7 @@ jobs:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: latest
+          ghc-version: 9.6.2
           cabal-version: latest
 
       - name: Restore Cache Stack Setup
