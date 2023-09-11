@@ -458,10 +458,18 @@ jobs:
           mkdir -p "${BENCHMARKS}"
           tar -xvf "${ARCHIVE}" -C "${BENCHMARKS}"
 
+      - name: Temporary Tools Directory
+        id: temp
+        shell: sh
+        run: |
+          TOOLS=$(pwd)/tools
+          mkdir -p "${TOOLS}"
+          echo "tools=${TOOLS}" >> $GITHUB_OUTPUT
+
       - name: Construct Benchamrks Index
         uses: Exponential-Workload/create-index-action@master
         with:
-          path: ${{ env.HOME }}/create-index
+          path: ${{ steps.temp.outputs.tools }}/create-index
           dir: ${{ env.BENCHMARKS }}
 
       - name: Setup GitHub Pages
