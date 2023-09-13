@@ -15,7 +15,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: nightly-2023-08-29
+resolver: nightly-2023-09-14
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -46,7 +46,7 @@ extra-deps: []
 # extra-package-dbs: []
 
 # Control whether we use the GHC we find on the path
-system-ghc: true
+# system-ghc: true
 
 # Require a specific version of Stack, using version ranges
 # require-stack-version: -any # Default
