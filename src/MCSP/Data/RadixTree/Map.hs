@@ -251,7 +251,11 @@ insert = insertWith const
 
 -- | /O(?)/  Union with a combining function.
 unionWith :: Ord a => (v -> v -> v) -> RadixTreeMap a v -> RadixTreeMap a v -> RadixTreeMap a v
-unionWith f (Tree vx ex) (Tree vy ey) = Tree (liftA2 f vx vy) (Map.unionWith (mergeWith f) ex ey)
+unionWith f (Tree vx ex) (Tree vy ey) = Tree (mergeMaybe f vx vy) (Map.unionWith (mergeWith f) ex ey)
+  where
+    mergeMaybe g (Just x) (Just y) = Just (g x y)
+    mergeMaybe _ mx Nothing = mx
+    mergeMaybe _ Nothing my = my
 {-# INLINE unionWith #-}
 
 -- | /O(?)/ The expression @union t1 t2@ takes the left-biased union of @t1@ and @t2@.
