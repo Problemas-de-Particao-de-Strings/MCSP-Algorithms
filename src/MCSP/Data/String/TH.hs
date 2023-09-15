@@ -66,8 +66,9 @@ splitTypRep typ = fail $ "invalid deriving rule " ++ show typ
 
 -- | Given @T -> U@, derives `Data.Vector.Unboxed.Unbox` @T@ by casting it to @U@.
 --
+-- >>> import Data.Word (Word8)
 -- >>> data DNA = A | C | G | T
--- >>> derivingUnboxVia [t|DNA -> Word8]
+-- >>> -- derivingUnboxVia [t|DNA -> Word8|]
 derivingUnboxVia :: TypeQ -> DecsQ
 derivingUnboxVia rule = do
     (typ, rep) <- rule >>= splitTypRep
