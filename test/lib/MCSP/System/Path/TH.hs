@@ -1,4 +1,4 @@
--- | Compile time random value generation.
+-- | Compile time package information.
 module MCSP.System.Path.TH (
     thisFile,
     mkPackageRoot,
