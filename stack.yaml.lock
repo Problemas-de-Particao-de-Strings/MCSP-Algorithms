@@ -5,6 +5,13 @@
 
 packages:
   - completed:
+      hackage: doctest-0.22.1@sha256:8bbe68bfa6c95f69102362288bbf7988d956258547c3e18ad8cfd689f8556b1d,7378
+      pantry-tree:
+        sha256: 9372d16280e79b5059e017d1553e80d6e1f3c52c12ed106c21bf5e5f25fcea1a
+        size: 8382
+    original:
+      hackage: doctest-0.22.1
+  - completed:
       hackage: tasty-1.5@sha256:c62c96da1e9d65bf61ce583e9f7085eed1daeb62a45f3106ca252bf9ef87025b,2763
       pantry-tree:
         sha256: 7e9f57606982a8414be1a48a3fe16a29f2923b0f87c265a6ce0ab74944059d95
