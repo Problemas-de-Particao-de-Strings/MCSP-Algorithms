@@ -98,7 +98,7 @@ mark s1 s2 = markAll Second s2 . markAll First s1
 -- | /O(?)/ Constructs suffix tree for a pair of strings.
 --
 -- >>> construct "aba" "ba"
--- Tree [a :~> Tree (Suffix Both a) [ba :~> Tree (Suffix First aba) []],ba :~> Tree (Suffix Both ba) []]
+-- Tree (Suffix Both ) [a :~> Tree (Suffix Both a) [ba :~> Tree (Suffix First aba) []],ba :~> Tree (Suffix Both ba) []]
 construct :: Ord a => String a -> String a -> SuffixTree a
 construct s1 s2 = mark s1 s2 (insert s1 s2 Map.empty)
 {-# INLINE construct #-}
