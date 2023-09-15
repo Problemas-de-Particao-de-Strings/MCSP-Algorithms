@@ -5,6 +5,7 @@ import System.IO (IO)
 
 import Test.Tasty (defaultMain, testGroup)
 
+import MCSP.Tests.DocTest (testDocs)
 import MCSP.Tests.RadixTree (radixTreeTests)
 
 main :: IO ()
@@ -12,4 +13,4 @@ main =
     defaultMain $
         testGroup
             "Tests"
-            [radixTreeTests]
+            [radixTreeTests, testDocs "src"]

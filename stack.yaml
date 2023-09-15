@@ -38,6 +38,7 @@ packages:
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
 extra-deps:
+  - doctest-0.22.1
   - tasty-1.5
   - tasty-quickcheck-0.10.3
 
