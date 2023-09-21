@@ -90,7 +90,7 @@ internal-libraries:
       - process >= 1.6.17 && < 2
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
-      - statistics >= 0.16.2.0 && < 1
+      - statistics >= 0.16.2.1 && < 1
       - time >= 1.12.2 && < 2
 
 tests:
@@ -110,7 +110,7 @@ tests:
       - process >= 1.6.17 && < 2
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
-      - statistics >= 0.16.2.0 && < 1
+      - statistics >= 0.16.2.1 && < 1
       - time >= 1.12.2 && < 2
     ghc-options: *binary-ghc-options
 
@@ -122,7 +122,7 @@ benchmarks:
       - mcsp-algorithms
       - mcsp-test-lib
       - mwc-random >= 0.15.0.2 && < 1
-      - statistics >= 0.16.2.0 && < 1
+      - statistics >= 0.16.2.1 && < 1
       - time >= 1.12.2 && < 2
     ghc-options: *binary-ghc-options
   time:
