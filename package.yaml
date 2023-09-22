@@ -39,6 +39,7 @@ default-extensions:
 library:
   source-dirs: src
   exposed-modules:
+    - MCSP.Data.MatchingGraph
     - MCSP.Data.Pair
     - MCSP.Data.RadixTree
     - MCSP.Data.String
