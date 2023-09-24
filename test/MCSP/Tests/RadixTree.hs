@@ -8,11 +8,10 @@ import Data.Eq ((/=), (==))
 import Data.Foldable (Foldable (..))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
-import Data.List.Extra (map, nubSort, snoc)
+import Data.List.Extra (nubSort, snoc)
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Ord (Ord, max, min)
 import Data.Semigroup (Max (..), Min (..))
-import GHC.IsList (fromList)
 import GHC.Num ((-))
 
 import Test.Tasty (TestTree, testGroup)
@@ -42,10 +41,6 @@ import MCSP.Data.String (String, Unbox, concat)
 
 radixTreeTests :: TestTree
 radixTreeTests = testGroup "RadixTree" [radixTreeFoldsAreSorted, treeStructureHolds]
-
-instance (Unbox a, Arbitrary a) => Arbitrary (String a) where
-    arbitrary = fromList <$> arbitrary
-    shrink = map fromList . shrink . toList
 
 radixTreeFoldsAreSorted :: TestTree
 radixTreeFoldsAreSorted =
