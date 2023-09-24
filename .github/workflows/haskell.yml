@@ -3,8 +3,11 @@ name: Haskell Workflow
 on:
   # Runs on pushes targeting the default branch
   pull_request:
-  push:
-    branches: [main]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -44,6 +47,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    if: "! github.event.pull_request.draft"
 
     outputs:
       cache-setup: ${{ steps.cache-keys.outputs.cache-setup }}
@@ -160,6 +164,7 @@ jobs:
     name: Tests
     needs: build
     runs-on: ubuntu-latest
+    if: "! github.event.pull_request.draft"
 
     steps:
       - uses: actions/checkout@v4
@@ -221,6 +226,7 @@ jobs:
     name: Benchmarks
     needs: build
     runs-on: ubuntu-latest
+    if: "! github.event.pull_request.draft"
 
     env:
       BENCHMARKS_ARTIFACT: benchmarks
@@ -314,6 +320,7 @@ jobs:
     name: Build Docs
     needs: build
     runs-on: ubuntu-latest
+    if: "! github.event.pull_request.draft"
 
     env:
       # if internal items should be exposed in the documentation
