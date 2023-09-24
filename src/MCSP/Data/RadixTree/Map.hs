@@ -13,7 +13,9 @@ module MCSP.Data.RadixTree.Map (
     -- * Query
     lookup,
     lookupMin,
+    lookupMinWithKey,
     lookupMax,
+    lookupMaxWithKey,
     member,
 
     -- * Modification
@@ -25,9 +27,9 @@ module MCSP.Data.RadixTree.Map (
     updatePath,
 ) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative (liftA2, pure)
 import Control.Monad ((<$!>))
-import Data.Bool (Bool (False, True))
+import Data.Bool (Bool (False, True), otherwise)
 import Data.Char (Char)
 import Data.Eq (Eq ((==)))
 import Data.Foldable (foldMap, foldMap', foldl, foldl', foldr, foldr', toList)
@@ -36,11 +38,11 @@ import Data.Foldable1 qualified as Foldable1 (Foldable1 (..), foldl1, foldr1)
 import Data.Function (const, flip, id, ($), (.))
 import Data.Functor (Functor (fmap, (<$)), (<$>))
 import Data.Int (Int)
-import Data.List (map)
+import Data.List.Extra (concat, map, nubSort, transpose, zip)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Maybe (Maybe (Just, Nothing), isJust, maybe)
-import Data.Monoid (mempty, (<>))
-import Data.Ord (Ord, (>))
+import Data.Monoid (mappend, mempty, (<>))
+import Data.Ord (Ord, (>), (>=))
 import Data.String qualified as Text (String)
 import Data.Traversable (Traversable (..))
 import Data.Tuple (snd, uncurry)
@@ -48,6 +50,9 @@ import Data.Word (Word8)
 import GHC.Base (($!))
 import GHC.Err (error, errorWithoutStackTrace)
 import GHC.Num ((+), (-))
+import Test.QuickCheck (arbitrary1, chooseInt, functionMap, shrink1, sized, vectorOf)
+import Test.QuickCheck.Arbitrary (Arbitrary (..), Arbitrary1 (..), CoArbitrary (..))
+import Test.QuickCheck.Function (Function (..))
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
@@ -170,6 +175,34 @@ lookup k@(Head h) t = do
     rest <- stripPrefix prefix k
     lookup rest subt
 {-# INLINEABLE lookup #-}
+
+-- | /O(n log r)/ Extract the minimal key in the map.
+--
+-- >>> lookupMinWithKey (construct [("abc", 1), ("def", 3), ("abb", 5)])
+-- Just (abb,5)
+-- >>> lookupMinWithKey empty :: Maybe (String Char, Int)
+-- Nothing
+lookupMinWithKey :: Unbox a => RadixTreeMap a v -> Maybe (String a, v)
+lookupMinWithKey (Tree (Just !x) _) = Just (mempty, x)
+lookupMinWithKey (Tree Nothing es) = do
+    (_, prefix :~> t) <- Map.lookupMin es
+    (suffix, val) <- lookupMinWithKey t
+    pure (prefix ++ suffix, val)
+{-# INLINEABLE lookupMinWithKey #-}
+
+-- | /O(n log r)/ Extract the maximal key in the map.
+--
+-- >>> lookupMaxWithKey (construct [("abc", 1), ("def", 3), ("abb", 5)])
+-- Just (def,3)
+-- >>> lookupMaxWithKey empty :: Maybe (String Char, Int)
+-- Nothing
+lookupMaxWithKey :: Unbox a => RadixTreeMap a v -> Maybe (String a, v)
+lookupMaxWithKey (Leaf x) = Just (mempty, x)
+lookupMaxWithKey (Tree _ es) = do
+    (_, prefix :~> t) <- Map.lookupMax es
+    (suffix, val) <- lookupMaxWithKey t
+    pure (prefix ++ suffix, val)
+{-# INLINEABLE lookupMaxWithKey #-}
 
 -- | /O(n log r)/ Extract the value associated with the minimal key in the map.
 --
@@ -339,6 +372,13 @@ debug root = go (0 :: Int) root ""
 -- ------------------ --
 -- Foldable instances --
 -- ------------------ --
+
+-- | Fold over all pairs @(key, value)@ in the map.
+foldrWithKey :: Unbox a => (String a -> v -> b -> b) -> b -> RadixTreeMap a v -> b
+foldrWithKey = go []
+  where
+    go p f x (Tree val es) = foldr (f p) (foldr (foldEdge f p) x es) val
+    foldEdge f p (s :~> t) x = go (p ++ s) f x t
 
 -- | Extracts the element out of a `Just` and throws an error if its argument is `Nothing`.
 --
@@ -534,3 +574,52 @@ instance Traversable (Edge s) where
     {-# INLINE mapM #-}
     sequence (label :~> t) = (label :~>) <$> sequence t
     {-# INLINE sequence #-}
+
+-- ----------------------- --
+-- Generation (QuickCheck) --
+
+instance (Unbox a, Arbitrary a, Ord a) => Arbitrary1 (RadixTreeMap a) where
+    liftArbitrary gen = sized $ \n -> do
+        k <- chooseInt (0, n)
+        keys <- unique k []
+        vals <- vectorOf k gen
+        pure $ construct (zip keys vals)
+      where
+        len = Foldable.length
+        unique n xs
+            | n >= len xs = pure xs
+            | otherwise = do
+                x <- vectorOf (n - len xs) arbitrary
+                unique n (nubSort (xs `mappend` x))
+
+    liftShrink shrinkVal treeMap = case takeMax treeMap of
+        Just (rest, maxKey, val) ->
+            rest : concat [shr maxKey val rest | shr <- [shrinkRest, shrinkMax]]
+        Nothing -> []
+      where
+        takeMax tree = do
+            (maxKey, val) <- lookupMaxWithKey tree
+            pure (delete maxKey tree, maxKey, val)
+        shrinkRest key val subtree =
+            map (insert key val) (liftShrink shrinkVal subtree)
+        shrinkMax key val subtree =
+            concat $
+                transpose
+                    [ map (\k -> insert k val subtree) (shrink key),
+                      map (\v -> insert key v subtree) (shrinkVal val)
+                    ]
+
+instance (Unbox a, Ord a, Arbitrary a, Arbitrary v) => Arbitrary (RadixTreeMap a v) where
+    arbitrary = arbitrary1
+    shrink = shrink1
+
+instance (Unbox a, CoArbitrary a, CoArbitrary v) => CoArbitrary (RadixTreeMap a v) where
+    coarbitrary = go []
+      where
+        go p (Tree val es) = foldr (coArbEdge p) (coarbitrary p . coarbitrary val) es
+        coArbEdge p (s :~> t) acc = go (p ++ s) t . acc
+
+instance (Unbox a, Ord a, Function a, Function v) => Function (RadixTreeMap a v) where
+    function = functionMap elems construct
+      where
+        elems = foldrWithKey (\k v xs -> (k, v) : xs) []

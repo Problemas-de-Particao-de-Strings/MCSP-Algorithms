@@ -1,7 +1,5 @@
 module MCSP.Tests.RadixTree (radixTreeTests) where
 
-import Control.Applicative (pure)
-import Control.Monad ((>>=))
 import Data.Bool (Bool, not)
 import Data.Char (Char)
 import Data.Eq ((/=), (==))
@@ -10,34 +8,14 @@ import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.List.Extra (nubSort, snoc)
 import Data.Maybe (Maybe (Just, Nothing))
-import Data.Ord (Ord, max, min)
+import Data.Ord (max, min)
 import Data.Semigroup (Max (..), Min (..))
-import GHC.Num ((-))
 
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (
-    Arbitrary (..),
-    Property,
-    Testable,
-    classify,
-    oneof,
-    sized,
-    suchThat,
-    testProperty,
- )
+import Test.Tasty.QuickCheck (Property, Testable, classify, testProperty)
 
-import MCSP.Data.RadixTree (
-    RadixTree,
-    construct,
-    delete,
-    empty,
-    findMax,
-    findMin,
-    insert,
-    member,
-    union,
- )
-import MCSP.Data.String (String, Unbox, concat)
+import MCSP.Data.RadixTree (RadixTree, construct, findMax, findMin, union)
+import MCSP.Data.String (String, concat)
 
 radixTreeTests :: TestTree
 radixTreeTests = testGroup "RadixTree" [radixTreeFoldsAreSorted, treeStructureHolds]
@@ -75,28 +53,6 @@ radixTreeFoldsAreSorted =
 markDeduplicated :: ([String Char] -> Bool) -> [String Char] -> Property
 markDeduplicated prop xs =
     classify (length xs /= length (nubSort xs)) "deduplicated" (prop xs)
-
-instance (Unbox a, Arbitrary a, Ord a) => Arbitrary (RadixTree a) where
-    arbitrary = sized go
-      where
-        go 0 = pure empty
-        go n = oneof [singleton <$> arbitrary, go (n - 1) >>= unique]
-        singleton x = construct [x]
-        unique tree = do
-            str <- suchThat arbitrary (not . (`member` tree))
-            pure (insert str tree)
-    shrink tree =
-        [ empty,
-          fromMaybe findMin tree,
-          fromMaybe findMax tree,
-          without findMin tree,
-          without findMax tree
-        ]
-      where
-        fromMaybe get t = construct (toList (get t))
-        without get t = case get t of
-            Just x -> delete x t
-            Nothing -> t
 
 treeStructureHolds :: TestTree
 treeStructureHolds =

@@ -68,7 +68,6 @@ executables:
       - -feager-blackholing
       - -rtsopts
       - -with-rtsopts=-N
-      - -Wno-orphans
 
 internal-libraries:
   mcsp-test-lib:
