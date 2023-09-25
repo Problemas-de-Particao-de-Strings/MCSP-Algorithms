@@ -7,10 +7,14 @@ import Test.Tasty (defaultMain, testGroup)
 
 import MCSP.Tests.DocTest (testDocs)
 import MCSP.Tests.RadixTree (radixTreeTests)
+import MCSP.Tests.StringExtra (stringExtraTests)
 
 main :: IO ()
 main =
     defaultMain $
         testGroup
             "Tests"
-            [radixTreeTests, testDocs "src"]
+            [ radixTreeTests,
+              stringExtraTests,
+              testDocs "src"
+            ]

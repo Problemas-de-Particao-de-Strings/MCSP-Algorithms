@@ -58,7 +58,6 @@ stripPrefix p str
 -- False
 isPrefixOf :: Eq a => String a -> String a -> Bool
 p `isPrefixOf` str = take (length p) str == p
-{-# INLINEABLE isPrefixOf #-}
 
 -- | /O(min(m,n))/ The length of maximum common prefix of two string.
 --
@@ -186,7 +185,6 @@ stripSuffix s str
 -- False
 isSuffixOf :: Eq a => String a -> String a -> Bool
 s `isSuffixOf` str = drop (length str - length s) str == s
-{-# INLINEABLE isSuffixOf #-}
 
 -- | /O(n)/ Extract all non-empty suffixes of a string.
 --
