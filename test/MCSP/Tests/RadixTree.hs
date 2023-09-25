@@ -14,7 +14,7 @@ import Data.Semigroup (Max (..), Min (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (Property, Testable, classify, testProperty)
 
-import MCSP.Data.RadixTree (RadixTree, construct, findMax, findMin, union)
+import MCSP.Data.RadixTree (RadixTree, SameKeyVal (..), construct, findMax, findMin, union)
 import MCSP.Data.String (String, concat)
 
 radixTreeTests :: TestTree
@@ -78,6 +78,6 @@ treeStructureHolds =
     minJust mx Nothing = mx
     minJust Nothing my = my
 
-markNonEmpty :: Testable prop => (RadixTree Char -> prop) -> RadixTree Char -> Property
-markNonEmpty prop tree =
+markNonEmpty :: Testable prop => (RadixTree Char -> prop) -> SameKeyVal Char -> Property
+markNonEmpty prop (SameKeyVal tree) =
     classify (not (null tree)) "non-empty" (prop tree)

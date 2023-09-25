@@ -17,17 +17,26 @@ module MCSP.Data.RadixTree (
     insert,
     union,
     delete,
+
+    -- * QuickCheck instances
+    SameKeyVal (..),
 ) where
 
+import Control.Applicative (pure)
 import Control.Arrow ((&&&))
 import Data.Bool (Bool)
+import Data.Eq (Eq)
 import Data.Function (id, (.))
+import Data.Functor ((<$>))
 import Data.List (map)
 import Data.Maybe (Maybe)
 import Data.Ord (Ord)
+import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
+import Test.QuickCheck.Function (Function (..), functionMap)
+import Text.Show (Show)
 
 import MCSP.Data.RadixTree.Map qualified as Map
-import MCSP.Data.String (String (..))
+import MCSP.Data.String (String (..), Unbox)
 
 -- | A set of `String`s represented by a [radix tree](https://en.wikipedia.org/wiki/Radix_tree).
 --
@@ -121,3 +130,20 @@ union = Map.union
 delete :: Ord a => String a -> RadixTree a -> RadixTree a
 delete = Map.delete
 {-# INLINE delete #-}
+
+-- | A [QuickCheck Modifier](https://hackage.haskell.org/package/QuickCheck-2.14.3/docs/Test-QuickCheck-Modifiers.html)
+-- that generates `RadixTree` instance correctly.
+newtype SameKeyVal a = SameKeyVal {getTree :: RadixTree a}
+    deriving newtype (Eq, Ord, Show)
+
+instance (Unbox a, Ord a, Arbitrary a) => Arbitrary (SameKeyVal a) where
+    arbitrary = SameKeyVal <$> Map.arbitraryWith arbitrary pure
+    shrink (SameKeyVal tree) = SameKeyVal <$> Map.shrinkWith shrinkPair tree
+      where
+        shrinkPair k _ = map (id &&& id) (shrink k)
+
+instance (Unbox a, CoArbitrary a) => CoArbitrary (SameKeyVal a) where
+    coarbitrary (SameKeyVal tree) = coarbitrary tree
+
+instance (Unbox a, Ord a, Function a) => Function (SameKeyVal a) where
+    function = functionMap getTree SameKeyVal

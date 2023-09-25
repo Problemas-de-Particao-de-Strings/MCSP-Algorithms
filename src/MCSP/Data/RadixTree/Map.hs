@@ -25,6 +25,10 @@ module MCSP.Data.RadixTree.Map (
     unionWith,
     delete,
     updatePath,
+
+    -- * QuickCheck instances
+    arbitraryWith,
+    shrinkWith,
 ) where
 
 import Control.Applicative (liftA2, pure)
@@ -50,9 +54,10 @@ import Data.Word (Word8)
 import GHC.Base (($!))
 import GHC.Err (error, errorWithoutStackTrace)
 import GHC.Num ((+), (-))
-import Test.QuickCheck (arbitrary1, chooseInt, functionMap, shrink1, sized, vectorOf)
+import Test.QuickCheck (arbitrary1, shrink1)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), Arbitrary1 (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Function (..))
+import Test.QuickCheck.Function (Function (..), functionMap)
+import Test.QuickCheck.Gen (Gen, chooseInt, sized, vectorOf)
 import Text.Show (Show (showsPrec), showChar, showParen, showString, shows)
 
 import Data.Map.Strict qualified as Map
@@ -578,36 +583,46 @@ instance Traversable (Edge s) where
 -- ----------------------- --
 -- Generation (QuickCheck) --
 
-instance (Unbox a, Arbitrary a, Ord a) => Arbitrary1 (RadixTreeMap a) where
-    liftArbitrary gen = sized $ \n -> do
-        k <- chooseInt (0, n)
-        keys <- unique k []
-        vals <- vectorOf k gen
-        pure $ construct (zip keys vals)
-      where
-        len = Foldable.length
-        unique n xs
-            | n >= len xs = pure xs
-            | otherwise = do
-                x <- vectorOf (n - len xs) arbitrary
-                unique n (nubSort (xs `mappend` x))
+-- | Generates arbitraty `RadixTreeMap` instances with eavh value dependent on the key.
+arbitraryWith :: Ord a => Gen (String a) -> (String a -> Gen v) -> Gen (RadixTreeMap a v)
+arbitraryWith genKey genVal = sized $ \n -> do
+    k <- chooseInt (0, n)
+    keys <- unique k []
+    vals <- mapM genVal keys
+    pure $ construct (zip keys vals)
+  where
+    len = Foldable.length
+    unique n xs
+        | n >= len xs = pure xs
+        | otherwise = do
+            x <- vectorOf (n - len xs) genKey
+            unique n (nubSort (xs `mappend` x))
 
-    liftShrink shrinkVal treeMap = case takeMax treeMap of
-        Just (rest, maxKey, val) ->
-            rest : concat [shr maxKey val rest | shr <- [shrinkRest, shrinkMax]]
-        Nothing -> []
+-- | Reduces a `RadixTreeMap` instance with a custom reducer for a @(key, value)@ pair.
+shrinkWith ::
+    (Unbox a, Ord a) =>
+    (String a -> v -> [(String a, v)])
+    -> RadixTreeMap a v
+    -> [RadixTreeMap a v]
+shrinkWith shrinkPair treeMap = case takeMax treeMap of
+    Just (rest, maxKey, val) ->
+        rest : concat [shr maxKey val rest | shr <- [shrinkRest, shrinkMax]]
+    Nothing -> []
+  where
+    takeMax tree = do
+        (maxKey, val) <- lookupMaxWithKey tree
+        pure (delete maxKey tree, maxKey, val)
+    shrinkRest key val subtree =
+        map (insert key val) (shrinkWith shrinkPair subtree)
+    shrinkMax key val subtree =
+        map (flip (uncurry insert) subtree) (shrinkPair key val)
+
+instance (Unbox a, Arbitrary a, Ord a) => Arbitrary1 (RadixTreeMap a) where
+    liftArbitrary = arbitraryWith arbitrary . const
+    liftShrink shrinkVal = shrinkWith shrinkPair
       where
-        takeMax tree = do
-            (maxKey, val) <- lookupMaxWithKey tree
-            pure (delete maxKey tree, maxKey, val)
-        shrinkRest key val subtree =
-            map (insert key val) (liftShrink shrinkVal subtree)
-        shrinkMax key val subtree =
-            concat $
-                transpose
-                    [ map (\k -> insert k val subtree) (shrink key),
-                      map (\v -> insert key v subtree) (shrinkVal val)
-                    ]
+        shrinkPair key val =
+            concat $ transpose [map (,val) (shrink key), map (key,) (shrinkVal val)]
 
 instance (Unbox a, Ord a, Arbitrary a, Arbitrary v) => Arbitrary (RadixTreeMap a v) where
     arbitrary = arbitrary1
