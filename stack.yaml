@@ -15,7 +15,9 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: nightly-2023-09-25
+#
+# See https://github.com/commercialhaskell/stackage-snapshots/tree/master/nightly
+resolver: nightly-2023-10-01
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
