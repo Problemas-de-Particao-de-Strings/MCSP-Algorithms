@@ -12,9 +12,9 @@ packages:
     original:
       hackage: doctest-0.22.1
   - completed:
-      hackage: tasty-1.5@sha256:c62c96da1e9d65bf61ce583e9f7085eed1daeb62a45f3106ca252bf9ef87025b,2763
+      hackage: tasty-1.5@sha256:2dc91101339814be9913846ca8c424d1c3eccfefb27c6335f3fea2af40a3d2e4,2870
       pantry-tree:
-        sha256: 7e9f57606982a8414be1a48a3fe16a29f2923b0f87c265a6ce0ab74944059d95
+        sha256: 0a7c186a9aab2f01a3bcdfad12f107e07ca2c414e93266d883ec770616f79448
         size: 1944
     original:
       hackage: tasty-1.5
@@ -27,7 +27,7 @@ packages:
       hackage: tasty-quickcheck-0.10.3
 snapshots:
   - completed:
-      sha256: 682574fdbde29718a8c5bc4a16e534b2e7c821922bdb46c1daf8adf373b28e55
-      size: 669535
-      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/9/25.yaml
-    original: nightly-2023-09-25
+      sha256: 5263c5cd05907ff6625e22009db2774a9d7d88fc713d8e41619b284a132f5923
+      size: 675308
+      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/10/1.yaml
+    original: nightly-2023-10-01
