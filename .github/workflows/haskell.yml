@@ -39,12 +39,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up HLint
-        uses: haskell/actions/hlint-setup@v2
+        uses: haskell-actions/hlint-setup@v2
         with:
           version: 3.6.1
 
       - name: Run HLint
-        uses: haskell/actions/hlint-run@v2
+        uses: haskell-actions/hlint-run@v2
         with:
           path: .
           fail-on: warning
@@ -64,12 +64,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Haskell
-        uses: haskell/actions/setup@v2
+        uses: haskell-actions/setup@v2
         with:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: 9.6.2
+          ghc-version: 9.6.3
 
       - name: Generate Cache Keys
         id: cache-keys
@@ -175,12 +175,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Haskell
-        uses: haskell/actions/setup@v2
+        uses: haskell-actions/setup@v2
         with:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: 9.6.2
+          ghc-version: 9.6.3
 
       - name: Restore Cache Stack Setup
         uses: actions/cache/restore@v3
@@ -246,12 +246,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Haskell
-        uses: haskell/actions/setup@v2
+        uses: haskell-actions/setup@v2
         with:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: 9.6.2
+          ghc-version: 9.6.3
 
       - name: Restore Cache Stack Setup
         uses: actions/cache/restore@v3
@@ -339,12 +339,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Haskell
-        uses: haskell/actions/setup@v2
+        uses: haskell-actions/setup@v2
         with:
           enable-stack: true
           stack-setup-ghc: true
           stack-version: latest
-          ghc-version: 9.6.2
+          ghc-version: 9.6.3
           cabal-version: latest
 
       - name: Restore Cache Stack Setup
