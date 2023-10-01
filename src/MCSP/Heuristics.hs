@@ -18,29 +18,25 @@ import Data.List.NonEmpty (nonEmpty)
 import Data.Maybe (fromJust)
 import Data.Ord (Ord (..))
 import Data.String qualified as Text
-import Data.Tuple.Extra (both)
 import GHC.Err (error)
 import GHC.Stack (HasCallStack)
 import Text.Show (Show, show)
 
+import MCSP.Data.Pair (Pair, both, liftP)
 import MCSP.Data.String (ShowString, String (..), concat, concatNE)
 import MCSP.Data.String.Extra (Partition, frequency)
 import MCSP.Heuristics.Combine (combine, combineS)
 import MCSP.Heuristics.Greedy (greedy)
 
 -- | Heuristic for the MCSP problem.
-type Heuristic a = String a -> String a -> (Partition a, Partition a)
+type Heuristic a = Pair (String a) -> Pair (Partition a)
 
 -- | Common constraints for debugging a heuristic.
 type Debug a = (HasCallStack, Show a, ShowString a, Ord a)
 
 -- | Transform a heuristic into one that checks the output for correctnes, but not the inputs.
 checked :: Debug a => Heuristic a -> Heuristic a
-checked h sx sy =
-    let (px, py) = h sx sy
-        px' = checkPart sx px
-        py' = checkPart sy py
-     in checkCommonPart px' py'
+checked h p = checkCommonPart (liftP checkPart p (h p))
 
 -- | Check that the partition is valid and returns it.
 checkPart :: Debug a => String a -> [String a] -> [String a]
@@ -56,8 +52,8 @@ checkPart s@Unboxed p
     (f1, f2) = (frequency s, frequency $ concat p)
 
 -- | Check that two partitions are of the same initial string.
-checkCommonPart :: Debug a => Partition a -> Partition a -> (Partition a, Partition a)
-checkCommonPart p1 p2
+checkCommonPart :: Debug a => Pair (Partition a) -> Pair (Partition a)
+checkCommonPart (p1, p2)
     -- each substring in must have an identical one in the other partition
     | sort p1 == sort p2 = (p1, p2)
     -- if they don't match, check if at least the character frequency is okay
