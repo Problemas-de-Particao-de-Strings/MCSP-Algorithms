@@ -2,7 +2,6 @@
 module MCSP.Data.String.Extra (
     -- ** Partition operations
     Partition,
-    PartitionPair,
     chars,
 
     -- ** Character set analysis
@@ -37,9 +36,6 @@ import MCSP.Data.String.Extra.Radix
 
 -- | A collection of substrings of the same string.
 type Partition a = [String a]
-
--- | A pair of partitions.
-type PartitionPair a = (Partition a, Partition a)
 
 -- | /O(n)/ Split the string in substrings of 1 char each.
 --
