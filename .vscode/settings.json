@@ -20,7 +20,9 @@
     "git.inputValidationSubjectLength": 50,
     "git.inputValidationLength": 72,
     "haskell.formattingProvider": "fourmolu",
-    "haskell.hlint.hints": [],
+    "haskell.hlint.hints": [
+        "--hint=.hlint.yaml"
+    ],
     "haskell.hlint.logLevel": "info",
     "haskell.hlint.run": "onType",
     "haskell.toolchain": {
