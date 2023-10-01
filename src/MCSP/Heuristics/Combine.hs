@@ -8,7 +8,7 @@ import Prelude hiding (String, (++))
 
 import Data.Set (Set)
 
-import MCSP.Data.Pair (Pair, both, first, second)
+import MCSP.Data.Pair (Pair, first, second, ($$))
 import MCSP.Data.String (String, (++))
 import MCSP.Data.String.Extra (Partition, chars, hasOneOf, singletons)
 
@@ -86,7 +86,7 @@ combineAll decision (x : xs, ys) =
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
 combine :: Eq a => Pair (String a) -> Pair (Partition a)
-combine xy = converge (combineAll AlwaysCombine) (both chars xy)
+combine xy = converge (combineAll AlwaysCombine) (chars $$ xy)
 
 -- | MSCP combine heuristic considering singleton analysis.
 --
@@ -95,8 +95,8 @@ combine xy = converge (combineAll AlwaysCombine) (both chars xy)
 -- block has singletons and finally all other possible pairs.
 combineS :: Ord a => Pair (String a) -> Pair (Partition a)
 combineS (x, y)
-    | null singles = converge (combineAll AlwaysCombine) (both chars (x, y))
-    | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (both chars (x, y))
+    | null singles = converge (combineAll AlwaysCombine) (chars $$ (x, y))
+    | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars $$ (x, y))
   where
     singles = singletons x
     combineSingletons =

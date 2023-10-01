@@ -1,6 +1,5 @@
 module MCSP.Tests.StringExtra (stringExtraTests) where
 
-import Control.Applicative (pure)
 import Data.Bool (not, otherwise)
 import Data.Char (Char)
 import Data.Foldable (foldl', length, null)
@@ -17,7 +16,6 @@ import Data.List.Extra qualified as List (
     stripSuffix,
     (++),
  )
-import Data.List.NonEmpty (unzip)
 import Data.Maybe (Maybe (..), fromMaybe)
 import Data.Ord ((<=), (>=))
 import Data.Set (member, union)
@@ -28,6 +26,7 @@ import GHC.Real (rem)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.QuickCheck (Testable, classify, testProperty, (.&&.), (=/=), (===), (==>))
 
+import MCSP.Data.Pair (both, unzip, ($$), ($:))
 import MCSP.Data.String (String (..), drop, singleton, slice, take, (++))
 import MCSP.Data.String.Extra (
     chars,
@@ -143,9 +142,7 @@ infixOpTests =
              in nullOrDistinct (lastS px) (lastS py) .&&. nullOrDistinct (headS sx) (headS sy)
         ]
   where
-    stripAsList x y = do
-        (p, s) <- List.stripInfix (toList x) (toList y)
-        pure (fromList p, fromList s)
+    stripAsList x y = both fromList <$> (List.stripInfix $: (toList $$ (x, y)))
 
     withLCS prop x y =
         let lcs = fromMaybe "" (longestCommonSubstring x y)
