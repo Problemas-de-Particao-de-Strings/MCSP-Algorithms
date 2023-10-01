@@ -47,10 +47,9 @@ defaultMain benchmarks = do
 
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
 benchHeuristic :: StringParameters -> NamedHeuristic Word8 -> Benchmark
-benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair runHeuristic
+benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair (pure . heuristic)
   where
     genPair = generate (randomPairWith params)
-    runHeuristic = pure . uncurry heuristic
 
 -- | Creates a benchmark group running each heuristic against the given parameters.
 benchWithParams :: StringParameters -> Benchmark

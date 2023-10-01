@@ -15,10 +15,10 @@ import Control.DeepSeq (NFData)
 import Data.List (intercalate)
 import Data.Ratio ((%))
 import Data.String qualified as Text
-import Data.Tuple.Extra (both, second)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
+import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (repeated, singletons)
 import MCSP.Heuristics (
@@ -81,7 +81,7 @@ checkedLen name (x, y)
 -- >>> trivial x y = (chars x, chars y)
 -- >>> measure $(mkNamed 'trivial) ("abcd", "cdab")
 -- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, singles = 4, repeats = 0}
-measure :: Debug a => NamedHeuristic a -> (String a, String a) -> Measured
+measure :: Debug a => NamedHeuristic a -> Pair (String a) -> Measured
 measure (name, heuristic) pair =
     Measured
         { heuristic = name,
@@ -92,7 +92,7 @@ measure (name, heuristic) pair =
           repeats = reps
         }
   where
-    blks = checkedLen "blocks" (uncurry (checked heuristic) pair)
+    blks = checkedLen "blocks" (checked heuristic pair)
     chrs = checkedLen "size" pair
     sing = checkedLen "singletons" (both singletons pair)
     reps = checkedLen "repeated" (both repeated pair)

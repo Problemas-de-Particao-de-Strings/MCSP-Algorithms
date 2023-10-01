@@ -143,7 +143,7 @@ indexedGreedy = go (dupe empty)
 -- Tries to solve the MCSP by repeatedly finding the longest common substring (LCS), breaking the
 -- strings with it, and inserting the LCS in the resulting partition, until no common substring is
 -- left.
-greedy :: Ord a => String a -> String a -> Pair (Partition a)
-greedy s1 s2 = both sort (indexedGreedy (singleton 0 s1, singleton 0 s2))
+greedy :: Ord a => Pair (String a) -> Pair (Partition a)
+greedy = both sort . indexedGreedy . both (singleton 0)
   where
     sort = map snd . toAscList
