@@ -6,17 +6,17 @@ module MCSP.TestLib.Random (
     pairShufflingBlocks,
 ) where
 
-import Control.Applicative (liftA2, pure, (<$>))
+import Control.Applicative (pure, (<$>))
 import Data.Eq (Eq)
 import Data.Function (($))
 import Data.Int (Int)
-import Data.Tuple.Extra (both)
 import GHC.Enum (Bounded, Enum, succ)
 import GHC.IsList (fromList)
 import GHC.Num ((-))
 
+import MCSP.Data.Pair (Pair, both, bothM, dupe)
 import MCSP.Data.String (String (..), Unbox, concat, elem, empty, length, (!), (++))
-import MCSP.Data.String.Extra (PartitionPair)
+import MCSP.Data.String.Extra (Partition)
 import MCSP.System.Random (Random, partitions, shuffle, uniformB, uniformRE)
 
 -- | Common constraints for a character.
@@ -67,8 +67,10 @@ randomWithSingletons n lo mid hi = do
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (1,2) (pairShufflingChars "impossibletoread!")
 -- (teiposmosdbeair!l,mobldepreti!isosa)
-pairShufflingChars :: String a -> Random (String a, String a)
-pairShufflingChars str@Unboxed = liftA2 (,) (shuffle str) (shuffle str)
+pairShufflingChars :: String a -> Random (Pair (String a))
+pairShufflingChars str = bothM shuf (dupe str)
+  where
+    shuf s@Unboxed = shuffle s
 
 -- | Generates a pair partitions by shuffling the randomly broken blocks
 -- of the input string.
@@ -76,7 +78,7 @@ pairShufflingChars str@Unboxed = liftA2 (,) (shuffle str) (shuffle str)
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (1,2) (partitionsShufflingBlocks "brokeninblocksandshuffled!")
 -- ([d,!,brokeninblocksands,e,huffl],[e,d,brokeninblocksands,huffl,!])
-partitionsShufflingBlocks :: String a -> Random (PartitionPair a)
+partitionsShufflingBlocks :: String a -> Random (Pair (Partition a))
 partitionsShufflingBlocks str@Unboxed = do
     p <- partitions str
     p1 <- shuffle p
@@ -89,5 +91,5 @@ partitionsShufflingBlocks str@Unboxed = do
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (1,2) (pairShufflingBlocks "stillhardtoread!")
 -- (d!stillharadtore,adstillhardtore!)
-pairShufflingBlocks :: String a -> Random (String a, String a)
+pairShufflingBlocks :: String a -> Random (Pair (String a))
 pairShufflingBlocks str@Unboxed = both concat <$> partitionsShufflingBlocks str
