@@ -23,10 +23,9 @@ module MCSP.Data.RadixTree (
 ) where
 
 import Control.Applicative (pure)
-import Control.Arrow ((&&&))
 import Data.Bool (Bool)
 import Data.Eq (Eq)
-import Data.Function (id, (.))
+import Data.Function ((.))
 import Data.Functor ((<$>))
 import Data.List (map)
 import Data.Maybe (Maybe)
@@ -35,6 +34,7 @@ import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
 import Test.QuickCheck.Function (Function (..), functionMap)
 import Text.Show (Show)
 
+import MCSP.Data.Pair (dupe)
 import MCSP.Data.RadixTree.Map qualified as Map
 import MCSP.Data.String (String (..), Unbox)
 
@@ -59,7 +59,7 @@ empty = Map.empty
 -- >>> construct ["abc", "def", "abb"]
 -- Tree [ab :~> Tree [b :~> Tree (abb) [],c :~> Tree (abc) []],def :~> Tree (def) []]
 construct :: Ord a => [String a] -> RadixTree a
-construct = Map.construct . map (id &&& id)
+construct = Map.construct . map dupe
 {-# INLINEABLE construct #-}
 
 -- | /O(n log r)/ Check if string is present in the tree.
@@ -140,7 +140,7 @@ instance (Unbox a, Ord a, Arbitrary a) => Arbitrary (SameKeyVal a) where
     arbitrary = SameKeyVal <$> Map.arbitraryWith arbitrary pure
     shrink (SameKeyVal tree) = SameKeyVal <$> Map.shrinkWith shrinkPair tree
       where
-        shrinkPair k _ = map (id &&& id) (shrink k)
+        shrinkPair k _ = map dupe (shrink k)
 
 instance (Unbox a, CoArbitrary a) => CoArbitrary (SameKeyVal a) where
     coarbitrary (SameKeyVal tree) = coarbitrary tree

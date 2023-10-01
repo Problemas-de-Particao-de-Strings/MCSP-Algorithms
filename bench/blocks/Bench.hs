@@ -5,7 +5,6 @@ import Prelude
 
 import Control.Monad (forM_)
 import Data.Time.Clock.System (SystemTime (..), getSystemTime)
-import Data.Tuple.Extra (both)
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
 import Data.Word (Word8)
@@ -18,6 +17,7 @@ import Statistics.Types (CL, ConfInt, Estimate (Estimate), Sample, confidenceLev
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 import System.Random.MWC (createSystemRandom)
 
+import MCSP.Data.Pair (($$), ($:))
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
@@ -105,9 +105,8 @@ estimateCI = absolute . sampleCI confLevel
 -- iterations for that point (given by `G.length`) and the y-axis should be a fold over the
 -- measurements in the data fold.
 runBenchmark :: IO Measured -> IO (V.Vector (V.Vector Measured))
-runBenchmark = go (indexed 1 $ take maxRuns series) G.empty 0 G.empty
+runBenchmark = go (indexed 1 $ take (max $: runs) series) G.empty 0 G.empty
   where
-    (minRuns, maxRuns) = (uncurry min runs, uncurry max runs)
     go [] _ _ acc _ = pure acc
     go ((run, it) : iters) scores runningTime acc m = do
         -- run the heuristic multiple times, measure time and collect the data
@@ -124,7 +123,7 @@ runBenchmark = go (indexed 1 $ take maxRuns series) G.empty 0 G.empty
         -- \* a minimum number of runs is executed
         -- \* the time limit ran out and
         -- \* the confidence interval is less than 1% score
-        if run >= minRuns && totalElapsed > timeLimit && estimateCI scores' < 0.01
+        if run >= (min $: runs) && totalElapsed > timeLimit && estimateCI scores' < 0.01
             then pure result
             else go iters scores' totalElapsed result m
 
@@ -150,7 +149,7 @@ showEstimate :: String -> Estimate ConfInt Double -> String
 showEstimate unit estimate@(Estimate value _) =
     withUnit value ++ "\t(" ++ lowerBound ++ " .. " ++ upperBound ++ ")"
   where
-    (lowerBound, upperBound) = both withUnit (confidenceInterval estimate)
+    (lowerBound, upperBound) = withUnit $$ confidenceInterval estimate
     -- formatting numbers and strings
     withUnit n = fixed n ++ " " ++ withWidth 2 ' ' unit
     fixed n = withWidth 5 '0' (showFFloat Nothing n "")
