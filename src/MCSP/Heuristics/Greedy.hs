@@ -7,11 +7,11 @@ import Control.Applicative (pure)
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
 import Data.Function (on, (.))
+import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List (map)
 import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
-import Data.Tuple.Extra (both, first, snd, uncurry)
 import GHC.Err (errorWithoutStackTrace)
 import GHC.Num ((+))
 import Text.Show (Show)
@@ -27,8 +27,9 @@ import Data.IntMap.Strict (
     union,
  )
 
+import MCSP.Data.Pair (Pair, both, dupe, first, liftP, snd, transpose, uncurry)
 import MCSP.Data.String (String (..), length)
-import MCSP.Data.String.Extra (PartitionPair, longestCommonSubstring, stripInfix)
+import MCSP.Data.String.Extra (Partition, longestCommonSubstring, stripInfix)
 
 -- | The pair @(idx, substr)@ where @idx@ is the index where @substr@ was taken from in the
 -- original string.
@@ -39,9 +40,6 @@ type IndexedString a = (Int, String a)
 -- Represents a partition of the original strings, but their relative order is maintained with the
 -- indexes, not by their position a list.
 type IndexedPartition a = IntMap (String a)
-
--- | Same as `PartitionPair`, but using @IndexedPartition@s.
-type IndexedPartitionPair a = (IndexedPartition a, IndexedPartition a)
 
 -- --------------------------------------- --
 -- Longest Common Substring for Partitions --
@@ -83,7 +81,7 @@ instance Ord (LCSResult a) where
 
 -- | Returns the longest common subtring of a @IndexedPartitionPair@ and the pair where such
 -- substring was found. Returns `Nothing` if no common substring can be found.
-lcsPair :: Ord a => IndexedPartitionPair a -> Maybe (LCSResult a)
+lcsPair :: Ord a => Pair (IndexedPartition a) -> Maybe (LCSResult a)
 lcsPair (xs, ys) = foldlWithKey' (lcsPairWith ys) Nothing xs
   where
     lcsPairWith rhs res n x
@@ -103,11 +101,11 @@ lcsPair (xs, ys) = foldlWithKey' (lcsPairWith ys) Nothing xs
 -- the @lcs@, which should be collected in another @IndexedPartition@.
 breakAt ::
     Eq a =>
-    IndexedString a
-    -> String a
+    String a
+    -> IndexedString a
     -> IndexedPartition a
     -> (IndexedString a, IndexedPartition a)
-breakAt (n, v) s m = case stripInfix s v of
+breakAt s (n, v) m = case stripInfix s v of
     Just (prefix, suffix) -> insertItems prefix suffix (n, delete n m)
     Nothing -> errorWithoutStackTrace "greedy: given LCS was not part of the input string."
   where
@@ -122,24 +120,22 @@ breakAt (n, v) s m = case stripInfix s v of
 -- indices where to reinsert it for each partition.
 extractLCS ::
     Ord a =>
-    IndexedPartitionPair a
-    -> Maybe (IndexedPartitionPair a, IndexedString a, IndexedString a)
-extractLCS (xs, ys) = do
-    Result x common y <- lcsPair (xs, ys)
-    let (x', xs') = breakAt x common xs
-    let (y', ys') = breakAt y common ys
-    pure ((xs', ys'), x', y')
+    Pair (IndexedPartition a)
+    -> Maybe (Pair (IndexedString a), Pair (IndexedPartition a))
+extractLCS parts = breakEach <$> lcsPair parts
+  where
+    breakEach Result {..} = transpose (liftP (breakAt lcs) (left, right) parts)
 
 -- | Recursively run the greedy algorithm by finding the longest common substring, breaking the
 -- matched subtrings and collecting the results in a two new partitions. When no common substring
 -- is found, the algorithm is finished, and the result partition is merged with the remaining
 -- unbroken strings.
-indexedGreedy :: Ord a => IndexedPartitionPair a -> IndexedPartitionPair a
-indexedGreedy = go empty empty
+indexedGreedy :: Ord a => Pair (IndexedPartition a) -> Pair (IndexedPartition a)
+indexedGreedy = go (dupe empty)
   where
-    go rx ry (px, py) = case extractLCS (px, py) of
-        Just (pp, x, y) -> go (add x rx) (add y ry) pp
-        Nothing -> (rx `union` px, ry `union` py)
+    go pi pp = case extractLCS pp of
+        Just (xy, pp') -> go (liftP add xy pi) pp'
+        Nothing -> liftP union pi pp
     add = uncurry insert
 
 -- | MCSP greedy algorithm.
@@ -147,7 +143,7 @@ indexedGreedy = go empty empty
 -- Tries to solve the MCSP by repeatedly finding the longest common substring (LCS), breaking the
 -- strings with it, and inserting the LCS in the resulting partition, until no common substring is
 -- left.
-greedy :: Ord a => String a -> String a -> PartitionPair a
+greedy :: Ord a => String a -> String a -> Pair (Partition a)
 greedy s1 s2 = both sort (indexedGreedy (singleton 0 s1, singleton 0 s2))
   where
     sort = map snd . toAscList
