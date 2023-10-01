@@ -6,11 +6,11 @@ module MCSP.Heuristics.Combine (
 
 import Prelude hiding (String, (++))
 
-import Data.Bifunctor (first, second)
 import Data.Set (Set)
 
+import MCSP.Data.Pair (Pair, first, second)
 import MCSP.Data.String (String, (++))
-import MCSP.Data.String.Extra (PartitionPair, chars, hasOneOf, singletons)
+import MCSP.Data.String.Extra (Partition, chars, hasOneOf, singletons)
 
 -- | Applies a function until the result converges.
 converge :: Eq a => (a -> a) -> a -> a
@@ -46,24 +46,24 @@ instance Ord a => CombineDecision EitherHasSingleton a where
 
 -- | /O(n^2)/ If possible, combines the first 2 blocks of a string and the first identical pair of
 -- another.
-combineOne :: (CombineDecision h a, Eq a) => h a -> PartitionPair a -> Maybe (PartitionPair a)
+combineOne :: (CombineDecision h a, Eq a) => h a -> Pair (Partition a) -> Maybe (Pair (Partition a))
 combineOne deicision (x1 : x2 : xs, y1 : y2 : ys)
     | (x1, x2) == (y1, y2) && shouldCombine deicision x1 x2 = Just ((x1 ++ x2) : xs, (y1 ++ y2) : ys)
     | otherwise = second (y1 :) <$> combineOne deicision (x1 : x2 : xs, y2 : ys)
 combineOne _ _ = Nothing
 -- Specilization for each `CombineDecision` possible.
 {-# SPECIALIZE combineOne ::
-    Eq a => AlwaysCombine a -> PartitionPair a -> Maybe (PartitionPair a)
+    Eq a => AlwaysCombine a -> Pair (Partition a) -> Maybe (Pair (Partition a))
     #-}
 {-# SPECIALIZE combineOne ::
-    Ord a => BothHaveSingleton a -> PartitionPair a -> Maybe (PartitionPair a)
+    Ord a => BothHaveSingleton a -> Pair (Partition a) -> Maybe (Pair (Partition a))
     #-}
 {-# SPECIALIZE combineOne ::
-    Ord a => EitherHasSingleton a -> PartitionPair a -> Maybe (PartitionPair a)
+    Ord a => EitherHasSingleton a -> Pair (Partition a) -> Maybe (Pair (Partition a))
     #-}
 
 -- | Combines pairs of blocks from left to right in 2 strings.
-combineAll :: (CombineDecision h a, Eq a) => h a -> PartitionPair a -> PartitionPair a
+combineAll :: (CombineDecision h a, Eq a) => h a -> Pair (Partition a) -> Pair (Partition a)
 combineAll _ ([], ys) = ([], ys)
 combineAll _ (xs, []) = (xs, [])
 combineAll decision (x : xs, ys) =
@@ -74,14 +74,18 @@ combineAll decision (x : xs, ys) =
   where
     combineXs = first (x :) $ combineAll decision (xs, ys)
 -- Specilization for each `CombineDecision` possible.
-{-# SPECIALIZE combineAll :: Eq a => AlwaysCombine a -> PartitionPair a -> PartitionPair a #-}
-{-# SPECIALIZE combineAll :: Ord a => BothHaveSingleton a -> PartitionPair a -> PartitionPair a #-}
-{-# SPECIALIZE combineAll :: Ord a => EitherHasSingleton a -> PartitionPair a -> PartitionPair a #-}
+{-# SPECIALIZE combineAll :: Eq a => AlwaysCombine a -> Pair (Partition a) -> Pair (Partition a) #-}
+{-# SPECIALIZE combineAll ::
+    Ord a => BothHaveSingleton a -> Pair (Partition a) -> Pair (Partition a)
+    #-}
+{-# SPECIALIZE combineAll ::
+    Ord a => EitherHasSingleton a -> Pair (Partition a) -> Pair (Partition a)
+    #-}
 
 -- | MCSP combine heuristic.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
-combine :: Eq a => String a -> String a -> PartitionPair a
+combine :: Eq a => String a -> String a -> Pair (Partition a)
 combine x y = converge (combineAll AlwaysCombine) (chars x, chars y)
 
 -- | MSCP combine heuristic considering singleton analysis.
@@ -89,7 +93,7 @@ combine x y = converge (combineAll AlwaysCombine) (chars x, chars y)
 -- Applies combination of blocks from left to right until a maximal solution is reached,
 -- combining first pairs in which both blocks have singletons, then pairs in which either
 -- block has singletons and finally all other possible pairs.
-combineS :: Ord a => String a -> String a -> PartitionPair a
+combineS :: Ord a => String a -> String a -> Pair (Partition a)
 combineS x y
     | null singles = converge (combineAll AlwaysCombine) (chars x, chars y)
     | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars x, chars y)
