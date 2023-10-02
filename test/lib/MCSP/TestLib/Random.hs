@@ -68,9 +68,7 @@ randomWithSingletons n lo mid hi = do
 -- >>> generateWith (1,2) (pairShufflingChars "impossibletoread!")
 -- (teiposmosdbeair!l,mobldepreti!isosa)
 pairShufflingChars :: String a -> Random (Pair (String a))
-pairShufflingChars str = bothM shuf (dupe str)
-  where
-    shuf s@Unboxed = shuffle s
+pairShufflingChars str@Unboxed = bothM shuffle (dupe str)
 
 -- | Generates a pair partitions by shuffling the randomly broken blocks
 -- of the input string.
@@ -81,9 +79,7 @@ pairShufflingChars str = bothM shuf (dupe str)
 partitionsShufflingBlocks :: String a -> Random (Pair (Partition a))
 partitionsShufflingBlocks str@Unboxed = do
     p <- partitions str
-    p1 <- shuffle p
-    p2 <- shuffle p
-    pure (p1, p2)
+    bothM shuffle (dupe p)
 
 -- | Generates a pair of related strings by shuffling randomly broken blocks
 -- of the input string.
