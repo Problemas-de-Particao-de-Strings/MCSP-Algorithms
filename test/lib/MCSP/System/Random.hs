@@ -15,14 +15,22 @@ module MCSP.System.Random (
     partitions,
 ) where
 
-import Prelude hiding (splitAt)
-
-import Data.Bits (Bits (complement))
+import Control.Applicative (pure)
+import Control.Monad (mapM)
+import Data.Bits (complement)
+import Data.Foldable (length)
+import Data.Function (($))
+import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
+import Data.Maybe (Maybe (..))
+import Data.Tuple (fst)
 import Data.Vector.Generic (Vector, indexM, splitAt)
 import Data.Vector.Generic qualified as Vector (length)
 import Data.Word (Word64, bitReverse64)
+import GHC.Enum (Bounded (..), Enum (..))
 import GHC.Exts (IsList (..))
+import GHC.Num ((+), (-))
+import System.IO (IO)
 
 import Control.Monad.Random (RandT, evalRandT, liftRandT)
 import System.Random.PCG qualified as PCG
