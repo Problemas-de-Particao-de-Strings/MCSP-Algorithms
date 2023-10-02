@@ -1,9 +1,16 @@
 -- | Randomized operations using a `Random` monad for "PCG" operations.
 module MCSP.System.Random (
+    -- * Random Monad
     Random,
+
+    -- * Evaluation
+    evalRandom,
+    liftRandom,
     Seed,
     generate,
     generateWith,
+
+    -- * Random Values
     PCG.Variate,
     uniform,
     uniformR,
@@ -15,14 +22,18 @@ module MCSP.System.Random (
     partitions,
 ) where
 
-import Control.Applicative (pure)
-import Control.Monad (mapM)
+import Control.Applicative (Applicative (..))
+import Control.Monad (Monad (..), mapM)
 import Data.Bits (complement)
 import Data.Foldable (length)
-import Data.Function (($))
+import Data.Function (const, ($))
+import Data.Functor (Functor (..), (<$>))
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (Maybe (..))
+import Data.Monoid (Monoid (..))
+import Data.Semigroup (Semigroup (..))
+import Data.Traversable (sequence)
 import Data.Tuple (fst)
 import Data.Vector.Generic (Vector, indexM, splitAt)
 import Data.Vector.Generic qualified as Vector (length)
@@ -32,13 +43,81 @@ import GHC.Exts (IsList (..))
 import GHC.Num ((+), (-))
 import System.IO (IO)
 
-import Control.Monad.Random (RandT, evalRandT, liftRandT)
 import System.Random.PCG qualified as PCG
 import System.Random.PCG.Class (Generator)
 import System.Random.Shuffle qualified as Shuffle (shuffle)
 
+-- ------------ --
+-- Random Monad --
+-- ------------ --
+
 -- | A monad capable of producing random values of @a@.
-type Random a = forall g m. Generator g m => RandT g m a
+newtype Random a = Random (forall g m. Generator g m => g -> m a)
+
+instance Functor Random where
+    fmap f (Random gena) = liftRandom $ \rng -> do
+        a <- gena rng
+        pure (f a)
+    {-# INLINE fmap #-}
+    x <$ _ = pure x
+    {-# INLINE (<$) #-}
+
+instance Applicative Random where
+    pure x = Random (const (pure x))
+    {-# INLINE pure #-}
+    liftA2 f (Random gena) (Random genb) = liftRandom $ \rng -> do
+        a <- gena rng
+        b <- genb rng
+        pure (f a b)
+    {-# INLINE liftA2 #-}
+    Random genf <*> Random gena = liftRandom $ \rng -> do
+        f <- genf rng
+        a <- gena rng
+        pure (f a)
+    {-# INLINE (<*>) #-}
+    Random gena *> Random genb = liftRandom $ \rng -> do
+        _ <- gena rng
+        genb rng
+    {-# INLINE (*>) #-}
+    Random gena <* Random genb = liftRandom $ \rng -> do
+        a <- gena rng
+        _ <- genb rng
+        pure a
+    {-# INLINE (<*) #-}
+
+instance Monad Random where
+    Random gena >>= f = liftRandom $ \rng -> do
+        a <- gena rng
+        evalRandom (f a) rng
+    {-# INLINE (>>=) #-}
+
+instance Semigroup a => Semigroup (Random a) where
+    (<>) = liftA2 (<>)
+    {-# INLINE (<>) #-}
+    sconcat xs = sconcat <$> sequence xs
+    {-# INLINE sconcat #-}
+    stimes n x = stimes n <$> x
+    {-# INLINE stimes #-}
+
+instance Monoid a => Monoid (Random a) where
+    mempty = pure mempty
+    {-# INLINE mempty #-}
+    mconcat xs = mconcat <$> sequence xs
+    {-# INLINE mconcat #-}
+
+-- ---------- --
+-- Evaluation --
+-- ---------- --
+
+-- | Evaluate a random computation with the given initial generator and return the final value.
+evalRandom :: Generator g m => Random a -> g -> m a
+evalRandom (Random gen) = gen
+{-# INLINE evalRandom #-}
+
+-- | Turn a standard RNG function into a `Random` monad.
+liftRandom :: (forall g m. Generator g m => g -> m a) -> Random a
+liftRandom = Random
+{-# INLINE liftRandom #-}
 
 -- | Values used to seed a random number generator.
 type Seed = (Word64, Word64)
@@ -48,7 +127,7 @@ type Seed = (Word64, Word64)
 -- >>> generateWith (100,200) uniform :: Int
 -- 3081816684322452293
 generateWith :: Seed -> Random a -> a
-generateWith (s1, s2) r = fst $ PCG.withFrozen seed (evalRandT r)
+generateWith (s1, s2) r = fst $ PCG.withFrozen seed (evalRandom r)
   where
     seed = PCG.initFrozen (complement s2) (bitReverse64 s1)
 {-# INLINE generateWith #-}
@@ -58,17 +137,12 @@ generateWith (s1, s2) r = fst $ PCG.withFrozen seed (evalRandT r)
 -- >>> generate uniform :: IO Int
 -- 3295836545219376626  -- Could be any Int
 generate :: Random a -> IO a
-generate r = PCG.withSystemRandom (evalRandT r)
+generate r = PCG.withSystemRandom (evalRandom r)
 {-# INLINE generate #-}
 
--- | Turn a standard RNG function into a `Random` monad.
-liftRandom :: (forall g m. Generator g m => g -> m a) -> Random a
-liftRandom gen = liftRandT genAndReturn
-  where
-    genAndReturn rng = do
-        value <- gen rng
-        pure (value, rng)
-{-# INLINE liftRandom #-}
+-- ------------- --
+-- Random Values --
+-- ------------- --
 
 -- | /O(1)/ Generate a uniformly distributed random variate.
 --
