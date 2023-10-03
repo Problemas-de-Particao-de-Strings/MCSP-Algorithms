@@ -18,7 +18,7 @@ import Data.String qualified as Text
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 
-import MCSP.Data.Pair (Pair, second, ($$))
+import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (repeated, singletons)
 import MCSP.Heuristics (
@@ -94,8 +94,8 @@ measure (name, heuristic) pair =
   where
     blks = checkedLen "blocks" (checked heuristic pair)
     chrs = checkedLen "size" pair
-    sing = checkedLen "singletons" (singletons $$ pair)
-    reps = checkedLen "repeated" (repeated $$ pair)
+    sing = checkedLen "singletons" (singletons `both` pair)
+    reps = checkedLen "repeated" (repeated `both` pair)
     x `divR` y = fromRational (toInteger x % toInteger y)
 
 -- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.

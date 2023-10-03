@@ -186,7 +186,6 @@ import Data.Vector.Generic qualified as Generic
 import Data.Vector.Generic.Mutable qualified as Mutable
 import Data.Vector.Unboxed (MVector, Unbox, Vector)
 
-import MCSP.Data.Pair (dupe, liftP, ($:$))
 import MCSP.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
 
 -- --------------- --
@@ -317,7 +316,7 @@ pattern xs :>: x <- (splitAtLast -> Just (xs, x@Unboxed))
 splitAtHead :: String a -> Maybe (String a, String a)
 splitAtHead s@Unboxed
     -- SAFETY: n > 0 guarantees head (0 .. 1) and tail (1 .. n) are present
-    | n > 0 = Just (liftP Generic.unsafeSlice (0, 1) (1, n - 1) $:$ dupe s)
+    | n > 0 = Just (Generic.unsafeSlice 0 1 s, Generic.unsafeSlice 1 (n - 1) s)
     | otherwise = Nothing
   where
     n = Generic.length $! s
@@ -330,7 +329,7 @@ splitAtHead s@Unboxed
 splitAtLast :: String a -> Maybe (String a, String a)
 splitAtLast s@Unboxed
     -- SAFETY: n > 0 guarantees init (0 .. n-1) and last (n-1 .. n) are present
-    | n > 0 = Just (liftP Generic.unsafeSlice (0, n - 1) (n - 1, 1) $:$ dupe s)
+    | n > 0 = Just (Generic.unsafeSlice 0 (n - 1) s, Generic.unsafeSlice (n - 1) 1 s)
     | otherwise = Nothing
   where
     n = Generic.length $! s

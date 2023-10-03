@@ -26,7 +26,7 @@ import GHC.Real (rem)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.QuickCheck (Testable, classify, testProperty, (.&&.), (=/=), (===), (==>))
 
-import MCSP.Data.Pair (both, unzip, ($$), ($:))
+import MCSP.Data.Pair (both, unzip, ($:))
 import MCSP.Data.String (String (..), drop, singleton, slice, take, (++))
 import MCSP.Data.String.Extra (
     chars,
@@ -142,7 +142,7 @@ infixOpTests =
              in nullOrDistinct (lastS px) (lastS py) .&&. nullOrDistinct (headS sx) (headS sy)
         ]
   where
-    stripAsList x y = both fromList <$> (List.stripInfix $: (toList $$ (x, y)))
+    stripAsList x y = both fromList <$> (List.stripInfix $: (toList `both` (x, y)))
 
     withLCS prop x y =
         let lcs = fromMaybe "" (longestCommonSubstring x y)
