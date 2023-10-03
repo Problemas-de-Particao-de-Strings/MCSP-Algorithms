@@ -36,12 +36,15 @@
 
 # Rules for MCSP.Data.Pair
 - warn: { lhs: "(x, x)", rhs: "dupe x" }
-- warn: { lhs: "(f x, g x)", rhs: "(f &&& g) x", side: "notEq f g" }
-- warn: { lhs: "(f x, f y)", rhs: "f $$ (x, y)", side: "notEq x y" }
+- warn: { lhs: "(f x, f y)", rhs: "f `both` (x, y)", side: "notEq x y" }
 - warn: { lhs: "(f &&& f) x", rhs: "dupe (f x)" }
-- warn: { lhs: "(f *** f) p", rhs: "f $$ p" }
+- warn: { lhs: "(f *** f) p", rhs: "f `both` p" }
 - warn: { lhs: "uncurry f p", rhs: "f $: p" }
-- warn: { lhs: "both f p", rhs: "f $$ p" }
+- warn:
+    lhs: "both f p"
+    rhs: "f `both` p"
+    side: "not (isInfixApp original) && not (isParen result)"
+    name: "Use infix"
 
 # The hints are named by the string they display in warning messages.
 # For example, if you see a warning starting like
