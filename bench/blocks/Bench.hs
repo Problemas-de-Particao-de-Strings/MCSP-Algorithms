@@ -17,7 +17,7 @@ import Statistics.Types (CL, ConfInt, Estimate (Estimate), Sample, confidenceLev
 import System.IO (Handle, IOMode (AppendMode), hFlush, hPutStrLn, stdout, withFile)
 import System.Random.MWC (createSystemRandom)
 
-import MCSP.Data.Pair (($$), ($:))
+import MCSP.Data.Pair (both, ($:))
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
@@ -149,7 +149,7 @@ showEstimate :: String -> Estimate ConfInt Double -> String
 showEstimate unit estimate@(Estimate value _) =
     withUnit value ++ "\t(" ++ lowerBound ++ " .. " ++ upperBound ++ ")"
   where
-    (lowerBound, upperBound) = withUnit $$ confidenceInterval estimate
+    (lowerBound, upperBound) = withUnit `both` confidenceInterval estimate
     -- formatting numbers and strings
     withUnit n = fixed n ++ " " ++ withWidth 2 ' ' unit
     fixed n = withWidth 5 '0' (showFFloat Nothing n "")

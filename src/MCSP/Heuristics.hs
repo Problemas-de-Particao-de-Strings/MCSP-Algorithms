@@ -22,7 +22,7 @@ import GHC.Err (error)
 import GHC.Stack (HasCallStack)
 import Text.Show (Show, show)
 
-import MCSP.Data.Pair (Pair, liftP, ($$))
+import MCSP.Data.Pair (Pair, both, liftP)
 import MCSP.Data.String (ShowString, String (..), concat, concatNE)
 import MCSP.Data.String.Extra (Partition, frequency)
 import MCSP.Heuristics.Combine (combine, combineS)
@@ -49,7 +49,7 @@ checkPart s@Unboxed p
     | otherwise = mismatch header f1 f2
   where
     header = "partition for '" ++ show s ++ "'"
-    (f1, f2) = frequency $$ (s, concat p)
+    (f1, f2) = frequency `both` (s, concat p)
 
 -- | Check that two partitions are of the same initial string.
 checkCommonPart :: Debug a => Pair (Partition a) -> Pair (Partition a)
@@ -62,8 +62,8 @@ checkCommonPart (p1, p2)
     | otherwise = mismatch header f1 f2
   where
     header = "partitions for '" ++ show s1 ++ "' and '" ++ show s2 ++ "'"
-    (s1, s2) = (concatNE . fromJust . nonEmpty) $$ (p1, p2)
-    (f1, f2) = frequency $$ (s1, s2)
+    (s1, s2) = (concatNE . fromJust . nonEmpty) `both` (p1, p2)
+    (f1, f2) = frequency `both` (s1, s2)
 
 -- | Stop execution and display an error message specific for `checked`.
 mismatch :: (HasCallStack, Show a, Show b) => Text.String -> a -> b -> never

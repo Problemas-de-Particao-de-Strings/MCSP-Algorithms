@@ -19,8 +19,6 @@ module MCSP.Data.Pair (
     zip,
     unzip,
     ($:),
-    ($$),
-    ($:$),
 ) where
 
 import Control.Applicative (Applicative, liftA2)
@@ -115,8 +113,6 @@ zip = bothM id
 {-# INLINE zip #-}
 
 infixr 4 $:
-infixr 4 $$
-infixr 4 $:$
 
 -- | Spread a pair of values as arguments to a function.
 --
@@ -129,24 +125,3 @@ infixr 4 $:$
 ($:) :: (a -> b -> c) -> (a, b) -> c
 ($:) = uncurry
 {-# INLINE ($:) #-}
-
--- | Apply a function to both elements.
---
--- Infix version of `both`.
---
--- >>> import Text.Show (show)
--- >>> show $$ (1, 2)
--- ("1","2")
-($$) :: (a -> b) -> Pair a -> Pair b
-($$) = both
-{-# INLINE ($$) #-}
-
--- | Apply a pair of function to a pair of values.
---
--- >>> import Text.Show (show)
--- >>> import GHC.Num ((+))
--- >>> (show, (+ 2)) $:$ (4, 5)
--- ("4",7)
-($:$) :: (a -> a', b -> b') -> (a, b) -> (a', b')
-($:$) = ((***) $:)
-{-# INLINE ($:$) #-}
