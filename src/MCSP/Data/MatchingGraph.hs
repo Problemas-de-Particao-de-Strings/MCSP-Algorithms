@@ -8,6 +8,11 @@ module MCSP.Data.MatchingGraph (
     Solution,
     solution,
     solutions,
+
+    -- * Restoring Partitions
+    mergeness,
+    blockCount,
+    toPartitions,
 ) where
 
 import Control.Applicative (liftA2, pure)
@@ -23,17 +28,18 @@ import Data.IntervalSet qualified as IntervalSet (null, singleton)
 import Data.List.NonEmpty (NonEmpty (..), unfoldr, (<|))
 import Data.Map qualified as Map (Map, alter, empty, intersectionWith)
 import Data.Maybe (Maybe (..), maybe)
-import Data.Monoid (Monoid (..), mempty)
+import Data.Monoid (Monoid (..), mappend, mempty)
 import Data.Ord (Ord (..))
-import Data.Vector.Generic qualified as Vector (foldl', snoc)
+import Data.Vector.Generic qualified as Vector (foldl', length, snoc)
 import Data.Vector.Unboxed (Vector)
 import GHC.IsList (IsList (..))
 import GHC.Num (fromInteger, (+), (-))
 import GHC.Real (toInteger)
 import Text.Show (Show)
 
-import MCSP.Data.Pair (Pair, both, left, liftP, right, (&&&))
-import MCSP.Data.String (String (..), unsafeSlice)
+import MCSP.Data.Pair (Pair, both, left, liftP, right, ($:), (&&&))
+import MCSP.Data.String (String (..), slice, unsafeSlice)
+import MCSP.Data.String.Extra (Partition, chars)
 
 -- --------------------- --
 -- Edge Set Construction --
@@ -280,3 +286,59 @@ solution = toSolution . resolve
 -- ([(2,2),(0,2)],[(2,2),(0,2)]) :| [([(2,2),(0,2)],[(2,2),(0,2)]),([(0,3)],[(0,3)]),([(0,4)],[(0,4)]),([(1,2)],[(1,2)]),([(1,3)],[(1,3)]),([],[])]
 solutions :: Vector Edge -> NonEmpty Solution
 solutions edges = unfoldr (toSolution &&& nextSolution) (resolve edges)
+
+-- -------------------- --
+-- Restoring Partitions --
+-- -------------------- --
+
+-- | Calculates how much the solution merges the characters of the string.
+--
+-- The mergeness is given by the string length minus the number of blocks.
+--
+-- >>> mergeness mempty
+-- 0
+-- >>> mergeness (solution $ edgeSet ("abab", "abba"))
+-- 1
+mergeness :: Solution -> Length
+mergeness sol = min $: blocks `both` sol
+  where
+    blocks part = Vector.foldl' sum 0 part - Vector.length part
+    sum total (_, len) = total + len
+
+-- | Calculates the number of blocks the solution will create.
+--
+-- >>> blockCount "abab" mempty
+-- 4
+-- >>> blockCount "abab" (solution $ edgeSet ("abab", "abba"))
+-- 3
+blockCount :: String a -> Solution -> Length
+blockCount str sol = length str - mergeness sol
+
+-- | Extract the partition from a block slice map.
+--
+-- >>> toPartition "abcd" (fromList [(1, 2)])
+-- [a,bc,d]
+-- >>> toPartition "abcd" (fromList [(2, 2)])
+-- [a,b,cd]
+-- >>> toPartition "abcd" (fromList [(0, 2)])
+-- [ab,c,d]
+-- >>> toPartition "abcd" (fromList [(0, 4)])
+-- [abcd]
+-- >>> toPartition "abcd" (fromList [])
+-- [a,b,c,d]
+toPartition :: String a -> Vector (Index, Length) -> Partition a
+toPartition s = concatChars 0 . Vector.foldl' insertBlock (length s, [])
+  where
+    insertBlock (f, p) (i, n) = (i, slice i n s : concatChars (i + n) (f, p))
+    concatChars i (f, p) = chars (slice i (f - i) s) `mappend` p
+
+-- | Construct the partitions for a solution.
+--
+-- >>> toPartitions ("abab", "abba") mempty
+-- ([a,b,a,b],[a,b,b,a])
+-- >>> toPartitions ("abab", "abba") (solution $ edgeSet ("abab", "abba"))
+-- ([ab,a,b],[ab,b,a])
+-- >>> toPartitions ("abba", "abab") (solution $ edgeSet ("abba", "abab"))
+-- ([ab,b,a],[ab,a,b])
+toPartitions :: Pair (String a) -> Solution -> Pair (Partition a)
+toPartitions = liftP toPartition
