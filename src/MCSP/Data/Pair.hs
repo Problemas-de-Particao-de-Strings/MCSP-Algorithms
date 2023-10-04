@@ -10,21 +10,23 @@ module MCSP.Data.Pair (
     pattern (::|),
 
     -- * Operations
-    cartesian,
-    liftP,
-    transpose,
     module Data.Tuple,
     module Data.Tuple.Extra,
     bothM,
+    zipM,
     zip,
     unzip,
+    cartesian,
+    liftP,
+    transpose,
     ($:),
 ) where
 
 import Control.Applicative (Applicative, liftA2)
 import Data.Function (id)
+import Data.List (zip)
 import Data.List.NonEmpty (unzip)
-import Data.Tuple (fst, snd, swap, uncurry)
+import Data.Tuple (curry, fst, snd, swap, uncurry)
 import Data.Tuple.Extra (both, dupe, first, firstM, second, secondM, (&&&), (***))
 
 -- | A pair of elements of the same type @a@.
@@ -65,6 +67,31 @@ pattern p ::| xs <- (\(x : y : rest) -> ((x, y), rest) -> (p, xs))
         (x, y) ::| xs = x : y : xs
 {-# INLINE CONLIKE (::|) #-}
 
+-- | Apply an action to both components of a pair.
+--
+-- >>> import Data.List.NonEmpty (nonEmpty)
+-- >>> bothM nonEmpty ([], [1])
+-- Nothing
+-- >>> bothM nonEmpty ([1], [2])
+-- Just (1 :| [],2 :| [])
+bothM :: Applicative m => (a -> m b) -> Pair a -> m (Pair b)
+bothM f (x, y) = liftA2 (,) (f x) (f y)
+{-# INLINE bothM #-}
+
+-- | Extract a pair elements from a pair of actions.
+--
+-- >>> import Data.Maybe (Maybe (..))
+-- >>> zipM (Just 1, Nothing)
+-- Nothing
+-- >>> zipM (Just 1, Just 2)
+-- Just (1,2)
+-- >>> import Data.Int (Int)
+-- >>> zipM ([1, 2, 3], [4, 5] :: [Int])
+-- [(1,4),(1,5),(2,4),(2,5),(3,4),(3,5)]
+zipM :: Applicative m => Pair (m a) -> m (Pair a)
+zipM = bothM id
+{-# INLINE zipM #-}
+
 -- | Cartesian product of the elements of two lists.
 --
 -- >>> cartesian [1, 2, 3] "ab"
@@ -89,28 +116,6 @@ liftP op (x1, x2) (y1, y2) = (x1 `op` y1, x2 `op` y2)
 transpose :: ((a, b), (c, d)) -> ((a, c), (b, d))
 transpose ((x, y), (z, w)) = ((x, z), (y, w))
 {-# INLINE transpose #-}
-
--- | Apply an action to both components of a pair.
---
--- >>> import Data.List.NonEmpty (nonEmpty)
--- >>> bothM nonEmpty ([], [1])
--- Nothing
--- >>> bothM nonEmpty ([1], [2])
--- Just (1 :| [],2 :| [])
-bothM :: Applicative m => (a -> m b) -> Pair a -> m (Pair b)
-bothM f (x, y) = liftA2 (,) (f x) (f y)
-{-# INLINE bothM #-}
-
--- | Extract a pair elements from a pair of actions.
---
--- >>> import Data.Maybe (Maybe (..))
--- >>> zip (Just 1, Nothing)
--- Nothing
--- >>> zip (Just 1, Just 2)
--- Just (1,2)
-zip :: Applicative m => Pair (m a) -> m (Pair a)
-zip = bothM id
-{-# INLINE zip #-}
 
 infixr 4 $:
 
