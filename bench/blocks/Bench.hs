@@ -19,6 +19,7 @@ import System.Random.MWC (createSystemRandom)
 
 import MCSP.Data.Pair (both, ($:))
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
+import MCSP.System.Random (randomSeed)
 import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
 import MCSP.TestLib.Heuristics (
     Measured,
@@ -27,7 +28,6 @@ import MCSP.TestLib.Heuristics (
     csvHeader,
     heuristics,
     measure,
-    randomSeed,
     score,
     toCsvRow,
  )
