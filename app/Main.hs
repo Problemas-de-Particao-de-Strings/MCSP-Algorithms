@@ -6,29 +6,28 @@ import Control.Monad (forM_, replicateM_)
 import Data.Word (Word8)
 
 import MCSP.Data.String (String)
-import MCSP.System.Random (generate, uniformR)
-import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, toCsvRow)
+import MCSP.System.Random (Random, uniformR)
+import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, randomSeed, toCsvRow)
 import MCSP.TestLib.Sample (ShuffleMethod (..), StringParameters (..), randomPairWith)
 
-genPair :: IO (String Word8, String Word8)
+genPair :: Random (String Word8, String Word8)
 genPair = do
-    r <- generate $ uniformR 1 10
-    s <- generate $ uniformR 2 50
-    n <- generate $ uniformR (r + s + 10) 200
-    let params =
-            StringParameters
-                { size = n,
-                  nReplicated = r,
-                  nSingletons = s,
-                  shuffle = Chars
-                }
-    generate (randomPairWith params)
+    r <- uniformR 1 10
+    s <- uniformR 2 50
+    n <- uniformR (r + s + 10) 200
+    randomPairWith
+        StringParameters
+            { size = n,
+              nReplicated = r,
+              nSingletons = s,
+              shuffle = Chars
+            }
 
 run :: IO ()
 run = do
-    pair <- genPair
-    let results = map (`measure` pair) heuristics
-    forM_ results (putStrLn . toCsvRow)
+    seed <- randomSeed
+    forM_ heuristics $ \heuristc ->
+        putStrLn $ toCsvRow $ measure heuristc seed genPair
 
 main :: IO ()
 main = putStrLn csvHeader >> replicateM_ 10_000 run

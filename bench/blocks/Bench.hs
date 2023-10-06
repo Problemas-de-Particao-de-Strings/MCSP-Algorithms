@@ -19,7 +19,6 @@ import System.Random.MWC (createSystemRandom)
 
 import MCSP.Data.Pair (both, ($:))
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
-import MCSP.System.Random (generate)
 import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
 import MCSP.TestLib.Heuristics (
     Measured,
@@ -28,6 +27,7 @@ import MCSP.TestLib.Heuristics (
     csvHeader,
     heuristics,
     measure,
+    randomSeed,
     score,
     toCsvRow,
  )
@@ -192,7 +192,9 @@ regress f v = do
 
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
 measuring :: StringParameters -> NamedHeuristic Word8 -> IO Measured
-measuring params heuristic = measure heuristic <$> generate (randomPairWith params)
+measuring params heuristic = do
+    seed <- randomSeed
+    pure (measure heuristic seed (randomPairWith params))
 
 -- | Writes the measured information in CSV format and returns it unchanged.
 writeCsv :: PutStrLn -> Measured -> IO Measured
