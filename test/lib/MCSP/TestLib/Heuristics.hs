@@ -4,7 +4,6 @@ module MCSP.TestLib.Heuristics (
     NamedHeuristic,
     heuristics,
     Measured (..),
-    randomSeed,
     measure,
     csvHeader,
     toCsvRow,
@@ -18,7 +17,6 @@ import Data.Ratio ((%))
 import Data.String qualified as Text
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import Numeric (showHex)
 
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
@@ -32,7 +30,7 @@ import MCSP.Heuristics (
     greedy,
  )
 
-import MCSP.System.Random (Random, Seed, generate, generateWith, uniform)
+import MCSP.System.Random (Random, Seed, generateWith, showSeed)
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
 -- | The heuristic with its defined name.
@@ -77,10 +75,6 @@ checkedLen name (x, y)
     nx = length x
     ny = length y
 
--- | Generate a new random seed.
-randomSeed :: IO Seed
-randomSeed = generate uniform
-
 -- | Run the heuristic and returns information about the solution.
 --
 -- >>> import MCSP.TestLib.Heuristics.TH (mkNamed)
@@ -116,8 +110,6 @@ csvColumns =
       second (show .) $(mkNamed 'score),
       second (showSeed .) $(mkNamed 'seed)
     ]
-  where
-    showSeed (x, y) = showHex x " " ++ showHex y ""
 
 -- | The CSV header for the columns of `Measured`.
 --

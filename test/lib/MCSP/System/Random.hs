@@ -9,6 +9,9 @@ module MCSP.System.Random (
     Seed,
     generate,
     generateWith,
+    randomSeed,
+    showSeed,
+    readSeed,
 
     -- * Random Values
     PCG.Variate,
@@ -23,16 +26,19 @@ module MCSP.System.Random (
 ) where
 
 import Control.Applicative (Applicative (..))
+import Control.Exception.Extra (errorWithoutStackTrace)
 import Control.Monad (Monad (..), mapM)
 import Data.Bits (complement)
 import Data.Foldable (length)
 import Data.Function (const, ($))
 import Data.Functor (Functor (..), (<$>))
 import Data.Int (Int)
+import Data.List ((++))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (Maybe (..))
 import Data.Monoid (Monoid (..))
 import Data.Semigroup (Semigroup (..))
+import Data.String qualified as Text (String)
 import Data.Traversable (sequence)
 import Data.Tuple (fst)
 import Data.Vector.Generic (Vector, indexM, splitAt)
@@ -41,10 +47,12 @@ import Data.Word (Word64, bitReverse64)
 import GHC.Enum (Bounded (..), Enum (..))
 import GHC.Exts (IsList (..))
 import GHC.Num ((+), (-))
+import Numeric (readHex, showHex)
 import System.IO (IO)
+import Text.ParserCombinators.ReadP (ReadP, readP_to_S, readS_to_P, skipSpaces)
 
 import System.Random.PCG qualified as PCG
-import System.Random.PCG.Class (Generator)
+import System.Random.PCG.Class (Generator, sysRandom)
 import System.Random.Shuffle qualified as Shuffle (shuffle)
 
 -- ------------ --
@@ -139,6 +147,51 @@ generateWith (s1, s2) r = fst $ PCG.withFrozen seed (evalRandom r)
 generate :: Random a -> IO a
 generate r = PCG.withSystemRandom (evalRandom r)
 {-# INLINE generate #-}
+
+-- | Generate a new random seed.
+--
+-- >>> randomSeed
+-- (7193915830657461549,13617428908513093874) -- Could be any seed
+randomSeed :: IO Seed
+randomSeed = do
+    l <- sysRandom
+    r <- sysRandom
+    pure (l, r)
+{-# INLINE randomSeed #-}
+
+-- | String representing the RNG seed in hex.
+--
+-- Inverse of `readSeed`.
+--
+-- >>> showSeed (0, 1)
+-- "0 1"
+showSeed :: Seed -> Text.String
+showSeed (x, y) = showHex x " " ++ showHex y ""
+{-# INLINE showSeed #-}
+
+-- | Parser combinator for reading seeds.
+readSeedP :: ReadP Seed
+readSeedP = do
+    l <- readS_to_P readHex
+    skipSpaces
+    r <- readS_to_P readHex
+    pure (l, r)
+
+-- | Read a seed in hexadecimal format.
+--
+-- Inverse of `showSeed`.
+--
+-- >>> readSeed "0 1"
+-- (0,1)
+-- >>> readSeed (showSeed (5, 10))
+-- (5,10)
+-- >>> readSeed "75f9fea579c63117 8a3a15e4c0a7029f"
+-- (8501105758304612631,9960297598112170655)
+readSeed :: Text.String -> Seed
+readSeed str = case readP_to_S readSeedP str of
+    [(seed, "")] -> seed
+    [] -> errorWithoutStackTrace "readSeed: no parse"
+    _ -> errorWithoutStackTrace "readSeed: ambiguous parse"
 
 -- ------------- --
 -- Random Values --

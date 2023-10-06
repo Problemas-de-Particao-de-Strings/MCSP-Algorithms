@@ -6,8 +6,8 @@ import Control.Monad (forM_, replicateM_)
 import Data.Word (Word8)
 
 import MCSP.Data.String (String)
-import MCSP.System.Random (Random, uniformR)
-import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, randomSeed, toCsvRow)
+import MCSP.System.Random (Random, randomSeed, uniformR)
+import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, toCsvRow)
 import MCSP.TestLib.Sample (ShuffleMethod (..), StringParameters (..), randomPairWith)
 
 genPair :: Random (String Word8, String Word8)
