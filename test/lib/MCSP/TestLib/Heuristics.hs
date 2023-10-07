@@ -12,6 +12,7 @@ module MCSP.TestLib.Heuristics (
 import Prelude hiding (String)
 
 import Control.DeepSeq (NFData)
+import Data.Fixed (Pico)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
@@ -22,6 +23,7 @@ import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (repeated, singletons)
 import MCSP.Heuristics (Debug, Heuristic, checkedIO, combine, combineS, greedy)
+import MCSP.System.TimeIt (timeIt)
 
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
@@ -42,6 +44,8 @@ data Measured = Measured
       blocks :: Int,
       -- | A score of the solution, given by @1 - (`blocks` - 1) / (`size` - 1)@
       score :: Double,
+      -- | Execution time in seconds.
+      time :: Pico,
       -- | Number of unique characters in the input pair or strings.
       singles :: Int,
       -- | Number of non-singletons in the input strings.
@@ -89,18 +93,18 @@ checkedDiv dividend divisor = Just $ fromRational (toInteger dividend % toIntege
 -- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, singles = 4, repeats = 0}
 measure :: Debug a => NamedHeuristic a -> Pair (String a) -> IO Measured
 measure (name, heuristic) pair = do
-    partitions <- checkedIO heuristic pair
+    (time, partitions) <- timeIt (checkedIO heuristic) pair
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions
     let score = fromMaybe 1 $ (size - blocks) `checkedDiv` (size - 1)
     singles <- checkedLen "singletons" (singletons `both` pair)
     repeats <- checkedLen "repeated" (repeated `both` pair)
-    pure Measured {heuristic = name, blocks, size, score, singles, repeats}
+    pure Measured {heuristic = name, blocks, size, score, time, singles, repeats}
 
 -- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
 --
 -- >>> map fst csvColumns
--- ["size","repeats","singles","heuristic","blocks","score"]
+-- ["size","repeats","singles","heuristic","blocks","score","time"]
 csvColumns :: [(Text.String, Measured -> Text.String)]
 csvColumns =
     [ second (show .) $(mkNamed 'size),
@@ -108,21 +112,22 @@ csvColumns =
       second (show .) $(mkNamed 'singles),
       $(mkNamed 'heuristic),
       second (show .) $(mkNamed 'blocks),
-      second (show .) $(mkNamed 'score)
+      second (show .) $(mkNamed 'score),
+      second (show .) $(mkNamed 'time)
     ]
 
 -- | The CSV header for the columns of `Measured`.
 --
 -- >>> csvHeader
--- "size,repeats,singles,heuristic,blocks,score"
+-- "size,repeats,singles,heuristic,blocks,score,time"
 csvHeader :: Text.String
 csvHeader = intercalate "," (map fst csvColumns)
 
 -- | The CSV row representing the values of a `Measured`.
 --
--- >>> result = measure $(mkNamed 'combine) ("abcd", "cdab")
+-- >>> result <- measure $(mkNamed 'combine) ("abcd", "cdab")
 -- >>> toCsvRow result
--- "4,0,4,combine,2,0.6666666666666666"
+-- "4,0,4,combine,2,0.6666666666666666,0.000072530000"
 toCsvRow :: Measured -> Text.String
 toCsvRow measured = intercalate "," (map getValue csvColumns)
   where

@@ -81,6 +81,7 @@ internal-libraries:
       - MCSP.System.Random
       - MCSP.System.Repl
       - MCSP.System.Statistics
+      - MCSP.System.TimeIt
       - MCSP.TestLib.Heuristics
       - MCSP.TestLib.Heuristics.TH
       - MCSP.TestLib.Random
