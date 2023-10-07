@@ -30,7 +30,6 @@ import MCSP.Heuristics (
     greedy,
  )
 
-import MCSP.System.Random (Random, Seed, generateWith, showSeed)
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
 -- | The heuristic with its defined name.
@@ -53,9 +52,7 @@ data Measured = Measured
       -- | Number of unique characters in the input pair or strings.
       singles :: Int,
       -- | Number of non-singletons in the input strings.
-      repeats :: Int,
-      -- | Seed used to generate the input strings.
-      seed :: Seed
+      repeats :: Int
     }
     deriving stock (Show, Eq, Generic)
 
@@ -78,28 +75,28 @@ checkedLen name (x, y)
 -- | Run the heuristic and returns information about the solution.
 --
 -- >>> import MCSP.TestLib.Heuristics.TH (mkNamed)
--- >>> measure $(mkNamed 'combine) (0, 0) (pure ("abcd", "cdab"))
--- Measured {heuristic = "combine", size = 4, blocks = 2, score = 0.6666666666666666, singles = 4, repeats = 0, seed = (0,0)}
+-- >>> measure $(mkNamed 'combine) ("abcd", "cdab")
+-- Measured {heuristic = "combine", size = 4, blocks = 2, score = 0.6666666666666666, singles = 4, repeats = 0}
+--
 -- >>> import MCSP.Data.String.Extra (chars)
 -- >>> trivial = both chars
--- >>> measure $(mkNamed 'trivial) (0, 0) (pure ("abcd", "cdab"))
--- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, singles = 4, repeats = 0, seed = (0,0)}
-measure :: Debug a => NamedHeuristic a -> Seed -> Random (Pair (String a)) -> Measured
-measure (name, heuristic) seed genPair =
-    let pair = generateWith seed genPair
-        size = checkedLen "size" pair
+-- >>> measure $(mkNamed 'trivial) ("abcd", "cdab")
+-- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, singles = 4, repeats = 0}
+measure :: Debug a => NamedHeuristic a -> Pair (String a) -> Measured
+measure (name, heuristic) pair =
+    let size = checkedLen "size" pair
         blocks = checkedLen "blocks" (checked' heuristic pair)
         score = (size - blocks) `divR` (size - 1)
         singles = checkedLen "singletons" (singletons `both` pair)
         repeats = checkedLen "repeated" (repeated `both` pair)
-     in Measured {heuristic = name, blocks, size, score, singles, repeats, seed}
+     in Measured {heuristic = name, blocks, size, score, singles, repeats}
   where
     x `divR` y = fromRational (toInteger x % toInteger y)
 
 -- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
 --
 -- >>> map fst csvColumns
--- ["size","repeats","singles","heuristic","blocks","score","seed"]
+-- ["size","repeats","singles","heuristic","blocks","score"]
 csvColumns :: [(Text.String, Measured -> Text.String)]
 csvColumns =
     [ second (show .) $(mkNamed 'size),
@@ -107,14 +104,13 @@ csvColumns =
       second (show .) $(mkNamed 'singles),
       $(mkNamed 'heuristic),
       second (show .) $(mkNamed 'blocks),
-      second (show .) $(mkNamed 'score),
-      second (showSeed .) $(mkNamed 'seed)
+      second (show .) $(mkNamed 'score)
     ]
 
 -- | The CSV header for the columns of `Measured`.
 --
 -- >>> csvHeader
--- "size,repeats,singles,heuristic,blocks,score,seed"
+-- "size,repeats,singles,heuristic,blocks,score"
 csvHeader :: Text.String
 csvHeader = intercalate "," (map fst csvColumns)
 
