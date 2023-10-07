@@ -4,6 +4,7 @@ import Prelude hiding (String)
 
 import Control.Monad (forM_, replicateM_)
 import Data.Word (Word8)
+import System.IO (hFlush, stdout)
 
 import MCSP.Data.String (String)
 import MCSP.System.Random (Random, generate, uniformR)
@@ -23,11 +24,13 @@ randomPair = do
               shuffle = Chars
             }
 
-run :: IO ()
-run = do
-    pair <- generate randomPair
-    forM_ heuristics $ \heuristc ->
-        putStrLn $ toCsvRow $ measure heuristc pair
-
 main :: IO ()
-main = putStrLn csvHeader >> replicateM_ 10_000 run
+main = do
+    putLn csvHeader
+    replicateM_ 10_000 $ do
+        pair <- generate randomPair
+        forM_ heuristics $ \heuristc -> do
+            result <- measure heuristc pair
+            putLn $ toCsvRow result
+  where
+    putLn line = putStrLn line >> hFlush stdout

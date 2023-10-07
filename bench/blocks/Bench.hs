@@ -192,7 +192,7 @@ regress f v = do
 
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
 measuring :: StringParameters -> NamedHeuristic Word8 -> IO Measured
-measuring params heuristic = measure heuristic <$> generate (randomPairWith params)
+measuring params heuristic = generate (randomPairWith params) >>= measure heuristic
 
 -- | Writes the measured information in CSV format and returns it unchanged.
 writeCsv :: PutStrLn -> Measured -> IO Measured
