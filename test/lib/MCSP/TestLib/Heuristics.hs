@@ -13,22 +13,15 @@ import Prelude hiding (String)
 
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
+import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.String qualified as Text
 import GHC.Generics (Generic)
-import GHC.Stack (HasCallStack)
 
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (repeated, singletons)
-import MCSP.Heuristics (
-    Debug,
-    Heuristic,
-    checked',
-    combine,
-    combineS,
-    greedy,
- )
+import MCSP.Heuristics (Debug, Heuristic, checkedIO, combine, combineS, greedy)
 
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
@@ -62,15 +55,27 @@ instance NFData Measured
 --
 -- >>> checkedLen "list" ([1..4], [2..5] :: [Int])
 -- 4
+--
 -- >>> checkedLen "string" ("", "abc" :: String Char)
--- length mismatch for string: 0 != 3
-checkedLen :: HasCallStack => Text.String -> Foldable t => (t a, t a) -> Int
+-- user error (length mismatch for string: 0 != 3)
+checkedLen :: Text.String -> Foldable t => (t a, t a) -> IO Int
 checkedLen name (x, y)
-    | nx == ny = nx
-    | otherwise = error $ "length mismatch for " ++ name ++ ": " ++ show nx ++ " != " ++ show ny
+    | nx == ny = pure nx
+    | otherwise = fail $ "length mismatch for " ++ name ++ ": " ++ show nx ++ " != " ++ show ny
   where
     nx = length x
     ny = length y
+
+-- | Just the division of the two numbers, or `Nothing` if the divisor is zero.
+--
+-- >>> 1 `checkedDiv` 2
+-- Just 0.5
+--
+-- >>> 2 `checkedDiv` 0
+-- Nothing
+checkedDiv :: (Integral a, Fractional b) => a -> a -> Maybe b
+checkedDiv _ 0 = Nothing
+checkedDiv dividend divisor = Just $ fromRational (toInteger dividend % toInteger divisor)
 
 -- | Run the heuristic and returns information about the solution.
 --
@@ -82,16 +87,15 @@ checkedLen name (x, y)
 -- >>> trivial = both chars
 -- >>> measure $(mkNamed 'trivial) ("abcd", "cdab")
 -- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, singles = 4, repeats = 0}
-measure :: Debug a => NamedHeuristic a -> Pair (String a) -> Measured
-measure (name, heuristic) pair =
-    let size = checkedLen "size" pair
-        blocks = checkedLen "blocks" (checked' heuristic pair)
-        score = (size - blocks) `divR` (size - 1)
-        singles = checkedLen "singletons" (singletons `both` pair)
-        repeats = checkedLen "repeated" (repeated `both` pair)
-     in Measured {heuristic = name, blocks, size, score, singles, repeats}
-  where
-    x `divR` y = fromRational (toInteger x % toInteger y)
+measure :: Debug a => NamedHeuristic a -> Pair (String a) -> IO Measured
+measure (name, heuristic) pair = do
+    partitions <- checkedIO heuristic pair
+    size <- checkedLen "size" pair
+    blocks <- checkedLen "blocks" partitions
+    let score = fromMaybe 1 $ (size - blocks) `checkedDiv` (size - 1)
+    singles <- checkedLen "singletons" (singletons `both` pair)
+    repeats <- checkedLen "repeated" (repeated `both` pair)
+    pure Measured {heuristic = name, blocks, size, score, singles, repeats}
 
 -- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
 --
