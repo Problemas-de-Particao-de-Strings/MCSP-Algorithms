@@ -24,7 +24,7 @@ import MCSP.Data.String.Extra (repeated, singletons)
 import MCSP.Heuristics (
     Debug,
     Heuristic,
-    checked,
+    checked',
     combine,
     combineS,
     greedy,
@@ -88,7 +88,7 @@ measure :: Debug a => NamedHeuristic a -> Seed -> Random (Pair (String a)) -> Me
 measure (name, heuristic) seed genPair =
     let pair = generateWith seed genPair
         size = checkedLen "size" pair
-        blocks = checkedLen "blocks" (checked heuristic pair)
+        blocks = checkedLen "blocks" (checked' heuristic pair)
         score = (size - blocks) `divR` (size - 1)
         singles = checkedLen "singletons" (singletons `both` pair)
         repeats = checkedLen "repeated" (repeated `both` pair)
