@@ -5,7 +5,8 @@ module MCSP.Data.String.Extra (
     chars,
 
     -- ** Character set analysis
-    frequency,
+    alphabet,
+    occurrences,
     singletons,
     repeated,
     hasOneOf,
@@ -50,31 +51,40 @@ chars = go []
 -- ---------------------- --
 -- Character set analysis --
 
--- | /O(n lg n)/ Extracts the frequency count of each character in a string.
+-- | /O(n lg n)/ The set of all characters in a string.
 --
--- >>> frequency "aabacabd"
+-- >>> alphabet "aabacabd"
+-- fromList "abcd"
+alphabet :: Ord a => String a -> Set a
+alphabet = foldl' (flip insert) mempty
+
+-- | /O(n lg n)/ The frequency count of each character in a string.
+--
+-- >>> occurrences "aabacabd"
 -- fromList [('a',4),('b',2),('c',1),('d',1)]
-frequency :: Ord a => String a -> Map a Int
-frequency = foldl' (flip $ alter increment) mempty
+occurrences :: Ord a => String a -> Map a Int
+occurrences = foldl' (flip $ alter increment) mempty
   where
     increment x = Just (1 + fromMaybe 0 x)
+{-# INLINEABLE occurrences #-}
 
--- | /O(n lg n)/ Extracts the set of singleton characters in a string.
+-- | /O(n lg n)/ The set of singleton characters in a string.
 --
 -- >>> singletons "aabacabd"
 -- fromList "cd"
 singletons :: Ord a => String a -> Set a
-singletons str = foldrWithKey' insertSingleton mempty (frequency str)
+singletons str = foldrWithKey' insertSingleton mempty (occurrences str)
   where
     insertSingleton k 1 = insert k
     insertSingleton _ _ = id
+{-# INLINEABLE singletons #-}
 
--- | /O(n lg n)/ Extracts the set of repeated characters in a string.
+-- | /O(n lg n)/ The set of repeated characters in a string.
 --
 -- >>> repeated "aabacabd"
 -- fromList "ab"
 repeated :: Ord a => String a -> Set a
-repeated str = foldrWithKey' insertRepeated mempty (frequency str)
+repeated str = foldrWithKey' insertRepeated mempty (occurrences str)
   where
     insertRepeated _ 1 = id
     insertRepeated k _ = insert k

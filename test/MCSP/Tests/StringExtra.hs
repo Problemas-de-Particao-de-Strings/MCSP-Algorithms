@@ -2,7 +2,7 @@ module MCSP.Tests.StringExtra (stringExtraTests) where
 
 import Data.Bool (not, otherwise)
 import Data.Char (Char)
-import Data.Foldable (foldl', length, null)
+import Data.Foldable (all, foldl', length, null)
 import Data.Function (($))
 import Data.Functor ((<$>))
 import Data.Int (Int)
@@ -17,10 +17,10 @@ import Data.List.Extra qualified as List (
     (++),
  )
 import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Ord ((<=), (>=))
-import Data.Set (member, union)
+import Data.Ord ((<=))
+import Data.Set (empty, intersection, member, union)
 import GHC.IsList (fromList, toList)
-import GHC.Num ((*), (+), (-))
+import GHC.Num ((+), (-))
 import GHC.Real (rem)
 
 import Test.Tasty (TestName, TestTree, testGroup)
@@ -29,6 +29,7 @@ import Test.Tasty.QuickCheck (Testable, classify, testProperty, (.&&.), (=/=), (
 import MCSP.Data.Pair (both, unzip, ($:))
 import MCSP.Data.String (String (..), drop, singleton, slice, take, (++))
 import MCSP.Data.String.Extra (
+    alphabet,
     chars,
     commonPrefix,
     hasOneOf,
@@ -65,16 +66,22 @@ charSetTests =
         "character set functions hold"
         [ testStr "chars == toList" $ \str ->
             chars str === map singleton (toList str),
-          testStr "singletons `union` repeated == fromList" $ \str ->
-            singletons str `union` repeated str === fromList (toList str),
+          testStr "alphabet == fromList" $ \str ->
+            alphabet str === fromList (toList str),
+          testStr "singletons `union` repeated == alphabet" $ \str ->
+            singletons str `union` repeated str === alphabet str,
+          testStr "singletons `intersection` repeated == empty" $ \str ->
+            singletons str `intersection` repeated str === empty,
+          testStr "all (`member` alphabet)" $ \str ->
+            all (`member` alphabet str) str,
           testStr "str `hasOneOf` singletons str" $ \str ->
             not (null (singletons str)) ==> str `hasOneOf` singletons str,
           testStr "str `hasOneOf` repeated str" $ \str ->
             not (null (repeated str)) ==> str `hasOneOf` repeated str,
           testStr "count (`member` singletons str) == length (singletons str)" $ \str ->
             count (`member` singletons str) str === length (singletons str),
-          testStr "count (`member` repeated str) >= 2 * length (repeated str)" $ \str ->
-            count (`member` repeated str) str >= 2 * length (repeated str)
+          testStr "count (`member` repeated str) == length str - length (singletons str)" $ \str ->
+            count (`member` repeated str) str === length str - length (singletons str)
         ]
   where
     count prop = foldl' (\n x -> if prop x then n + 1 else n) 0
