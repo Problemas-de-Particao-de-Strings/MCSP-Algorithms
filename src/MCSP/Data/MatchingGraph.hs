@@ -39,6 +39,7 @@ import Data.Map qualified as Map (Map, alter, empty, intersectionWith)
 import Data.Maybe (Maybe (..), maybe)
 import Data.Monoid (Monoid (..), mappend, mempty)
 import Data.Ord (Ord (..))
+import Data.Tuple.Extra (fst3)
 import Data.Vector.Generic qualified as Vector (foldl', length, snoc)
 import Data.Vector.Unboxed (Vector)
 import GHC.IsList (IsList (..))
@@ -48,7 +49,13 @@ import Text.Show (Show)
 
 import MCSP.Data.Pair (Pair, both, cartesian, left, liftP, right, ($:), (&&&))
 import MCSP.Data.String (String (..), slice, unsafeSlice)
-import MCSP.Data.String.Extra (Partition, chars)
+import MCSP.Data.String.Extra (
+    Partition,
+    chars,
+    commonPrefix,
+    commonPrefixLength,
+    splitCommonPrefix,
+ )
 
 -- --------------------- --
 -- Edge Set Construction --
@@ -143,10 +150,6 @@ toVector :: [Edge] -> Vector Edge
 toVector = fromList
 {-# INLINEABLE toVector #-}
 
-toVectorN :: [Edge] -> Vector Edge
-toVectorN edges = fromListN (length edges) edges
-{-# INLINEABLE toVectorN #-}
-
 -- >>> edgeSet1 ("abab", "abba")
 -- [((0,0),2),((2,0),2),((1,2),2)]
 edgeSet1 :: Ord a => Pair (String a) -> Vector Edge
@@ -170,10 +173,37 @@ edgeSet2 (l, r) = toVector $ concatMap (edgesFrom (l, r)) start
     start = cartesian [0 .. length l - 1] [0 .. length r - 1]
 {-# INLINEABLE edgeSet2 #-}
 
+-- >>> edgesFromP1 ("abab", "abba") (0,0)
+-- [((0,0),2)]
+edgesFromP1 :: Eq a => Pair (String a) -> Pair Index -> [Edge]
+edgesFromP1 (l, r) (s, p) = [((s, p), k) | k <- [2 .. prefixLen (suffix s l) (suffix p r)]]
+  where
+    suffix i str = unsafeSlice i (length str - i) str
+    prefixLen s1 s2 = length (commonPrefix s1 s2)
+{-# INLINEABLE edgesFromP1 #-}
+
+-- >>> edgesFromP2 ("abab", "abba") (0,0)
+-- [((0,0),2)]
+edgesFromP2 :: Eq a => Pair (String a) -> Pair Index -> [Edge]
+edgesFromP2 (l, r) (s, p) = [((s, p), k) | k <- [2 .. prefixLen (suffix s l) (suffix p r)]]
+  where
+    suffix i str = unsafeSlice i (length str - i) str
+    prefixLen s1 s2 = length (fst3 $ splitCommonPrefix s1 s2)
+{-# INLINEABLE edgesFromP2 #-}
+
+-- >>> edgesFromP3 ("abab", "abba") (0,0)
+-- [((0,0),2)]
+edgesFromP3 :: Eq a => Pair (String a) -> Pair Index -> [Edge]
+edgesFromP3 (l, r) (s, p) = [((s, p), k) | k <- [2 .. prefixLen (suffix s l) (suffix p r)]]
+  where
+    suffix i str = unsafeSlice i (length str - i) str
+    prefixLen = commonPrefixLength
+{-# INLINEABLE edgesFromP3 #-}
+
 -- >>> edgeSet3 ("abab", "abba")
 -- [((0,0),2),((1,2),2),((2,0),2)]
 edgeSet3 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet3 (l, r) = toVectorN $ concatMap (edgesFrom (l, r)) start
+edgeSet3 (l, r) = toVector $ concatMap (edgesFromP1 (l, r)) start
   where
     start = cartesian [0 .. length l - 1] [0 .. length r - 1]
 {-# INLINEABLE edgeSet3 #-}
@@ -181,7 +211,7 @@ edgeSet3 (l, r) = toVectorN $ concatMap (edgesFrom (l, r)) start
 -- >>> edgeSet4 ("abab", "abba")
 -- [((0,0),2),((1,2),2),((2,0),2)]
 edgeSet4 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet4 (l, r) = foldMap' (toVector . edgesFrom (l, r)) start
+edgeSet4 (l, r) = toVector $ concatMap (edgesFromP2 (l, r)) start
   where
     start = cartesian [0 .. length l - 1] [0 .. length r - 1]
 {-# INLINEABLE edgeSet4 #-}
@@ -189,7 +219,7 @@ edgeSet4 (l, r) = foldMap' (toVector . edgesFrom (l, r)) start
 -- >>> edgeSet5 ("abab", "abba")
 -- [((0,0),2),((1,2),2),((2,0),2)]
 edgeSet5 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet5 (l, r) = foldMap' (toVectorN . edgesFrom (l, r)) start
+edgeSet5 (l, r) = toVector $ concatMap (edgesFromP3 (l, r)) start
   where
     start = cartesian [0 .. length l - 1] [0 .. length r - 1]
 {-# INLINEABLE edgeSet5 #-}

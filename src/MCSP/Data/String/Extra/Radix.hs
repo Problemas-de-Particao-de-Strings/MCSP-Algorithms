@@ -3,6 +3,7 @@ module MCSP.Data.String.Extra.Radix (
     -- * Prefix
     stripPrefix,
     isPrefixOf,
+    commonPrefixLength,
     commonPrefix,
     splitCommonPrefix,
 
@@ -23,7 +24,6 @@ import Data.Int (Int)
 import Data.List.Extra (find, firstJust)
 import Data.Maybe (Maybe (Just, Nothing), fromMaybe, isJust)
 import Data.Ord (min)
-import Data.Tuple.Extra (fst3)
 import GHC.Num ((+), (-))
 
 import MCSP.Data.String (String (..), drop, length, splitAt, take, unsafeIndex, unsafeSlice)
@@ -82,7 +82,7 @@ commonPrefixLength lhs rhs = fromMaybe n (find notMatching indices)
 -- >>> commonPrefix "def" "ghi"
 -- <BLANKLINE>
 commonPrefix :: Eq a => String a -> String a -> String a
-commonPrefix lhs rhs = fst3 (splitCommonPrefix lhs rhs)
+commonPrefix lhs rhs = unsafeSlice 0 (commonPrefixLength lhs rhs) lhs
 {-# INLINE commonPrefix #-}
 
 -- | /O(min(m,n))/ Returns the maximum common prefix of two strings and the remainder of each string.
