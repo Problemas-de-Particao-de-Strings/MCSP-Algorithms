@@ -1,9 +1,9 @@
 module MCSP.Tests.StringExtra (stringExtraTests) where
 
-import Data.Bool (not, otherwise)
+import Data.Bool (not, otherwise, (||))
 import Data.Char (Char)
 import Data.Foldable (all, foldl', length, null)
-import Data.Function (($))
+import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List (map, tails)
@@ -24,7 +24,16 @@ import GHC.Num ((+), (-))
 import GHC.Real (rem)
 
 import Test.Tasty (TestName, TestTree, testGroup)
-import Test.Tasty.QuickCheck (Testable, classify, testProperty, (.&&.), (=/=), (===), (==>))
+import Test.Tasty.QuickCheck (
+    ASCIIString (..),
+    Testable,
+    classify,
+    testProperty,
+    (.&&.),
+    (=/=),
+    (===),
+    (==>),
+ )
 
 import MCSP.Data.Pair (both, unzip, ($:))
 import MCSP.Data.String (String (..), drop, singleton, slice, take, (++))
@@ -57,7 +66,7 @@ stringExtraTests =
         ]
 
 testStr :: Testable prop => TestName -> (String Char -> prop) -> TestTree
-testStr name prop = testProperty name $ \str ->
+testStr name prop = testProperty name $ \(fromList . getASCIIString -> str) ->
     classify (not (null str)) "non-null" (prop str)
 
 charSetTests :: TestTree
@@ -155,8 +164,7 @@ infixOpTests =
         let lcs = fromMaybe "" (longestCommonSubstring x y)
          in classify (not (null lcs)) "has-common-substring" (prop x y lcs)
 
-    nullOrDistinct x y =
-        not (null x) ==> not (null y) ==> x =/= y
+    nullOrDistinct x y = not (null x) || not (null y) ==> x =/= y
     headS (Just (NonNull s)) = slice 0 1 s
     headS _ = ""
     lastS (Just (NonNull s)) = slice (length s - 1) 1 s
