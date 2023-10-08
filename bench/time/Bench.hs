@@ -1,16 +1,21 @@
 -- | Benchmark measuring running time of MCSP heuristics.
 module Main (main) where
 
-import Prelude
+import Prelude hiding (String)
 
 import Criterion.Main (bench, bgroup, defaultMainWith, perRunEnv)
 import Criterion.Types (Benchmark, Config (..), Verbosity (Verbose))
+import Data.String qualified as Text (String)
+import Data.Vector.Unboxed (Vector)
 import Data.Word (Word8)
 
+import MCSP.Data.MatchingGraph (Edge, edgeSet1, edgeSet2, edgeSet3, edgeSet4, edgeSet5)
+import MCSP.Data.Pair (Pair)
+import MCSP.Data.String (String)
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
-import MCSP.System.Statistics (cl95)
-import MCSP.TestLib.Heuristics (NamedHeuristic, heuristics)
+import MCSP.System.Statistics (cl99)
+import MCSP.TestLib.Heuristics.TH (mkNamedList)
 import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 
 -- | Generates a configuration for Criterion that saves the outputs by default.
@@ -21,12 +26,12 @@ import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
 -- "MCSP-Algorithms/bench/output/time-2023-09-06T00:20:21.292946511-03:00.html"
 getDefaultConfig :: IO Config
 getDefaultConfig = do
-    let outputDir = packageRoot </> "bench" </> "output"
+    let outputDir = packageRoot
     createDirectory outputDir
     timestamp <- getCurrentTimestamp
     pure
         Config
-            { confInterval = cl95,
+            { confInterval = cl99,
               timeLimit = 10,
               resamples = 1000,
               regressions = [],
@@ -45,16 +50,21 @@ defaultMain benchmarks = do
     config <- getDefaultConfig
     defaultMainWith config benchmarks
 
+type EdgeSet = Pair (String Word8) -> Vector Edge
+
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
-benchHeuristic :: StringParameters -> NamedHeuristic Word8 -> Benchmark
-benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair (pure . heuristic)
+benchHeuristic :: EdgeSet -> StringParameters -> Benchmark
+benchHeuristic edgeSet params = bench (repr params) $ perRunEnv genPair (pure . edgeSet)
   where
     genPair = generate (randomPairWith params)
 
+implementations :: [(Text.String, EdgeSet)]
+implementations = $(mkNamedList ['edgeSet1, 'edgeSet2, 'edgeSet3, 'edgeSet4, 'edgeSet5])
+
 -- | Creates a benchmark group running each heuristic against the given parameters.
-benchWithParams :: StringParameters -> Benchmark
-benchWithParams params = bgroup (repr params) $ map (benchHeuristic params) heuristics
+benchWithParams :: (Text.String, EdgeSet) -> Benchmark
+benchWithParams (name, impl) = bgroup name $ map (benchHeuristic impl) benchParams
 
 -- | Run a matrix of benchmarks for each parameter set and heuristic.
 main :: IO ()
-main = defaultMain (map benchWithParams benchParams)
+main = defaultMain (map benchWithParams implementations)
