@@ -13,33 +13,22 @@ module MCSP.Data.MatchingGraph (
     mergeness,
     blockCount,
     toPartitions,
-
-    -- * Testing
-    edgeSet1,
-    edgeSet2,
-    edgeSet3,
-    edgeSet4,
-    edgeSet5,
 ) where
 
-import Control.Applicative (liftA2, pure)
 import Data.Bool (Bool, not, (&&))
 import Data.Eq (Eq (..))
-import Data.Foldable (foldMap', foldr, length, null)
+import Data.Foldable (length, null)
 import Data.Function (($), (.))
-import Data.Functor (fmap)
 import Data.Int (Int)
 import Data.IntMap.Strict qualified as IntMap (IntMap, insert, size, toDescList)
 import Data.Interval (Interval, (<=..<))
 import Data.IntervalSet (IntervalSet, insert, intersection)
 import Data.IntervalSet qualified as IntervalSet (null, singleton)
 import Data.List (concatMap, map, takeWhile)
-import Data.List.NonEmpty (NonEmpty (..), unfoldr, (<|))
-import Data.Map qualified as Map (Map, alter, empty, intersectionWith)
-import Data.Maybe (Maybe (..), maybe)
+import Data.List.NonEmpty (NonEmpty (..), unfoldr)
+import Data.Maybe (Maybe (..))
 import Data.Monoid (Monoid (..), mappend, mempty)
 import Data.Ord (Ord (..))
-import Data.Tuple.Extra (fst3)
 import Data.Vector.Generic qualified as Vector (foldl', length, snoc)
 import Data.Vector.Unboxed (Vector)
 import GHC.IsList (IsList (..))
@@ -49,56 +38,17 @@ import Text.Show (Show)
 
 import MCSP.Data.Pair (Pair, both, cartesian, left, liftP, right, ($:), (&&&))
 import MCSP.Data.String (String (..), slice, unsafeSlice)
-import MCSP.Data.String.Extra (
-    Partition,
-    chars,
-    commonPrefix,
-    commonPrefixLength,
-    splitCommonPrefix,
- )
+import MCSP.Data.String.Extra (Partition, chars)
 
 -- --------------------- --
 -- Edge Set Construction --
 -- --------------------- --
-
--- | A mapping where each key has multiple values.
-type MultiMap k v = Map.Map k (NonEmpty v)
-
--- | /O(n log n)/ Construct a multi-map collecting repeated values in a `NonEmpty` list.
---
--- >>> multiMap [('a', 1), ('b', 2), ('a', 3)]
--- fromList [('a',1 :| [3]),('b',2 :| [])]
-multiMap :: Ord k => [(k, v)] -> MultiMap k v
-multiMap = foldr prependAt Map.empty
-  where
-    prependAt (key, val) = Map.alter (prepend val) key
-    prepend x xs = pure (maybe (x :| []) (x <|) xs)
 
 -- | Represents a position of a block or a character.
 type Index = Int
 
 -- | Represents the length of a block.
 type Length = Int
-
--- | The set of all possible blocks in a single string.
---
--- Keys are the subtrings associated with the block, and the values are @(start, length)@ of the
--- block in the original string.
-type BlockMap a = MultiMap (String a) (Index, Length)
-
--- | /O(n^2 log n)/ Constructs the `BlockMap` of a string.
---
--- Blocks of length 1 are ignored.
---
--- >>> blockMap "abab"
--- fromList [(ab,(0,2) :| [(2,2)]),(aba,(0,3) :| []),(abab,(0,4) :| []),(ba,(1,2) :| []),(bab,(1,3) :| [])]
-blockMap :: Ord a => String a -> BlockMap a
-blockMap str =
-    let n = length str
-        indices = [(s, k) | s <- [0 .. n - 1], k <- [2 .. n - s]]
-     in multiMap (fmap withSlice indices)
-  where
-    withSlice (s, k) = (unsafeSlice s k str, (s, k))
 
 -- | A single edge in the matching graph for a pair of strings.
 --
@@ -120,109 +70,26 @@ pattern Edge :: Pair Index -> Length -> Edge
 pattern Edge {start, blockLen} = (start, blockLen)
 {-# INLINE CONLIKE Edge #-}
 
--- | The set of all possible common blocks in a pair of strings.
+-- | /O(n)/ List edges starting from a poistion pair @(s,p)@.
 --
--- Keys are the subtrings associated with the block, and the values are the edges in the matching
--- graph.
-type CommonBlockMap a = MultiMap (String a) Edge
-
--- | /O(n^3)/ Constructs the `CommonBlockMap` of a string.
---
--- Blocks of length 1 are ignored.
---
--- >>> commonBlockMap ("abab", "abba")
--- fromList [(ab,((0,0),2) :| [((2,0),2)]),(ba,((1,2),2) :| [])]
-commonBlockMap :: Ord a => Pair (String a) -> CommonBlockMap a
-commonBlockMap (s1, s2) = Map.intersectionWith (liftA2 createEdge) (blockMap s1) (blockMap s2)
-  where
-    createEdge (s, k) (p, _k) = Edge {start = (s, p), blockLen = k}
-
--- | /O(n^3 log n)/ List all edges of the matching graph for a pait of strings.
---
--- >>> edgeSet ("abab", "abba")
--- [((0,0),2),((2,0),2),((1,2),2)]
-edgeSet :: Ord a => Pair (String a) -> Vector Edge
-edgeSet = foldMap' asList . commonBlockMap
-  where
-    asList es = fromListN (length es) (toList es)
-
-toVector :: [Edge] -> Vector Edge
-toVector = fromList
-{-# INLINEABLE toVector #-}
-
--- >>> edgeSet1 ("abab", "abba")
--- [((0,0),2),((2,0),2),((1,2),2)]
-edgeSet1 :: Ord a => Pair (String a) -> Vector Edge
-edgeSet1 = edgeSet
-{-# INLINEABLE edgeSet1 #-}
-
 -- >>> edgesFrom ("abab", "abba") (0,0)
 -- [((0,0),2)]
 edgesFrom :: Eq a => Pair (String a) -> Pair Index -> [Edge]
 edgesFrom strs start = takeWhile (isCommonBlock strs) $ map (start,) [2 ..]
   where
-    isCommonBlock (l, r) ((s, p), k) =
+    isCommonBlock (l, r) Edge {start = (s, p), blockLen = k} =
         s + k <= length l && p + k <= length r && unsafeSlice s k l == unsafeSlice p k r
 {-# INLINEABLE edgesFrom #-}
 
--- >>> edgeSet2 ("abab", "abba")
+-- | /O(n^3)/ List all edges of the matching graph for a pair of strings.
+--
+-- >>> edgeSet ("abab", "abba")
 -- [((0,0),2),((1,2),2),((2,0),2)]
-edgeSet2 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet2 (l, r) = toVector $ concatMap (edgesFrom (l, r)) start
+edgeSet :: Eq a => Pair (String a) -> Vector Edge
+edgeSet (l, r) = toVector $ concatMap (edgesFrom (l, r)) start
   where
     start = cartesian [0 .. length l - 1] [0 .. length r - 1]
-{-# INLINEABLE edgeSet2 #-}
-
--- >>> edgesFromP1 ("abab", "abba") (0,0)
--- [((0,0),2)]
-edgesFromP1 :: Eq a => Pair (String a) -> Pair Index -> [Edge]
-edgesFromP1 (l, r) (s, p) = [((s, p), k) | k <- [2 .. prefixLen (suffix s l) (suffix p r)]]
-  where
-    suffix i str = unsafeSlice i (length str - i) str
-    prefixLen s1 s2 = length (commonPrefix s1 s2)
-{-# INLINEABLE edgesFromP1 #-}
-
--- >>> edgesFromP2 ("abab", "abba") (0,0)
--- [((0,0),2)]
-edgesFromP2 :: Eq a => Pair (String a) -> Pair Index -> [Edge]
-edgesFromP2 (l, r) (s, p) = [((s, p), k) | k <- [2 .. prefixLen (suffix s l) (suffix p r)]]
-  where
-    suffix i str = unsafeSlice i (length str - i) str
-    prefixLen s1 s2 = length (fst3 $ splitCommonPrefix s1 s2)
-{-# INLINEABLE edgesFromP2 #-}
-
--- >>> edgesFromP3 ("abab", "abba") (0,0)
--- [((0,0),2)]
-edgesFromP3 :: Eq a => Pair (String a) -> Pair Index -> [Edge]
-edgesFromP3 (l, r) (s, p) = [((s, p), k) | k <- [2 .. prefixLen (suffix s l) (suffix p r)]]
-  where
-    suffix i str = unsafeSlice i (length str - i) str
-    prefixLen = commonPrefixLength
-{-# INLINEABLE edgesFromP3 #-}
-
--- >>> edgeSet3 ("abab", "abba")
--- [((0,0),2),((1,2),2),((2,0),2)]
-edgeSet3 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet3 (l, r) = toVector $ concatMap (edgesFromP1 (l, r)) start
-  where
-    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
-{-# INLINEABLE edgeSet3 #-}
-
--- >>> edgeSet4 ("abab", "abba")
--- [((0,0),2),((1,2),2),((2,0),2)]
-edgeSet4 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet4 (l, r) = toVector $ concatMap (edgesFromP2 (l, r)) start
-  where
-    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
-{-# INLINEABLE edgeSet4 #-}
-
--- >>> edgeSet5 ("abab", "abba")
--- [((0,0),2),((1,2),2),((2,0),2)]
-edgeSet5 :: Eq a => Pair (String a) -> Vector Edge
-edgeSet5 (l, r) = toVector $ concatMap (edgesFromP3 (l, r)) start
-  where
-    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
-{-# INLINEABLE edgeSet5 #-}
+    toVector = fromList
 
 -- ------------------ --
 -- Building Solutions --
@@ -245,7 +112,7 @@ blockInterval lo len = extend lo <=..< extend (lo + len)
 -- >>> toBlocks Edge {start=(0, 2), blockLen=5}
 -- (Finite 0 <=..< Finite 5,Finite 2 <=..< Finite 7)
 toBlocks :: Edge -> Pair Block
-toBlocks Edge {start = (l, r), blockLen = k} = (blockInterval l k, blockInterval r k)
+toBlocks Edge {start = (s, p), blockLen = k} = (blockInterval s k, blockInterval p k)
 
 -- | The set of all matched regions of string.
 --

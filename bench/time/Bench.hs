@@ -9,7 +9,7 @@ import Data.String qualified as Text (String)
 import Data.Vector.Unboxed (Vector)
 import Data.Word (Word8)
 
-import MCSP.Data.MatchingGraph (Edge, edgeSet1, edgeSet2, edgeSet3, edgeSet4, edgeSet5)
+import MCSP.Data.MatchingGraph (Edge, edgeSet)
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
@@ -54,12 +54,12 @@ type EdgeSet = Pair (String Word8) -> Vector Edge
 
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
 benchHeuristic :: EdgeSet -> StringParameters -> Benchmark
-benchHeuristic edgeSet params = bench (repr params) $ perRunEnv genPair (pure . edgeSet)
+benchHeuristic getEdges params = bench (repr params) $ perRunEnv genPair (pure . getEdges)
   where
     genPair = generate (randomPairWith params)
 
 implementations :: [(Text.String, EdgeSet)]
-implementations = $(mkNamedList ['edgeSet1, 'edgeSet2, 'edgeSet3, 'edgeSet4, 'edgeSet5])
+implementations = $(mkNamedList ['edgeSet])
 
 -- | Creates a benchmark group running each heuristic against the given parameters.
 benchWithParams :: (Text.String, EdgeSet) -> Benchmark
