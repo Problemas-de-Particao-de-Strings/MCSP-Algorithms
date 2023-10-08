@@ -11,6 +11,7 @@ import Test.Tasty.Options (IsOption (..))
 import Test.Tasty.QuickCheck (QuickCheckTests (..))
 
 import MCSP.Tests.DocTest (testDocs)
+import MCSP.Tests.MatchingGraph (matchingGraphTests)
 import MCSP.Tests.RadixTree (radixTreeTests)
 import MCSP.Tests.StringExtra (stringExtraTests)
 
@@ -22,6 +23,7 @@ main =
                 "Tests"
                 [ radixTreeTests,
                   stringExtraTests,
+                  matchingGraphTests,
                   testDocs "src"
                 ]
 
