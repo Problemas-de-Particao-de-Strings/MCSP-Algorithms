@@ -13,10 +13,18 @@ module MCSP.Data.MatchingGraph (
     mergeness,
     blockCount,
     toPartitions,
+
+    -- * Testing
+    edgeSet1,
+    edgeSet2,
+    edgeSet3,
+    edgeSet4,
+    edgeSet5,
 ) where
 
 import Control.Applicative (liftA2, pure)
 import Data.Bool (Bool, not, (&&))
+import Data.Eq (Eq (..))
 import Data.Foldable (foldMap', foldr, length, null)
 import Data.Function (($), (.))
 import Data.Functor (fmap)
@@ -25,6 +33,7 @@ import Data.IntMap.Strict qualified as IntMap (IntMap, insert, size, toDescList)
 import Data.Interval (Interval, (<=..<))
 import Data.IntervalSet (IntervalSet, insert, intersection)
 import Data.IntervalSet qualified as IntervalSet (null, singleton)
+import Data.List (concatMap, map, takeWhile)
 import Data.List.NonEmpty (NonEmpty (..), unfoldr, (<|))
 import Data.Map qualified as Map (Map, alter, empty, intersectionWith)
 import Data.Maybe (Maybe (..), maybe)
@@ -37,7 +46,7 @@ import GHC.Num (fromInteger, (+), (-))
 import GHC.Real (toInteger)
 import Text.Show (Show)
 
-import MCSP.Data.Pair (Pair, both, left, liftP, right, ($:), (&&&))
+import MCSP.Data.Pair (Pair, both, cartesian, left, liftP, right, ($:), (&&&))
 import MCSP.Data.String (String (..), slice, unsafeSlice)
 import MCSP.Data.String.Extra (Partition, chars)
 
@@ -129,6 +138,61 @@ edgeSet :: Ord a => Pair (String a) -> Vector Edge
 edgeSet = foldMap' asList . commonBlockMap
   where
     asList es = fromListN (length es) (toList es)
+
+toVector :: [Edge] -> Vector Edge
+toVector = fromList
+{-# INLINEABLE toVector #-}
+
+toVectorN :: [Edge] -> Vector Edge
+toVectorN edges = fromListN (length edges) edges
+{-# INLINEABLE toVectorN #-}
+
+-- >>> edgeSet1 ("abab", "abba")
+-- [((0,0),2),((2,0),2),((1,2),2)]
+edgeSet1 :: Ord a => Pair (String a) -> Vector Edge
+edgeSet1 = edgeSet
+{-# INLINEABLE edgeSet1 #-}
+
+-- >>> edgesFrom ("abab", "abba") (0,0)
+-- [((0,0),2)]
+edgesFrom :: Eq a => Pair (String a) -> Pair Index -> [Edge]
+edgesFrom strs start = takeWhile (isCommonBlock strs) $ map (start,) [2 ..]
+  where
+    isCommonBlock (l, r) ((s, p), k) =
+        s + k <= length l && p + k <= length r && unsafeSlice s k l == unsafeSlice p k r
+{-# INLINEABLE edgesFrom #-}
+
+-- >>> edgeSet2 ("abab", "abba")
+-- [((0,0),2),((1,2),2),((2,0),2)]
+edgeSet2 :: Eq a => Pair (String a) -> Vector Edge
+edgeSet2 (l, r) = toVector $ concatMap (edgesFrom (l, r)) start
+  where
+    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
+{-# INLINEABLE edgeSet2 #-}
+
+-- >>> edgeSet3 ("abab", "abba")
+-- [((0,0),2),((1,2),2),((2,0),2)]
+edgeSet3 :: Eq a => Pair (String a) -> Vector Edge
+edgeSet3 (l, r) = toVectorN $ concatMap (edgesFrom (l, r)) start
+  where
+    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
+{-# INLINEABLE edgeSet3 #-}
+
+-- >>> edgeSet4 ("abab", "abba")
+-- [((0,0),2),((1,2),2),((2,0),2)]
+edgeSet4 :: Eq a => Pair (String a) -> Vector Edge
+edgeSet4 (l, r) = foldMap' (toVector . edgesFrom (l, r)) start
+  where
+    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
+{-# INLINEABLE edgeSet4 #-}
+
+-- >>> edgeSet5 ("abab", "abba")
+-- [((0,0),2),((1,2),2),((2,0),2)]
+edgeSet5 :: Eq a => Pair (String a) -> Vector Edge
+edgeSet5 (l, r) = foldMap' (toVectorN . edgesFrom (l, r)) start
+  where
+    start = cartesian [0 .. length l - 1] [0 .. length r - 1]
+{-# INLINEABLE edgeSet5 #-}
 
 -- ------------------ --
 -- Building Solutions --
@@ -259,9 +323,9 @@ type Solution = Pair (Vector (Index, Length))
 
 -- | Extract the solution from the `MatchingInfo`.
 toSolution :: MatchingInfo -> Solution
-toSolution Info {..} = toVector `both` partition
+toSolution Info {..} = toSolutionVector `both` partition
   where
-    toVector part = fromListN (IntMap.size part) (IntMap.toDescList part)
+    toSolutionVector part = fromListN (IntMap.size part) (IntMap.toDescList part)
 
 -- | The solution represented by the edge list.
 --
