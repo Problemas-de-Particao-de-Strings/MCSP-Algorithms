@@ -19,6 +19,7 @@ import Text.Show (show)
 
 import Test.DocTest.Internal.Parse (extractDocTests)
 import Test.DocTest.Internal.Run (Config (..), Summary (..), runDocTests)
+import Test.Tasty (DependencyType (..), TestName, after_)
 import Test.Tasty.Options (
     IsOption (..),
     OptionDescription (..),
@@ -27,17 +28,25 @@ import Test.Tasty.Options (
     lookupOption,
     safeReadBool,
  )
+import Test.Tasty.Patterns.Types (Expr (..))
 import Test.Tasty.Providers (IsTest (..), TestTree, singleTest, testFailed, testPassed)
 
 import MCSP.System.Path (expandFiles)
 import MCSP.System.Repl (getStackFlags, stackRepl)
 
 testDocs :: FilePath -> TestTree
-testDocs path = singleTest path $ DocTest $ do
+testDocs path = afterOthers path $ DocTest $ do
     files <- expandFiles path
     pure (filter isHaskellFile files)
   where
     isHaskellFile file = takeExtension file == ".hs"
+
+afterOthers :: IsTest t => TestName -> t -> TestTree
+afterOthers name test =
+    after_
+        AllFinish
+        (Field (IntLit 2) `NE` StringLit name)
+        (singleTest name test)
 
 newtype DocTest = DocTest (IO [FilePath])
     deriving newtype (Typeable)
