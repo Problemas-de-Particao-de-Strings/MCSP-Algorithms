@@ -18,7 +18,7 @@ module MCSP.Data.MatchingGraph (
 import Data.Bool (Bool, not, (&&))
 import Data.Eq (Eq (..))
 import Data.Foldable (length, null)
-import Data.Function (($), (.))
+import Data.Function (const, ($), (.))
 import Data.Int (Int)
 import Data.IntMap.Strict qualified as IntMap (IntMap, insert, size, toDescList)
 import Data.Interval (Interval, (<=..<))
@@ -178,10 +178,10 @@ empty = Info {partition = mempty, matchedSet = mempty, unused = []}
 
 -- | Constructs a partial solution from a list of edges, collecting the `unused` edges.
 --
--- >>> resolve [Edge {start=(0,2), blockLen=5}]
+-- >>> resolveWith Vector.snoc [Edge {start=(0,2), blockLen=5}]
 -- Info {partition = (fromList [(0,5)],fromList [(2,5)]), matchedSet = (fromList [Finite 0 <=..< Finite 5],fromList [Finite 2 <=..< Finite 7]), unused = []}
-resolve :: Vector Edge -> MatchingInfo
-resolve = Vector.foldl' addEdge empty
+resolveWith :: (Vector Edge -> Edge -> Vector Edge) -> Vector Edge -> MatchingInfo
+resolveWith add = Vector.foldl' addEdge empty
   where
     addEdge Info {..} edge = case nonOverlappingBlock edge matchedSet of
         -- non overlapping edge, add to solution
@@ -196,7 +196,7 @@ resolve = Vector.foldl' addEdge empty
             Info
                 { partition,
                   matchedSet,
-                  unused = Vector.snoc unused edge
+                  unused = add unused edge
                 }
 
 -- | Construct another solution with the `unused` edges of the previous solution.
@@ -211,7 +211,7 @@ nextSolution :: MatchingInfo -> Maybe MatchingInfo
 nextSolution Info {..} =
     if null (left partition) && null (right partition)
         then Nothing
-        else Just (resolve unused)
+        else Just (resolveWith Vector.snoc unused)
 
 -- | A complete solution to the strings partitioning.
 --
@@ -234,7 +234,7 @@ toSolution Info {..} = toSolutionVector `both` partition
 -- >>> solution $ edgeSet ("abab", "abab")
 -- ([(2,2),(0,2)],[(2,2),(0,2)])
 solution :: Vector Edge -> Solution
-solution = toSolution . resolve
+solution = toSolution . resolveWith const
 
 -- | List of all solutions represented with an ordering of the edge set.
 --
@@ -246,7 +246,7 @@ solution = toSolution . resolve
 -- >>> solutions $ edgeSet ("abab", "abab")
 -- ([(2,2),(0,2)],[(2,2),(0,2)]) :| [([(2,2),(0,2)],[(2,2),(0,2)]),([(0,3)],[(0,3)]),([(0,4)],[(0,4)]),([(1,2)],[(1,2)]),([(1,3)],[(1,3)]),([],[])]
 solutions :: Vector Edge -> NonEmpty Solution
-solutions edges = unfoldr (toSolution &&& nextSolution) (resolve edges)
+solutions edges = unfoldr (toSolution &&& nextSolution) (resolveWith Vector.snoc edges)
 
 -- -------------------- --
 -- Restoring Partitions --

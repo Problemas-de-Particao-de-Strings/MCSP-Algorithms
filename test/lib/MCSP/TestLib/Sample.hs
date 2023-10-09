@@ -62,6 +62,7 @@ randomPairWith (StringParameters {..}) = do
             size
             (fromMinBound 0)
             (fromMinBound (nReplicated - 1))
+            -- TODO: fix nSingletons
             (fromMinBound (nReplicated - 1 + nSingletons))
     case shuffle of
         Chars -> pairShufflingChars str
