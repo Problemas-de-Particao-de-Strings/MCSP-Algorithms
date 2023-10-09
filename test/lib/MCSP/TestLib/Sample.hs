@@ -21,7 +21,7 @@ import MCSP.TestLib.Random (
 
 -- | Method of shuffling a string.
 data ShuffleMethod = Chars | Blocks
-    deriving stock (Show, Eq)
+    deriving stock (Show, Eq, Ord)
 
 -- | Parameters to generate a string of integers.
 --
@@ -32,7 +32,7 @@ data StringParameters = StringParameters
       nSingletons :: Int,
       shuffle :: ShuffleMethod
     }
-    deriving stock (Show, Eq)
+    deriving stock (Show, Eq, Ord)
 
 -- | Short and formatted representation of @StringParameters@.
 --
@@ -72,10 +72,10 @@ randomPairWith (StringParameters {..}) = do
 -- | Parameters to generate strings for benchmarking.
 benchParams :: [StringParameters]
 benchParams =
-    [ StringParameters {size = 100, nReplicated = 2, nSingletons = 5, shuffle = Blocks},
-      StringParameters {size = 100, nReplicated = 2, nSingletons = 60, shuffle = Blocks},
-      StringParameters {size = 100, nReplicated = 5, nSingletons = 5, shuffle = Blocks},
-      StringParameters {size = 100, nReplicated = 10, nSingletons = 5, shuffle = Blocks},
+    [ StringParameters {size = 20, nReplicated = 2, nSingletons = 5, shuffle = Blocks},
+      StringParameters {size = 20, nReplicated = 2, nSingletons = 10, shuffle = Blocks},
+      StringParameters {size = 20, nReplicated = 5, nSingletons = 5, shuffle = Blocks},
+      StringParameters {size = 20, nReplicated = 10, nSingletons = 5, shuffle = Blocks},
       StringParameters {size = 50, nReplicated = 2, nSingletons = 5, shuffle = Blocks},
       StringParameters {size = 50, nReplicated = 2, nSingletons = 30, shuffle = Blocks},
       StringParameters {size = 50, nReplicated = 5, nSingletons = 5, shuffle = Blocks},
