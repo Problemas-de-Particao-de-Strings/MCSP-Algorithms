@@ -54,7 +54,6 @@ dependencies:
   - deepseq >= 1.4.8.1 && < 2
   - extra >= 1.7.14 && < 2
   - QuickCheck >= 2.14.3 && < 3
-  - store >= 0.7.18 && < 1
   - template-haskell > 2.20 && < 3
   - vector >= 0.13.1 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
