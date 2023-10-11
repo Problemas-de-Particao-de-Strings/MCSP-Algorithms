@@ -169,14 +169,13 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Monoid (Monoid (..))
 import Data.Ord (Ord (..), Ordering)
-import Data.Semigroup (Semigroup (..), Sum (..))
-import Data.Store (Size (..), Store (..))
+import Data.Semigroup (Semigroup (..))
 import Data.String (IsString (..))
 import Data.Type.Equality (type (~))
 import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
-import GHC.Num (Num, (+), (-))
+import GHC.Num (Num, (-))
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
 import Test.QuickCheck.Function (Function (..), functionMap)
 import Text.Read (Read (readListPrec, readPrec), readListPrecDefault)
@@ -460,30 +459,6 @@ instance (ReadString a, Unbox a) => Read (String a) where
     {-# INLINE readPrec #-}
     readListPrec = readListPrecDefault
     {-# INLINE readListPrec #-}
-
--- --------------------------------- --
--- Binary Input and Output instances --
--- --------------------------------- --
-
-instance (Store a, Unbox a) => Store (String a) where
-    {-# SPECIALIZE instance Store (String Char) #-}
-    {-# SPECIALIZE instance Store (String Int) #-}
-    {-# SPECIALIZE instance Store (String Word8) #-}
-    size = VarSize calcSize
-      where
-        calcSize s = sizeOf size (length s) + sizeSum s
-        sizeOf (ConstSize n) _ = n
-        sizeOf (VarSize f) x = f x
-        sizeSum s@Unboxed = getSum (Generic.foldMap (Sum . sizeOf size) s)
-    {-# INLINE size #-}
-    poke s = do
-        poke (Generic.length s)
-        Generic.forM_ s poke
-    {-# INLINEABLE poke #-}
-    peek = do
-        n <- peek
-        Generic.replicateM n peek
-    {-# INLINEABLE peek #-}
 
 -- -------------------- --
 -- Evaluation (DeepSeq) --
@@ -998,6 +973,7 @@ update s@Unboxed idx = Generic.update_ s (fromList idx)
 
 -- | /O(m+n)/ For each pair @(i,b)@ from the list, replace the character at position @i@ by @f a b@.
 --
+-- >>> import GHC.Num ((+))
 -- >>> accum (+) [1000,2000,3000] [(2,4),(1,6),(0,3),(1,10)] :: String Int
 -- 1003 2016 3004
 accum :: (a -> b -> a) -> String a -> [(Int, b)] -> String a
@@ -1007,6 +983,7 @@ accum f s@Unboxed = Generic.accum f s
 -- | /O(m+min(n1,n2))/ For each index @i@ from the index list and the corresponding value @b@ from the string,
 -- replace the character of the initial string at position @i@ by @f a b@.
 --
+-- >>> import GHC.Num ((+))
 -- >>> accumulate (+) [5,9,2] [2,1,0,1] [4,6,3,7] :: String Int
 -- 8 22 6
 accumulate :: (a -> b -> a) -> String a -> [Int] -> String b -> String a
@@ -1083,6 +1060,7 @@ map_ f s@Unboxed = Generic.map f s
 -- | /O(n)/ Apply a function to every character of a string and its index.
 --
 -- >>> import Data.Char (ord)
+-- >>> import GHC.Num ((+))
 -- >>> imap (\i c -> i + ord c) "genome"
 -- 103 102 112 114 113 106
 imap :: Unbox b => (Int -> a -> b) -> String a -> String b
@@ -1092,6 +1070,7 @@ imap f s@Unboxed = Generic.imap f s
 -- | /O(n)/ Apply an endofunction to every character of a string and its index.
 --
 -- >>> import Data.Char (chr, ord)
+-- >>> import GHC.Num ((+))
 -- >>> imap_ (\i c -> chr (i + ord c)) "genome"
 -- gfprqj
 imap_ :: (Int -> a -> a) -> String a -> String a
