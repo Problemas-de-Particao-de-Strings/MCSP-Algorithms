@@ -54,9 +54,9 @@ dependencies:
   - deepseq >= 1.4.8.1 && < 2
   - extra >= 1.7.14 && < 2
   - QuickCheck >= 2.14.3 && < 3
-  - store >= 0.7.16 && < 1
+  - store >= 0.7.18 && < 1
   - template-haskell > 2.20 && < 3
-  - vector >= 0.13 && < 1
+  - vector >= 0.13.1 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
 
 executables:
@@ -90,7 +90,6 @@ internal-libraries:
       - mcsp-algorithms
       - directory >= 1.3.8.1 && < 2
       - filepath >= 1.4.100.4 && < 2
-      - MonadRandom >= 0.6 && < 1
       - process >= 1.6.17 && < 2
       - pcg-random >= 0.1.4 && < 1
       - random-shuffle >= 0.0.4 && < 1
@@ -104,7 +103,7 @@ tests:
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
-      - doctest >= 0.22.1 && < 1
+      - doctest >= 0.22.2 && < 1
       - extended-reals >= 0.2.4.0 && < 1
       - tasty >= 1.5 && < 2
       - tasty-quickcheck >= 0.10.3 && < 1

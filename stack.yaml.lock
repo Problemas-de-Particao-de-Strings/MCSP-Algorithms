@@ -5,12 +5,12 @@
 
 packages:
   - completed:
-      hackage: doctest-0.22.1@sha256:8bbe68bfa6c95f69102362288bbf7988d956258547c3e18ad8cfd689f8556b1d,7378
+      hackage: doctest-0.22.2@sha256:3fd1dd59e95cce01d85c96f45e01f5ae10feab583a20b73d2de4680f284a250b,7558
       pantry-tree:
-        sha256: 9372d16280e79b5059e017d1553e80d6e1f3c52c12ed106c21bf5e5f25fcea1a
+        sha256: 97801503c3629531f112ff3072e3146b3e4b7a7d005f6c2dbe76fb03feaff344
         size: 8382
     original:
-      hackage: doctest-0.22.1
+      hackage: doctest-0.22.2
   - completed:
       hackage: tasty-1.5@sha256:2dc91101339814be9913846ca8c424d1c3eccfefb27c6335f3fea2af40a3d2e4,2870
       pantry-tree:
@@ -27,7 +27,7 @@ packages:
       hackage: tasty-quickcheck-0.10.3
 snapshots:
   - completed:
-      sha256: 5263c5cd05907ff6625e22009db2774a9d7d88fc713d8e41619b284a132f5923
-      size: 675308
-      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/10/1.yaml
-    original: nightly-2023-10-01
+      sha256: 917b397e40f0d5bc99e350f5bc5921456f091cf35b61a869838e14dfbc46e6e1
+      size: 684486
+      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/10/9.yaml
+    original: nightly-2023-10-09
