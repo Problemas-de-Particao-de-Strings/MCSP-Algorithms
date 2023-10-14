@@ -12,6 +12,11 @@ import System.IO (IO)
 
 import System.Random.PCG qualified (Gen)
 import System.Random.PCG.Class qualified as PCG (uniform1, uniform1B, uniform2)
+import System.Random.PCG.Fast qualified (Gen)
+import System.Random.PCG.Fast.Pure qualified (Gen)
+import System.Random.PCG.Pure qualified (Gen)
+import System.Random.PCG.Single qualified (Gen)
+import System.Random.PCG.Unique qualified (Gen)
 
 -- | A random number generator.
 --
@@ -42,6 +47,88 @@ instance Generator (GenPCG RealWorld) IO where
     {-# INLINE uniform1B #-}
 
 instance Generator (GenPCG s) (ST s) where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+type GenPCGFast s = System.Random.PCG.Fast.Gen s
+
+instance Generator (GenPCGFast RealWorld) IO where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+instance Generator (GenPCGFast s) (ST s) where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+type GenPCGPure s = System.Random.PCG.Pure.Gen s
+
+instance Generator (GenPCGPure RealWorld) IO where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+instance Generator (GenPCGPure s) (ST s) where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+type GenPCGFastPure s = System.Random.PCG.Fast.Pure.Gen s
+
+instance Generator (GenPCGFastPure RealWorld) IO where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+instance Generator (GenPCGFastPure s) (ST s) where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+type GenPCGSingle s = System.Random.PCG.Single.Gen s
+
+instance Generator (GenPCGSingle RealWorld) IO where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+instance Generator (GenPCGSingle s) (ST s) where
+    uniform1 = PCG.uniform1 id
+    {-# INLINE uniform1 #-}
+    uniform2 = PCG.uniform2 (,)
+    {-# INLINE uniform2 #-}
+    uniform1B = PCG.uniform1B id
+    {-# INLINE uniform1B #-}
+
+type GenPCGUnique = System.Random.PCG.Unique.Gen
+
+instance Generator GenPCGUnique IO where
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
