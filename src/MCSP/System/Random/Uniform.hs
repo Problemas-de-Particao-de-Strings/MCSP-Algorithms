@@ -21,8 +21,8 @@ import GHC.Num ((*), (+), (-))
 import GHC.Real (Integral, div, fromIntegral)
 import Language.Haskell.TH (conT)
 import Text.Printf (printf)
+import Text.Show (Show)
 
-import MCSP.Data.Pair (both)
 import MCSP.System.Random.Generator (Generator (..))
 
 -- | The class of types for which we can generate uniformly distributed random values.
@@ -81,19 +81,19 @@ fromBoundedW32 subTy (x, y) gen = toRange <$> uniform1B boundW32 gen
 uniformRange :: (Integral a, Integral b, Bounded b, Monad m) => b -> (a, a) -> m b -> m a
 uniformRange unsigned (x1, x2) genUniform
     | n == 0 = fromIntegral <$> genUniform -- Abuse overflow in unsigned types
-    | otherwise = fromIntegral <$> loop
+    | otherwise = loop
   where
     -- Allow ranges where x2<x1
     (i, j)
-        | x1 < x2 = fromIntegral `both` (x1, x2)
-        | otherwise = fromIntegral `both` (x2, x1)
-    n = 1 + j - i
+        | x1 < x2 = (x1, x2)
+        | otherwise = (x2, x1)
+    n = 1 + fromIntegral (j - i)
     buckets = asTypeOf maxBound unsigned `div` n
     maxN = buckets * n
     loop = do
         x <- genUniform
         if x < maxN
-            then pure $! i + x `div` buckets
+            then pure $! i + fromIntegral (x `div` buckets)
             else loop
 {-# INLINE uniformRange #-}
 
@@ -250,4 +250,16 @@ instance (Uniform a, Uniform b, Uniform c) => Uniform (a, b, c) where
         y <- uniformR (y1, y2) gen
         z <- uniformR (z1, z2) gen
         pure (x, y, z)
+    {-# INLINE uniformR #-}
+
+-- --------- --
+-- Modifiers --
+
+newtype ViaW32 a = Value a
+    deriving newtype (Show, Eq, Ord)
+
+instance (Integral a, Uniform a) => Uniform (ViaW32 a) where
+    uniform gen = Value <$> uniform gen
+    {-# INLINE uniform #-}
+    uniformR (Value x1, Value x2) gen = Value <$> uniformRange (0 :: Word32) (x1, x2) (uniform1 gen)
     {-# INLINE uniformR #-}
