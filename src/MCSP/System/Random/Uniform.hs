@@ -6,13 +6,14 @@ module MCSP.System.Random.Uniform (
 import Control.Applicative (pure)
 import Control.Monad (Monad)
 import Control.Monad.Extra (concatForM)
-import Data.Bits (FiniteBits, finiteBitSize, isSigned, shift, (.&.), (.|.))
+import Data.Bits (FiniteBits, finiteBitSize, isSigned, shift, (.&.))
 import Data.Bool (Bool (..), not, otherwise, (&&))
 import Data.Eq (Eq (..))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int, Int16, Int32, Int64, Int8)
 import Data.Ord (Ord (..))
+import Data.Tuple.Extra (both)
 import Data.Word (Word, Word16, Word32, Word64, Word8)
 import GHC.Base (asTypeOf, errorWithoutStackTrace, ($!))
 import GHC.Enum (Bounded (..))
@@ -46,9 +47,14 @@ class Uniform a where
 -- Integer instances --
 -- ----------------- --
 
-wordsTo64Bit :: (Word32, Word32) -> Word64
-wordsTo64Bit (x, y) = fromIntegral x `shift` 32 .|. fromIntegral y
-{-# INLINE wordsTo64Bit #-}
+-- | Break a 64 bit integer into two 32 bit integers.
+splitW64 :: Word64 -> (Word32, Word32)
+splitW64 val = toW32 `both` (val `shift` bitsW32, val)
+  where
+    maxW32 = fromIntegral (maxBound :: Word32)
+    bitsW32 = finiteBitSize (maxBound :: Word32)
+    toW32 x = fromIntegral (x .&. maxW32)
+{-# INLINE splitW64 #-}
 
 -- | Generate a uniform integer by casting from a uniform `Word32`.
 --
@@ -63,7 +69,7 @@ fromUniformW32 gen = fromIntegral <$> uniform1 gen
 -- Note that the cast does silent truncation, so this is only really uniformly distributed for
 -- integers @a@ that are powers of 2 and are smaller than 64-bits.
 fromUniformW64 :: (Integral a, Generator g m) => g -> m a
-fromUniformW64 gen = fromIntegral . wordsTo64Bit <$> uniform2 gen
+fromUniformW64 gen = fromIntegral <$> uniform2 gen
 {-# INLINE fromUniformW64 #-}
 
 -- | Generate a uniform integer by casting from a bounded uniform `Word32`.
@@ -98,7 +104,7 @@ uniformRange unsigned (x1, x2) genUniform
 {-# INLINE uniformRange #-}
 
 fromBoundedW64 :: (Integral a, Generator g m) => (a, a) -> g -> m a
-fromBoundedW64 bounds gen = uniformRange (0 :: Word64) bounds (wordsTo64Bit <$> uniform2 gen)
+fromBoundedW64 bounds gen = uniformRange (0 :: Word64) bounds (uniform2 gen)
 {-# INLINE fromBoundedW64 #-}
 
 -- | Run either `fromUniformW32` or `fromUniformW64` dependending on the width of the integer @a@.
@@ -192,7 +198,7 @@ wordsToDouble (x, y) =
 
 -- | Generates values in range @(0,1]@.
 instance Uniform Double where
-    uniform gen = wordsToDouble <$> uniform2 gen
+    uniform gen = wordsToDouble . splitW64 <$> uniform2 gen
     {-# INLINE uniform #-}
     uniformR (x1, x2) gen = do
         value <- uniform gen

@@ -7,17 +7,15 @@ module MCSP.System.Random.Generator (
 import Control.Applicative (pure)
 import Control.Monad (Monad (..), fail)
 import Control.Monad.Primitive (PrimMonad, PrimState)
-import Data.Bits (FiniteBits, finiteBitSize, shift, (.&.))
+import Data.Bits (FiniteBits, finiteBitSize, shift, (.|.))
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
 import Data.Function (id)
-import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
 import Data.Store (decodeIO)
 import Data.Tuple (uncurry)
-import Data.Tuple.Extra (both)
 import Data.Type.Equality (type (~))
 import Data.Vector.Unboxed (Vector)
 import Data.Word (Word32, Word64, Word8)
@@ -52,8 +50,8 @@ class Monad m => Generator g m where
     -- | Generates a single uniformly distributed 32-bit value.
     uniform1 :: g -> m Word32
 
-    -- | Generates a pair of uniformly distributed 32-bit values.
-    uniform2 :: g -> m (Word32, Word32)
+    -- | Generates a single uniformly distributed 64-bit value.
+    uniform2 :: g -> m Word64
 
     -- | Generates a single 32-bit value up to a given limit with a uniform distribution.
     uniform1B :: Word32 -> g -> m Word32
@@ -64,14 +62,9 @@ class Monad m => Generator g m where
 -- The WMC generator is supposed to be really fast. See <https://hackage.haskell.org/package/mwc-random>.
 type GenMWC s = System.Random.MWC.Gen s
 
--- | Break a 64 bit integer into two 32 bit integers.
-splitW64 :: Word64 -> (Word32, Word32)
-splitW64 val = toW32 `both` (val `shift` bitsW32, val)
-  where
-    maxW32 = fromIntegral (maxBound :: Word32)
-    bitsW32 = finiteBitSize (maxBound :: Word32)
-    toW32 x = fromIntegral (x .&. maxW32)
-{-# INLINE splitW64 #-}
+wordsTo64Bit :: Word32 -> Word32 -> Word64
+wordsTo64Bit x y = fromIntegral x `shift` 32 .|. fromIntegral y
+{-# INLINE wordsTo64Bit #-}
 
 instance (PrimMonad m, s ~ PrimState m) => Generator (GenMWC s) m where
     type Seed (GenMWC s) = Vector Word32
@@ -79,7 +72,7 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenMWC s) m where
     {-# INLINE initialize #-}
     uniform1 = System.Random.MWC.uniformM
     {-# INLINE uniform1 #-}
-    uniform2 gen = splitW64 <$> System.Random.MWC.uniformM gen
+    uniform2 = System.Random.MWC.uniformM
     {-# INLINE uniform2 #-}
     uniform1B bound = System.Random.MWC.uniformRM (0, bound)
     {-# INLINE uniform1B #-}
@@ -96,7 +89,7 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCG s) m where
     {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
+    uniform2 = PCG.uniform2 wordsTo64Bit
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
@@ -113,7 +106,7 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFast s) m where
     {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
+    uniform2 = PCG.uniform2 wordsTo64Bit
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
@@ -131,7 +124,7 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGPure s) m where
     {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
+    uniform2 = PCG.uniform2 wordsTo64Bit
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
@@ -148,7 +141,7 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFastPure s) m where
     {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
+    uniform2 = PCG.uniform2 wordsTo64Bit
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
@@ -166,7 +159,7 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGSingle s) m where
     {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
+    uniform2 = PCG.uniform2 wordsTo64Bit
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
@@ -185,7 +178,7 @@ instance Generator GenPCGUnique IO where
     {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
+    uniform2 = PCG.uniform2 wordsTo64Bit
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
