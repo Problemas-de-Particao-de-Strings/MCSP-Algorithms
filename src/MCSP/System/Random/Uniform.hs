@@ -33,13 +33,13 @@ class Uniform a where
     -- * For floating point numbers, the range @(0,1]@ is used. Zero is explicitly excluded,
     --   to allow variates to be used in statistical calculations that require non-zero values
     --   (e.g. uses of the `Numeric.log` function).
-    uniform :: Generator g m => g -> m a
+    genUniform :: Generator g m => g -> m a
 
     -- | Generate single uniformly distributed random variable in a given range.
     --
     --  * For integral types inclusive range is used.
     --  * For floating point numbers range @(a,b]@ is used if one ignores rounding errors.
-    uniformR :: Generator g m => (a, a) -> g -> m a
+    genUniformR :: Generator g m => (a, a) -> g -> m a
 
 -- ----------------- --
 -- Integer instances --
@@ -133,10 +133,10 @@ concatForM
     $ \name ->
         [d|
             instance Uniform $(conT name) where
-                uniform = fromUniformWord
-                {-# INLINE uniform #-}
-                uniformR = fromBoundedWord
-                {-# INLINE uniformR #-}
+                genUniform = fromUniformWord
+                {-# INLINE genUniform #-}
+                genUniformR = fromBoundedWord
+                {-# INLINE genUniformR #-}
             |]
 
 -- ----------------- --
@@ -156,12 +156,12 @@ wordToFloat x = fromIntegral i * m_inv_32 + 0.5 + m_inv_33
 
 -- | Generates values in range @(0,1]@.
 instance Uniform Float where
-    uniform gen = wordToFloat <$> uniform1 gen
-    {-# INLINE uniform #-}
-    uniformR (x1, x2) gen = do
-        value <- uniform gen
+    genUniform gen = wordToFloat <$> uniform1 gen
+    {-# INLINE genUniform #-}
+    genUniformR (x1, x2) gen = do
+        value <- genUniform gen
         pure (x1 + (x2 - x1) * value)
-    {-# INLINE uniformR #-}
+    {-# INLINE genUniformR #-}
 
 -- | Construct a `Double` in range @(0,1]@ from a pair of uniformly distributed `Word32`.
 --
@@ -181,12 +181,12 @@ wordsToDouble (x, y) =
 
 -- | Generates values in range @(0,1]@.
 instance Uniform Double where
-    uniform gen = wordsToDouble . splitW64 <$> uniform2 gen
-    {-# INLINE uniform #-}
-    uniformR (x1, x2) gen = do
-        value <- uniform gen
+    genUniform gen = wordsToDouble . splitW64 <$> uniform2 gen
+    {-# INLINE genUniform #-}
+    genUniformR (x1, x2) gen = do
+        value <- genUniform gen
         pure (x1 + (x2 - x1) * value)
-    {-# INLINE uniformR #-}
+    {-# INLINE genUniformR #-}
 
 -- ---------------- --
 -- Boolean instance --
@@ -198,45 +198,45 @@ wordToBool i = i .&. 1 /= 0
 {-# INLINE wordToBool #-}
 
 instance Uniform Bool where
-    uniform gen = wordToBool <$> uniform1 gen
-    {-# INLINE uniform #-}
-    uniformR (True, True) _ = pure True
-    uniformR (False, False) _ = pure False
-    uniformR (_, _) gen = uniform gen
-    {-# INLINE uniformR #-}
+    genUniform gen = wordToBool <$> uniform1 gen
+    {-# INLINE genUniform #-}
+    genUniformR (True, True) _ = pure True
+    genUniformR (False, False) _ = pure False
+    genUniformR (_, _) gen = genUniform gen
+    {-# INLINE genUniformR #-}
 
 -- --------------- --
 -- Tuple instances --
 -- --------------- --
 
 instance Uniform () where
-    uniform _ = pure ()
-    {-# INLINE uniform #-}
-    uniformR ((), ()) _ = pure ()
-    {-# INLINE uniformR #-}
+    genUniform _ = pure ()
+    {-# INLINE genUniform #-}
+    genUniformR ((), ()) _ = pure ()
+    {-# INLINE genUniformR #-}
 
 instance (Uniform a, Uniform b) => Uniform (a, b) where
-    uniform gen = do
-        x <- uniform gen
-        y <- uniform gen
+    genUniform gen = do
+        x <- genUniform gen
+        y <- genUniform gen
         pure (x, y)
-    {-# INLINE uniform #-}
-    uniformR ((x1, y1), (x2, y2)) gen = do
-        x <- uniformR (x1, x2) gen
-        y <- uniformR (y1, y2) gen
+    {-# INLINE genUniform #-}
+    genUniformR ((x1, y1), (x2, y2)) gen = do
+        x <- genUniformR (x1, x2) gen
+        y <- genUniformR (y1, y2) gen
         pure (x, y)
-    {-# INLINE uniformR #-}
+    {-# INLINE genUniformR #-}
 
 instance (Uniform a, Uniform b, Uniform c) => Uniform (a, b, c) where
-    uniform gen = do
-        x <- uniform gen
-        y <- uniform gen
-        z <- uniform gen
+    genUniform gen = do
+        x <- genUniform gen
+        y <- genUniform gen
+        z <- genUniform gen
         pure (x, y, z)
-    {-# INLINE uniform #-}
-    uniformR ((x1, y1, z1), (x2, y2, z2)) gen = do
-        x <- uniformR (x1, x2) gen
-        y <- uniformR (y1, y2) gen
-        z <- uniformR (z1, z2) gen
+    {-# INLINE genUniform #-}
+    genUniformR ((x1, y1, z1), (x2, y2, z2)) gen = do
+        x <- genUniformR (x1, x2) gen
+        y <- genUniformR (y1, y2) gen
+        z <- genUniformR (z1, z2) gen
         pure (x, y, z)
-    {-# INLINE uniformR #-}
+    {-# INLINE genUniformR #-}
