@@ -21,7 +21,7 @@ import Data.Vector.Unboxed (Vector)
 import Data.Word (Word32, Word64, Word8)
 import GHC.Base (asTypeOf, ($!))
 import GHC.Enum (Bounded, maxBound)
-import GHC.Num ((*), (+), (-))
+import GHC.Num ((*), (+))
 import GHC.Real (Integral, div, fromIntegral)
 import System.IO (IO)
 import Text.Show (Show)
@@ -29,7 +29,7 @@ import Text.Show (Show)
 import System.Entropy (getEntropy, getHardwareEntropy)
 import System.Random.MWC qualified (Gen, initialize, uniformM, uniformRM)
 import System.Random.PCG qualified (Gen, initialize)
-import System.Random.PCG.Class qualified as PCG (uniform1, uniform1B, uniform2)
+import System.Random.PCG.Class qualified as PCG (uniform1, uniform1B, uniform2, uniformRW64)
 import System.Random.PCG.Fast qualified (Gen, initialize)
 import System.Random.PCG.Fast.Pure qualified (Gen, initialize)
 import System.Random.PCG.Pure qualified (Gen, initialize)
@@ -56,6 +56,9 @@ class Monad m => Generator g m where
     -- | Generates a single 32-bit value up to a given limit with a uniform distribution.
     uniform1B :: Word32 -> g -> m Word32
 
+    -- | Generates a single 64-bit value up to a given limit with a uniform distribution.
+    uniform2B :: Word64 -> g -> m Word64
+
 -- | Pseudo-random number generation using Marsaglia's MWC256, (also known as MWC8222)
 -- multiply-with-carry generator
 --
@@ -76,6 +79,8 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenMWC s) m where
     {-# INLINE uniform2 #-}
     uniform1B bound = System.Random.MWC.uniformRM (0, bound)
     {-# INLINE uniform1B #-}
+    uniform2B bound = System.Random.MWC.uniformRM (0, bound)
+    {-# INLINE uniform2B #-}
 
 -- | The standard generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
@@ -93,6 +98,8 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCG s) m where
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
+    uniform2B bound = PCG.uniformRW64 (0, bound)
+    {-# INLINE uniform2B #-}
 
 -- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
@@ -110,6 +117,8 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFast s) m where
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
+    uniform2B bound = PCG.uniformRW64 (0, bound)
+    {-# INLINE uniform2B #-}
 
 -- | The standard generator for PCG (Permuted Congruential Generator) algorithm, implemented in
 -- Haskell.
@@ -128,6 +137,8 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGPure s) m where
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
+    uniform2B bound = PCG.uniformRW64 (0, bound)
+    {-# INLINE uniform2B #-}
 
 -- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in Haskell.
 --
@@ -145,6 +156,8 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFastPure s) m where
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
+    uniform2B bound = PCG.uniformRW64 (0, bound)
+    {-# INLINE uniform2B #-}
 
 -- | A single stream generator for PCG (Permuted Congruential Generator) algorithm, implemented in
 -- C.
@@ -163,6 +176,8 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGSingle s) m where
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
+    uniform2B bound = PCG.uniformRW64 (0, bound)
+    {-# INLINE uniform2B #-}
 
 -- | A unique generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
@@ -182,25 +197,23 @@ instance Generator GenPCGUnique IO where
     {-# INLINE uniform2 #-}
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
+    uniform2B bound = PCG.uniformRW64 (0, bound)
+    {-# INLINE uniform2B #-}
 
-uniformRange :: (Integral a, Bounded a, Monad m) => (a, a) -> m a -> m a
-uniformRange (x1, x2) genUniform
-    | n == 0 = genUniform -- Abuse overflow in unsigned types
+uniformBounded :: (Integral a, Bounded a, Monad m) => a -> m a -> m a
+uniformBounded hi genUniform
+    | hi == maxBound = genUniform
     | otherwise = loop
   where
-    -- Allow ranges where x2<x1
-    (i, j)
-        | x1 < x2 = (x1, x2)
-        | otherwise = (x2, x1)
-    n = 1 + (j - i)
+    n = hi + 1
     buckets = maxBound `div` n
     maxN = buckets * n
     loop = do
         x <- genUniform
         if x < maxN
-            then pure $! i + x `div` buckets
+            then pure $! x `div` buckets
             else loop
-{-# INLINE uniformRange #-}
+{-# INLINE uniformBounded #-}
 
 -- | Gets the size in bytes for type @a@.
 --
@@ -221,8 +234,10 @@ instance Generator GenEntropy IO where
     {-# INLINE uniform1 #-}
     uniform2 GenEntropy = getEntropy (sizeOf (0 :: Word64)) >>= decodeIO
     {-# INLINE uniform2 #-}
-    uniform1B hi gen = uniformRange (0, hi) (uniform1 gen)
+    uniform1B hi gen = uniformBounded hi (uniform1 gen)
     {-# INLINE uniform1B #-}
+    uniform2B hi gen = uniformBounded hi (uniform2 gen)
+    {-# INLINE uniform2B #-}
 
 data GenHWEntropy = GenHWEntropy
     deriving stock (Eq, Ord, Show)
@@ -238,5 +253,7 @@ instance Generator GenHWEntropy IO where
     {-# INLINE uniform1 #-}
     uniform2 GenHWEntropy = getHardwareEntropy (sizeOf (0 :: Word64)) >>= unwrapIO >>= decodeIO
     {-# INLINE uniform2 #-}
-    uniform1B hi gen = uniformRange (0, hi) (uniform1 gen)
+    uniform1B hi gen = uniformBounded hi (uniform1 gen)
     {-# INLINE uniform1B #-}
+    uniform2B hi gen = uniformBounded hi (uniform2 gen)
+    {-# INLINE uniform2B #-}

@@ -4,7 +4,6 @@ module MCSP.System.Random.Uniform (
 ) where
 
 import Control.Applicative (pure)
-import Control.Monad (Monad)
 import Control.Monad.Extra (concatForM)
 import Data.Bits (FiniteBits, finiteBitSize, isSigned, shift, (.&.))
 import Data.Bool (Bool (..), not, otherwise, (&&))
@@ -15,14 +14,13 @@ import Data.Int (Int, Int16, Int32, Int64, Int8)
 import Data.Ord (Ord (..))
 import Data.Tuple.Extra (both)
 import Data.Word (Word, Word16, Word32, Word64, Word8)
-import GHC.Base (asTypeOf, errorWithoutStackTrace, ($!))
+import GHC.Base (asTypeOf, errorWithoutStackTrace)
 import GHC.Enum (Bounded (..))
 import GHC.Float (Double, Float)
 import GHC.Num ((*), (+), (-))
-import GHC.Real (Integral, div, fromIntegral)
+import GHC.Real (Integral, fromIntegral)
 import Language.Haskell.TH (conT)
 import Text.Printf (printf)
-import Text.Show (Show)
 
 import MCSP.System.Random.Generator (Generator (..))
 
@@ -80,31 +78,16 @@ fromBoundedW32 :: (Integral a, Integral b, Generator g m) => b -> (a, a) -> g ->
 fromBoundedW32 subTy (x, y) gen = toRange <$> uniform1B boundW32 gen
   where
     (lo, hi) = if x < y then (x, y) else (y, x)
-    boundW32 = fromIntegral $ asTypeOf (fromIntegral hi - fromIntegral lo) subTy
+    boundW32 = fromIntegral $ asTypeOf (fromIntegral (hi - lo)) subTy
     toRange val = fromIntegral val + lo
 {-# INLINE fromBoundedW32 #-}
 
-uniformRange :: (Integral a, Integral b, Bounded b, Monad m) => b -> (a, a) -> m b -> m a
-uniformRange unsigned (x1, x2) genUniform
-    | n == 0 = fromIntegral <$> genUniform -- Abuse overflow in unsigned types
-    | otherwise = loop
+fromBoundedW64 :: (Integral a, Integral b, Generator g m) => b -> (a, a) -> g -> m a
+fromBoundedW64 subTy (x, y) gen = toRange <$> uniform2B boundW64 gen
   where
-    -- Allow ranges where x2<x1
-    (i, j)
-        | x1 < x2 = (x1, x2)
-        | otherwise = (x2, x1)
-    n = 1 + fromIntegral (j - i)
-    buckets = asTypeOf maxBound unsigned `div` n
-    maxN = buckets * n
-    loop = do
-        x <- genUniform
-        if x < maxN
-            then pure $! i + fromIntegral (x `div` buckets)
-            else loop
-{-# INLINE uniformRange #-}
-
-fromBoundedW64 :: (Integral a, Generator g m) => (a, a) -> g -> m a
-fromBoundedW64 bounds gen = uniformRange (0 :: Word64) bounds (uniform2 gen)
+    (lo, hi) = if x < y then (x, y) else (y, x)
+    boundW64 = fromIntegral $ asTypeOf (fromIntegral (hi - lo)) subTy
+    toRange val = fromIntegral val + lo
 {-# INLINE fromBoundedW64 #-}
 
 -- | Run either `fromUniformW32` or `fromUniformW64` dependending on the width of the integer @a@.
@@ -134,11 +117,11 @@ fromBoundedWord ::
     -> m a
 fromBoundedWord
     | not signed && size <= finiteBitSize (maxBound :: Word32) = fromBoundedW32 (0 :: a)
-    | not signed && size <= finiteBitSize (maxBound :: Word64) = fromBoundedW64
+    | not signed && size <= finiteBitSize (maxBound :: Word64) = fromBoundedW64 (0 :: Word64)
     | signed && size <= finiteBitSize (maxBound :: Int8) = fromBoundedW32 (0 :: Word8)
     | signed && size <= finiteBitSize (maxBound :: Int16) = fromBoundedW32 (0 :: Word16)
     | signed && size <= finiteBitSize (maxBound :: Int32) = fromBoundedW32 (0 :: Word32)
-    | signed && size <= finiteBitSize (maxBound :: Int64) = fromBoundedW64
+    | signed && size <= finiteBitSize (maxBound :: Int64) = fromBoundedW64 (0 :: Word64)
     | otherwise = errorWithoutStackTrace (printf "fromBoundedWord: invalid integer size of %d" size)
   where
     size = finiteBitSize (maxBound :: a)
@@ -256,16 +239,4 @@ instance (Uniform a, Uniform b, Uniform c) => Uniform (a, b, c) where
         y <- uniformR (y1, y2) gen
         z <- uniformR (z1, z2) gen
         pure (x, y, z)
-    {-# INLINE uniformR #-}
-
--- --------- --
--- Modifiers --
-
-newtype ViaW32 a = Value a
-    deriving newtype (Show, Eq, Ord)
-
-instance (Integral a, Uniform a) => Uniform (ViaW32 a) where
-    uniform gen = Value <$> uniform gen
-    {-# INLINE uniform #-}
-    uniformR (Value x1, Value x2) gen = Value <$> uniformRange (0 :: Word32) (x1, x2) (uniform1 gen)
     {-# INLINE uniformR #-}
