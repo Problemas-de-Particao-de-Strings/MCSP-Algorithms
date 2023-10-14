@@ -7,22 +7,29 @@ module MCSP.System.Random.Generator (
 import Control.Monad (Monad (..))
 import Control.Monad.ST (RealWorld, ST)
 import Data.Function (id)
-import Data.Word (Word32)
+import Data.Tuple (uncurry)
+import Data.Word (Word32, Word64)
 import System.IO (IO)
 
-import System.Random.PCG qualified (Gen)
+import System.Random.PCG qualified (Gen, initialize)
 import System.Random.PCG.Class qualified as PCG (uniform1, uniform1B, uniform2)
-import System.Random.PCG.Fast qualified (Gen)
-import System.Random.PCG.Fast.Pure qualified (Gen)
-import System.Random.PCG.Pure qualified (Gen)
-import System.Random.PCG.Single qualified (Gen)
-import System.Random.PCG.Unique qualified (Gen)
+import System.Random.PCG.Fast qualified (Gen, initialize)
+import System.Random.PCG.Fast.Pure qualified (Gen, initialize)
+import System.Random.PCG.Pure qualified (Gen, initialize)
+import System.Random.PCG.Single qualified (Gen, initialize)
+import System.Random.PCG.Unique qualified (Gen, initialize)
 
 -- | A random number generator.
 --
 -- The numbers generated here may be from computer entropy or may be generated with a pseudo-random
 -- RNG seeded in some way.
 class Monad m => Generator g m where
+    -- | The type used to seed the generator.
+    type Seed g
+
+    -- Construct the generator from a seed.
+    initialize :: Seed g -> m g
+
     -- | Generates a single uniformly distributed 32-bit value.
     uniform1 :: g -> m Word32
 
@@ -39,6 +46,9 @@ class Monad m => Generator g m where
 type GenPCG s = System.Random.PCG.Gen s
 
 instance Generator (GenPCG RealWorld) IO where
+    type Seed (GenPCG RealWorld) = (Word64, Word64)
+    initialize = uncurry System.Random.PCG.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -47,6 +57,9 @@ instance Generator (GenPCG RealWorld) IO where
     {-# INLINE uniform1B #-}
 
 instance Generator (GenPCG s) (ST s) where
+    type Seed (GenPCG s) = (Word64, Word64)
+    initialize = uncurry System.Random.PCG.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -54,9 +67,16 @@ instance Generator (GenPCG s) (ST s) where
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
 
+-- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
+--
+-- The PCG generators have good statstical quality, is fast and use very little memory. See
+-- <https://www.pcg-random.org/>.
 type GenPCGFast s = System.Random.PCG.Fast.Gen s
 
 instance Generator (GenPCGFast RealWorld) IO where
+    type Seed (GenPCGFast RealWorld) = Word64
+    initialize = System.Random.PCG.Fast.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -65,6 +85,9 @@ instance Generator (GenPCGFast RealWorld) IO where
     {-# INLINE uniform1B #-}
 
 instance Generator (GenPCGFast s) (ST s) where
+    type Seed (GenPCGFast s) = Word64
+    initialize = System.Random.PCG.Fast.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -72,9 +95,17 @@ instance Generator (GenPCGFast s) (ST s) where
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
 
+-- | The standard generator for PCG (Permuted Congruential Generator) algorithm, implemented in
+-- Haskell.
+--
+-- The PCG generators have good statstical quality, is fast and use very little memory. See
+-- <https://www.pcg-random.org/>.
 type GenPCGPure s = System.Random.PCG.Pure.Gen s
 
 instance Generator (GenPCGPure RealWorld) IO where
+    type Seed (GenPCGPure RealWorld) = (Word64, Word64)
+    initialize = uncurry System.Random.PCG.Pure.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -83,6 +114,9 @@ instance Generator (GenPCGPure RealWorld) IO where
     {-# INLINE uniform1B #-}
 
 instance Generator (GenPCGPure s) (ST s) where
+    type Seed (GenPCGPure s) = (Word64, Word64)
+    initialize = uncurry System.Random.PCG.Pure.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -90,9 +124,16 @@ instance Generator (GenPCGPure s) (ST s) where
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
 
+-- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in Haskell.
+--
+-- The PCG generators have good statstical quality, is fast and use very little memory. See
+-- <https://www.pcg-random.org/>.
 type GenPCGFastPure s = System.Random.PCG.Fast.Pure.Gen s
 
 instance Generator (GenPCGFastPure RealWorld) IO where
+    type Seed (GenPCGFastPure RealWorld) = Word64
+    initialize = System.Random.PCG.Fast.Pure.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -101,6 +142,9 @@ instance Generator (GenPCGFastPure RealWorld) IO where
     {-# INLINE uniform1B #-}
 
 instance Generator (GenPCGFastPure s) (ST s) where
+    type Seed (GenPCGFastPure s) = Word64
+    initialize = System.Random.PCG.Fast.Pure.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -108,9 +152,17 @@ instance Generator (GenPCGFastPure s) (ST s) where
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
 
+-- | A single stream generator for PCG (Permuted Congruential Generator) algorithm, implemented in
+-- C.
+--
+-- The PCG generators have good statstical quality, is fast and use very little memory. See
+-- <https://www.pcg-random.org/>.
 type GenPCGSingle s = System.Random.PCG.Single.Gen s
 
 instance Generator (GenPCGSingle RealWorld) IO where
+    type Seed (GenPCGSingle RealWorld) = Word64
+    initialize = System.Random.PCG.Single.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -119,6 +171,9 @@ instance Generator (GenPCGSingle RealWorld) IO where
     {-# INLINE uniform1B #-}
 
 instance Generator (GenPCGSingle s) (ST s) where
+    type Seed (GenPCGSingle s) = Word64
+    initialize = System.Random.PCG.Single.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
@@ -126,9 +181,18 @@ instance Generator (GenPCGSingle s) (ST s) where
     uniform1B = PCG.uniform1B id
     {-# INLINE uniform1B #-}
 
+-- | A unique generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
+--
+-- Guarantees the sequence to be unique by using the pointer address to select the output sequence.
+--
+-- The PCG generators have good statstical quality, is fast and use very little memory. See
+-- <https://www.pcg-random.org/>.
 type GenPCGUnique = System.Random.PCG.Unique.Gen
 
 instance Generator GenPCGUnique IO where
+    type Seed GenPCGUnique = Word64
+    initialize = System.Random.PCG.Unique.initialize
+    {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 (,)
