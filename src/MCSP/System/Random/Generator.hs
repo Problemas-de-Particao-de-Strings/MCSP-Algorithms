@@ -1,7 +1,15 @@
 -- | Random number generators.
 module MCSP.System.Random.Generator (
     Generator (..),
+    GenMWC,
     GenPCG,
+    GenPCGFast,
+    GenPCGPure,
+    GenPCGFastPure,
+    GenPCGSingle,
+    GenPCGUnique,
+    GenEntropy (..),
+    GenHWEntropy (..),
 ) where
 
 import Control.Applicative (pure)
