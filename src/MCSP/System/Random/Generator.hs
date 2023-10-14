@@ -5,12 +5,13 @@ module MCSP.System.Random.Generator (
 ) where
 
 import Control.Monad (Monad (..))
-import Control.Monad.ST (RealWorld, ST)
+import Control.Monad.Primitive (PrimMonad, PrimState)
 import Data.Bits (finiteBitSize, shift, (.&.))
 import Data.Function (id)
 import Data.Functor ((<$>))
 import Data.Tuple (uncurry)
 import Data.Tuple.Extra (both)
+import Data.Type.Equality (type (~))
 import Data.Vector.Unboxed (Vector)
 import Data.Word (Word32, Word64)
 import GHC.Enum (maxBound)
@@ -61,18 +62,7 @@ splitW64 val = toW32 `both` (val `shift` bitsW32, val)
     toW32 x = fromIntegral (x .&. maxW32)
 {-# INLINE splitW64 #-}
 
-instance Generator (GenMWC RealWorld) IO where
-    type Seed (GenMWC RealWorld) = Vector Word32
-    initialize = System.Random.MWC.initialize
-    {-# INLINE initialize #-}
-    uniform1 = System.Random.MWC.uniformM
-    {-# INLINE uniform1 #-}
-    uniform2 gen = splitW64 <$> System.Random.MWC.uniformM gen
-    {-# INLINE uniform2 #-}
-    uniform1B bound = System.Random.MWC.uniformRM (0, bound)
-    {-# INLINE uniform1B #-}
-
-instance Generator (GenMWC s) (ST s) where
+instance (PrimMonad m, s ~ PrimState m) => Generator (GenMWC s) m where
     type Seed (GenMWC s) = Vector Word32
     initialize = System.Random.MWC.initialize
     {-# INLINE initialize #-}
@@ -89,18 +79,7 @@ instance Generator (GenMWC s) (ST s) where
 -- <https://www.pcg-random.org>.
 type GenPCG s = System.Random.PCG.Gen s
 
-instance Generator (GenPCG RealWorld) IO where
-    type Seed (GenPCG RealWorld) = (Word64, Word64)
-    initialize = uncurry System.Random.PCG.initialize
-    {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-
-instance Generator (GenPCG s) (ST s) where
+instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCG s) m where
     type Seed (GenPCG s) = (Word64, Word64)
     initialize = uncurry System.Random.PCG.initialize
     {-# INLINE initialize #-}
@@ -117,18 +96,7 @@ instance Generator (GenPCG s) (ST s) where
 -- <https://www.pcg-random.org>.
 type GenPCGFast s = System.Random.PCG.Fast.Gen s
 
-instance Generator (GenPCGFast RealWorld) IO where
-    type Seed (GenPCGFast RealWorld) = Word64
-    initialize = System.Random.PCG.Fast.initialize
-    {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-
-instance Generator (GenPCGFast s) (ST s) where
+instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFast s) m where
     type Seed (GenPCGFast s) = Word64
     initialize = System.Random.PCG.Fast.initialize
     {-# INLINE initialize #-}
@@ -146,18 +114,7 @@ instance Generator (GenPCGFast s) (ST s) where
 -- <https://www.pcg-random.org>.
 type GenPCGPure s = System.Random.PCG.Pure.Gen s
 
-instance Generator (GenPCGPure RealWorld) IO where
-    type Seed (GenPCGPure RealWorld) = (Word64, Word64)
-    initialize = uncurry System.Random.PCG.Pure.initialize
-    {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-
-instance Generator (GenPCGPure s) (ST s) where
+instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGPure s) m where
     type Seed (GenPCGPure s) = (Word64, Word64)
     initialize = uncurry System.Random.PCG.Pure.initialize
     {-# INLINE initialize #-}
@@ -174,18 +131,7 @@ instance Generator (GenPCGPure s) (ST s) where
 -- <https://www.pcg-random.org>.
 type GenPCGFastPure s = System.Random.PCG.Fast.Pure.Gen s
 
-instance Generator (GenPCGFastPure RealWorld) IO where
-    type Seed (GenPCGFastPure RealWorld) = Word64
-    initialize = System.Random.PCG.Fast.Pure.initialize
-    {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-
-instance Generator (GenPCGFastPure s) (ST s) where
+instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFastPure s) m where
     type Seed (GenPCGFastPure s) = Word64
     initialize = System.Random.PCG.Fast.Pure.initialize
     {-# INLINE initialize #-}
@@ -203,18 +149,7 @@ instance Generator (GenPCGFastPure s) (ST s) where
 -- <https://www.pcg-random.org>.
 type GenPCGSingle s = System.Random.PCG.Single.Gen s
 
-instance Generator (GenPCGSingle RealWorld) IO where
-    type Seed (GenPCGSingle RealWorld) = Word64
-    initialize = System.Random.PCG.Single.initialize
-    {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 (,)
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-
-instance Generator (GenPCGSingle s) (ST s) where
+instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGSingle s) m where
     type Seed (GenPCGSingle s) = Word64
     initialize = System.Random.PCG.Single.initialize
     {-# INLINE initialize #-}
