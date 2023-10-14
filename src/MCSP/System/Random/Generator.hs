@@ -1,37 +1,39 @@
 -- | Random number generators.
 module MCSP.System.Random.Generator (
     Generator (..),
-    GenMWC,
-    GenPCG,
-    GenPCGFast,
-    GenPCGPure,
-    GenPCGFastPure,
-    GenPCGSingle,
-    GenPCGUnique,
-    GenEntropy (..),
-    GenHWEntropy (..),
+    SeedableGenerator (..),
+    MWC (..),
+    PCG (..),
+    PCGFast (..),
+    PCGPure (..),
+    PCGFastPure (..),
+    PCGSingle (..),
+    PCGUnique (..),
 ) where
 
 import Control.Applicative (pure)
 import Control.Monad (Monad (..), fail)
-import Control.Monad.Primitive (PrimMonad, PrimState)
+import Control.Monad.Extra (concatForM)
+import Control.Monad.ST (ST)
 import Data.Bits (FiniteBits, finiteBitSize, shift, (.|.))
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
-import Data.Function (id)
+import Data.Function (id, ($))
 import Data.Int (Int)
 import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
 import Data.Store (decodeIO)
 import Data.Tuple (uncurry)
-import Data.Type.Equality (type (~))
 import Data.Vector.Unboxed (Vector)
 import Data.Word (Word32, Word64, Word8)
 import GHC.Base (asTypeOf, ($!))
 import GHC.Enum (Bounded, maxBound)
+import GHC.Generics (Generic)
 import GHC.Num ((*), (+))
 import GHC.Real (Integral, div, fromIntegral)
+import Language.Haskell.TH (conT)
 import System.IO (IO)
+import Text.Read (Read)
 import Text.Show (Show)
 
 import System.Entropy (getEntropy, getHardwareEntropy)
@@ -49,12 +51,6 @@ import System.Random.PCG.Unique qualified (Gen, initialize)
 -- The numbers generated here may be from computer entropy or may be generated with a pseudo-random
 -- RNG seeded in some way.
 class Monad m => Generator g m where
-    -- | The type used to seed the generator.
-    type Seed g
-
-    -- Construct the generator from a seed.
-    initialize :: Seed g -> m g
-
     -- | Generates a single uniformly distributed 32-bit value.
     uniform1 :: g -> m Word32
 
@@ -67,20 +63,30 @@ class Monad m => Generator g m where
     -- | Generates a single 64-bit value up to a given limit with a uniform distribution.
     uniform2B :: Word64 -> g -> m Word64
 
+class Generator (State g m) m => SeedableGenerator g m where
+    -- | The actual generator that uses the seed to generate values.
+    type State g m
+
+    -- | The type used to seed the generator.
+    type Seed g
+
+    -- Construct the generator from a seed.
+    initialize :: g -> Seed g -> m (State g m)
+
 -- | Pseudo-random number generation using Marsaglia's MWC256, (also known as MWC8222)
 -- multiply-with-carry generator
 --
--- The WMC generator is supposed to be really fast. See <https://hackage.haskell.org/package/mwc-random>.
-type GenMWC s = System.Random.MWC.Gen s
+-- The MWC generator is supposed to be really fast. See <https://hackage.haskell.org/package/mwc-random>.
+data MWC = MWC
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-wordsTo64Bit :: Word32 -> Word32 -> Word64
-wordsTo64Bit x y = fromIntegral x `shift` 32 .|. fromIntegral y
-{-# INLINE wordsTo64Bit #-}
-
-instance (PrimMonad m, s ~ PrimState m) => Generator (GenMWC s) m where
-    type Seed (GenMWC s) = Vector Word32
-    initialize = System.Random.MWC.initialize
+instance SeedableGenerator MWC (ST s) where
+    type State MWC (ST s) = System.Random.MWC.Gen s
+    type Seed MWC = Vector Word32
+    initialize MWC = System.Random.MWC.initialize
     {-# INLINE initialize #-}
+
+instance Generator (System.Random.MWC.Gen s) (ST s) where
     uniform1 = System.Random.MWC.uniformM
     {-# INLINE uniform1 #-}
     uniform2 = System.Random.MWC.uniformM
@@ -90,102 +96,96 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenMWC s) m where
     uniform2B bound = System.Random.MWC.uniformRM (0, bound)
     {-# INLINE uniform2B #-}
 
+wordsTo64Bit :: Word32 -> Word32 -> Word64
+wordsTo64Bit x y = fromIntegral x `shift` 32 .|. fromIntegral y
+{-# INLINE wordsTo64Bit #-}
+
+concatForM
+    [ ''System.Random.PCG.Gen,
+      ''System.Random.PCG.Fast.Gen,
+      ''System.Random.PCG.Pure.Gen,
+      ''System.Random.PCG.Fast.Pure.Gen,
+      ''System.Random.PCG.Single.Gen
+    ]
+    $ \name ->
+        [d|
+            instance Generator ($(conT name) s) (ST s) where
+                uniform1 = PCG.uniform1 id
+                {-# INLINE uniform1 #-}
+                uniform2 = PCG.uniform2 wordsTo64Bit
+                {-# INLINE uniform2 #-}
+                uniform1B = PCG.uniform1B id
+                {-# INLINE uniform1B #-}
+                uniform2B bound = PCG.uniformRW64 (0, bound)
+                {-# INLINE uniform2B #-}
+            |]
+
 -- | The standard generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
 -- <https://www.pcg-random.org>.
-type GenPCG s = System.Random.PCG.Gen s
+data PCG = PCG
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCG s) m where
-    type Seed (GenPCG s) = (Word64, Word64)
-    initialize = uncurry System.Random.PCG.initialize
+instance SeedableGenerator PCG (ST s) where
+    type Seed PCG = (Word64, Word64)
+    type State PCG (ST s) = System.Random.PCG.Gen s
+    initialize PCG = uncurry System.Random.PCG.initialize
     {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 wordsTo64Bit
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-    uniform2B bound = PCG.uniformRW64 (0, bound)
-    {-# INLINE uniform2B #-}
 
 -- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
 -- <https://www.pcg-random.org>.
-type GenPCGFast s = System.Random.PCG.Fast.Gen s
+data PCGFast = PCGFast
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFast s) m where
-    type Seed (GenPCGFast s) = Word64
-    initialize = System.Random.PCG.Fast.initialize
+instance SeedableGenerator PCGFast (ST s) where
+    type Seed PCGFast = Word64
+    type State PCGFast (ST s) = System.Random.PCG.Fast.Gen s
+    initialize PCGFast = System.Random.PCG.Fast.initialize
     {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 wordsTo64Bit
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-    uniform2B bound = PCG.uniformRW64 (0, bound)
-    {-# INLINE uniform2B #-}
 
 -- | The standard generator for PCG (Permuted Congruential Generator) algorithm, implemented in
 -- Haskell.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
 -- <https://www.pcg-random.org>.
-type GenPCGPure s = System.Random.PCG.Pure.Gen s
+data PCGPure = PCGPure
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGPure s) m where
-    type Seed (GenPCGPure s) = (Word64, Word64)
-    initialize = uncurry System.Random.PCG.Pure.initialize
+instance SeedableGenerator PCGPure (ST s) where
+    type Seed PCGPure = (Word64, Word64)
+    type State PCGPure (ST s) = System.Random.PCG.Pure.Gen s
+    initialize PCGPure = uncurry System.Random.PCG.Pure.initialize
     {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 wordsTo64Bit
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-    uniform2B bound = PCG.uniformRW64 (0, bound)
-    {-# INLINE uniform2B #-}
 
 -- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in Haskell.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
 -- <https://www.pcg-random.org>.
-type GenPCGFastPure s = System.Random.PCG.Fast.Pure.Gen s
+data PCGFastPure = PCGFastPure
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGFastPure s) m where
-    type Seed (GenPCGFastPure s) = Word64
-    initialize = System.Random.PCG.Fast.Pure.initialize
+instance SeedableGenerator PCGFastPure (ST s) where
+    type Seed PCGFastPure = Word64
+    type State PCGFastPure (ST s) = System.Random.PCG.Fast.Pure.Gen s
+    initialize PCGFastPure = System.Random.PCG.Fast.Pure.initialize
     {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 wordsTo64Bit
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-    uniform2B bound = PCG.uniformRW64 (0, bound)
-    {-# INLINE uniform2B #-}
 
 -- | A single stream generator for PCG (Permuted Congruential Generator) algorithm, implemented in
 -- C.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
 -- <https://www.pcg-random.org>.
-type GenPCGSingle s = System.Random.PCG.Single.Gen s
+data PCGSingle = PCGSingle
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGSingle s) m where
-    type Seed (GenPCGSingle s) = Word64
-    initialize = System.Random.PCG.Single.initialize
+instance SeedableGenerator PCGSingle (ST s) where
+    type Seed PCGSingle = Word64
+    type State PCGSingle (ST s) = System.Random.PCG.Single.Gen s
+    initialize PCGSingle = System.Random.PCG.Single.initialize
     {-# INLINE initialize #-}
-    uniform1 = PCG.uniform1 id
-    {-# INLINE uniform1 #-}
-    uniform2 = PCG.uniform2 wordsTo64Bit
-    {-# INLINE uniform2 #-}
-    uniform1B = PCG.uniform1B id
-    {-# INLINE uniform1B #-}
-    uniform2B bound = PCG.uniformRW64 (0, bound)
-    {-# INLINE uniform2B #-}
 
 -- | A unique generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
@@ -193,12 +193,13 @@ instance (PrimMonad m, s ~ PrimState m) => Generator (GenPCGSingle s) m where
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
 -- <https://www.pcg-random.org>.
-type GenPCGUnique = System.Random.PCG.Unique.Gen
+data PCGUnique = PCGUnique
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance Generator GenPCGUnique IO where
-    type Seed GenPCGUnique = Word64
-    initialize = System.Random.PCG.Unique.initialize
-    {-# INLINE initialize #-}
+instance Generator System.Random.PCG.Unique.Gen IO where
+    -- type Seed GenPCGUnique = Word64
+    -- initialize = System.Random.PCG.Unique.initialize
+    -- {-# INLINE initialize #-}
     uniform1 = PCG.uniform1 id
     {-# INLINE uniform1 #-}
     uniform2 = PCG.uniform2 wordsTo64Bit
@@ -207,6 +208,12 @@ instance Generator GenPCGUnique IO where
     {-# INLINE uniform1B #-}
     uniform2B bound = PCG.uniformRW64 (0, bound)
     {-# INLINE uniform2B #-}
+
+instance SeedableGenerator PCGUnique IO where
+    type Seed PCGUnique = Word64
+    type State PCGUnique IO = System.Random.PCG.Unique.Gen
+    initialize PCGUnique = System.Random.PCG.Unique.initialize
+    {-# INLINE initialize #-}
 
 uniformBounded :: (Integral a, Bounded a, Monad m) => a -> m a -> m a
 uniformBounded hi genUniform
@@ -231,35 +238,29 @@ sizeOf :: (FiniteBits a, Bounded a) => a -> Int
 sizeOf val = finiteBitSize (asTypeOf maxBound val) `div` finiteBitSize (maxBound :: Word8)
 {-# INLINE sizeOf #-}
 
-data GenEntropy = GenEntropy
-    deriving stock (Eq, Ord, Show)
+data Entropy = Entropy
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
-instance Generator GenEntropy IO where
-    type Seed GenEntropy = GenEntropy
-    initialize = pure
-    {-# INLINE initialize #-}
-    uniform1 GenEntropy = getEntropy (sizeOf (0 :: Word32)) >>= decodeIO
+instance Generator Entropy IO where
+    uniform1 Entropy = getEntropy (sizeOf (0 :: Word32)) >>= decodeIO
     {-# INLINE uniform1 #-}
-    uniform2 GenEntropy = getEntropy (sizeOf (0 :: Word64)) >>= decodeIO
+    uniform2 Entropy = getEntropy (sizeOf (0 :: Word64)) >>= decodeIO
     {-# INLINE uniform2 #-}
     uniform1B hi gen = uniformBounded hi (uniform1 gen)
     {-# INLINE uniform1B #-}
     uniform2B hi gen = uniformBounded hi (uniform2 gen)
     {-# INLINE uniform2B #-}
 
-data GenHWEntropy = GenHWEntropy
-    deriving stock (Eq, Ord, Show)
+data HWEntropy = HWEntropy
+    deriving stock (Eq, Ord, Show, Read, Generic)
 
 unwrapIO :: Maybe a -> IO a
 unwrapIO = maybe (fail "GenHWEntropy: no hardware entropy available") pure
 
-instance Generator GenHWEntropy IO where
-    type Seed GenHWEntropy = GenHWEntropy
-    initialize = pure
-    {-# INLINE initialize #-}
-    uniform1 GenHWEntropy = getHardwareEntropy (sizeOf (0 :: Word32)) >>= unwrapIO >>= decodeIO
+instance Generator HWEntropy IO where
+    uniform1 HWEntropy = getHardwareEntropy (sizeOf (0 :: Word32)) >>= unwrapIO >>= decodeIO
     {-# INLINE uniform1 #-}
-    uniform2 GenHWEntropy = getHardwareEntropy (sizeOf (0 :: Word64)) >>= unwrapIO >>= decodeIO
+    uniform2 HWEntropy = getHardwareEntropy (sizeOf (0 :: Word64)) >>= unwrapIO >>= decodeIO
     {-# INLINE uniform2 #-}
     uniform1B hi gen = uniformBounded hi (uniform1 gen)
     {-# INLINE uniform1B #-}
