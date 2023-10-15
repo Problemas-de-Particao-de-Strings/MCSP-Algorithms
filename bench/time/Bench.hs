@@ -8,6 +8,7 @@ import Control.Monad (replicateM)
 import Control.Monad.ST (stToIO)
 import Criterion.Main (bench, bgroup, defaultMainWith, perRunEnv)
 import Criterion.Types (Benchmark, Config (..), Verbosity (Verbose))
+import Data.Int (Int64)
 import Data.Vector.Unboxed qualified as Vector (replicateM)
 import Data.Word (Word8)
 
@@ -71,6 +72,7 @@ benchCase ::
     -> (Random a -> s -> IO a)
     -> Benchmark
 benchCase name rand seed gen = bench name (perRunEnv seed (gen rand))
+{-# INLINE benchCase #-}
 
 benchGen :: (Show g, NFData s) => g -> IO s -> (forall a. Random a -> s -> IO a) -> Benchmark
 benchGen rng seed gen =
@@ -82,6 +84,9 @@ benchGen rng seed gen =
           benchCase "10 Word8 uniform" (replicateM 10 uniform :: Random [Word8]) seed gen,
           benchCase "100 Word8 uniform" (replicateM 100 uniform :: Random [Word8]) seed gen,
           benchCase "1000 Word8 uniform" (replicateM 1000 uniform :: Random [Word8]) seed gen,
+          benchCase "10 Int64 uniform" (replicateM 10 uniform :: Random [Int64]) seed gen,
+          benchCase "100 Int64 uniform" (replicateM 100 uniform :: Random [Int64]) seed gen,
+          benchCase "1000 Int64 uniform" (replicateM 1000 uniform :: Random [Int64]) seed gen,
           benchCase "10 Float uniform" (replicateM 10 uniform :: Random [Float]) seed gen,
           benchCase "100 Float uniform" (replicateM 100 uniform :: Random [Float]) seed gen,
           benchCase "1000 Float uniform" (replicateM 1000 uniform :: Random [Float]) seed gen,
@@ -93,8 +98,12 @@ benchGen rng seed gen =
           benchCase "1000 Int (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Int]) seed gen,
           benchCase "10 Word8 (0,100)" (replicateM 10 (uniformR 0 100) :: Random [Word8]) seed gen,
           benchCase "100 Word8 (0,100)" (replicateM 100 (uniformR 0 100) :: Random [Word8]) seed gen,
-          benchCase "1000 Word8 (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Word8]) seed gen
+          benchCase "1000 Word8 (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Word8]) seed gen,
+          benchCase "10 Int64 (0,100)" (replicateM 10 (uniformR 0 100) :: Random [Int64]) seed gen,
+          benchCase "100 Int64 (0,100)" (replicateM 100 (uniformR 0 100) :: Random [Int64]) seed gen,
+          benchCase "1000 Int64 (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Int64]) seed gen
         ]
+{-# INLINE benchGen #-}
 
 benchIt :: [Benchmark]
 benchIt =
@@ -121,6 +130,7 @@ benchIt =
     evalIO gen r s = initialize gen s >>= evalRandom r
     runRandom gen r seed = stToIO (initialize gen seed >>= evalRandom r)
     mwcSeed = evalRandom (Vector.replicateM 258 uniform) Entropy
+{-# INLINE benchIt #-}
 
 -- | Run a matrix of benchmarks for each parameter set and heuristic.
 main :: IO ()
