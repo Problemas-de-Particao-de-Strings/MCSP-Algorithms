@@ -16,6 +16,7 @@ module MCSP.System.Random.Generator (
 ) where
 
 import Control.Applicative (pure)
+import Control.DeepSeq (NFData, NFData1)
 import Control.Monad (Monad (..), fail, (>=>))
 import Control.Monad.Extra (concatForM)
 import Control.Monad.Primitive (PrimBase, unsafeDupableInterleave)
@@ -34,7 +35,7 @@ import Data.Vector.Unboxed (Vector)
 import Data.Word (Word32, Word64, Word8)
 import GHC.Base (asTypeOf, ($!))
 import GHC.Enum (Bounded, maxBound)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic, Generic1)
 import GHC.Num ((*), (+))
 import GHC.Real (Integral, div, fromIntegral)
 import Language.Haskell.TH (conT)
@@ -153,6 +154,8 @@ concatForM
 data PCG = PCG
     deriving stock (Eq, Ord, Show, Read, Generic)
 
+instance NFData PCG
+
 instance SeedableGenerator PCG (ST s) where
     type Seed PCG = (Word64, Word64)
     type State PCG (ST s) = System.Random.PCG.Gen s
@@ -169,6 +172,8 @@ instance RandomGenerator PCG where
 -- <https://www.pcg-random.org>.
 data PCGFast = PCGFast
     deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance NFData PCGFast
 
 instance SeedableGenerator PCGFast (ST s) where
     type Seed PCGFast = Word64
@@ -188,6 +193,8 @@ instance RandomGenerator PCGFast where
 data PCGPure = PCGPure
     deriving stock (Eq, Ord, Show, Read, Generic)
 
+instance NFData PCGPure
+
 instance SeedableGenerator PCGPure (ST s) where
     type Seed PCGPure = (Word64, Word64)
     type State PCGPure (ST s) = System.Random.PCG.Pure.Gen s
@@ -204,6 +211,8 @@ instance RandomGenerator PCGPure where
 -- <https://www.pcg-random.org>.
 data PCGFastPure = PCGFastPure
     deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance NFData PCGFastPure
 
 instance SeedableGenerator PCGFastPure (ST s) where
     type Seed PCGFastPure = Word64
@@ -223,6 +232,8 @@ instance RandomGenerator PCGFastPure where
 data PCGSingle = PCGSingle
     deriving stock (Eq, Ord, Show, Read, Generic)
 
+instance NFData PCGSingle
+
 instance SeedableGenerator PCGSingle (ST s) where
     type Seed PCGSingle = Word64
     type State PCGSingle (ST s) = System.Random.PCG.Single.Gen s
@@ -241,6 +252,8 @@ instance RandomGenerator PCGSingle where
 -- <https://www.pcg-random.org>.
 data PCGUnique = PCGUnique
     deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance NFData PCGUnique
 
 instance Generator System.Random.PCG.Unique.Gen IO where
     -- type Seed GenPCGUnique = Word64
@@ -291,6 +304,8 @@ sizeOf val = finiteBitSize (asTypeOf maxBound val) `div` finiteBitSize (maxBound
 data Entropy = Entropy
     deriving stock (Eq, Ord, Show, Read, Generic)
 
+instance NFData Entropy
+
 instance Generator Entropy IO where
     uniform1 Entropy = getEntropy (sizeOf (0 :: Word32)) >>= decodeIO
     {-# INLINE uniform1 #-}
@@ -307,6 +322,8 @@ instance RandomGenerator Entropy where
 
 data HWEntropy = HWEntropy
     deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance NFData HWEntropy
 
 unwrapIO :: Maybe a -> IO a
 unwrapIO = maybe (fail "GenHWEntropy: no hardware entropy available") pure
@@ -326,7 +343,10 @@ instance RandomGenerator HWEntropy where
     {-# INLINE generateR #-}
 
 newtype Lazy g = Lazy g
-    deriving stock (Eq, Ord, Show, Read, Generic)
+    deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+
+instance NFData g => NFData (Lazy g)
+instance NFData1 Lazy
 
 instance (PrimBase m, Generator g m) => Generator (Lazy g) m where
     uniform1 (Lazy gen) = unsafeDupableInterleave $ uniform1 gen
