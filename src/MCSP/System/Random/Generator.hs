@@ -10,16 +10,21 @@ module MCSP.System.Random.Generator (
     PCGFastPure (..),
     PCGSingle (..),
     PCGUnique (..),
+    Entropy (..),
+    HWEntropy (..),
+    Lazy (..),
 ) where
 
 import Control.Applicative (pure)
 import Control.Monad (Monad (..), fail, (>=>))
 import Control.Monad.Extra (concatForM)
+import Control.Monad.Primitive (PrimBase, unsafeDupableInterleave)
 import Control.Monad.ST (ST, runST)
 import Data.Bits (FiniteBits, finiteBitSize, shift, (.|.))
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
 import Data.Function (id, ($))
+import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
@@ -318,4 +323,27 @@ instance Generator HWEntropy IO where
 
 instance RandomGenerator HWEntropy where
     generateR gen r = r gen
+    {-# INLINE generateR #-}
+
+newtype Lazy g = Lazy g
+    deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance (PrimBase m, Generator g m) => Generator (Lazy g) m where
+    uniform1 (Lazy gen) = unsafeDupableInterleave $ uniform1 gen
+    {-# INLINE uniform1 #-}
+    uniform2 (Lazy gen) = unsafeDupableInterleave $ uniform2 gen
+    {-# INLINE uniform2 #-}
+    uniform1B hi (Lazy gen) = unsafeDupableInterleave $ uniform1B hi gen
+    {-# INLINE uniform1B #-}
+    uniform2B hi (Lazy gen) = unsafeDupableInterleave $ uniform2B hi gen
+    {-# INLINE uniform2B #-}
+
+instance (PrimBase m, SeedableGenerator g m) => SeedableGenerator (Lazy g) m where
+    type Seed (Lazy g) = Seed g
+    type State (Lazy g) m = Lazy (State g m)
+    initialize (Lazy gen) seed = unsafeDupableInterleave (Lazy <$> initialize gen seed)
+    {-# INLINE initialize #-}
+
+instance RandomGenerator g => RandomGenerator (Lazy g) where
+    generateR (Lazy gen) r = unsafeDupableInterleave $ generateR gen r
     {-# INLINE generateR #-}
