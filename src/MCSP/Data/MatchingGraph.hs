@@ -32,8 +32,8 @@ import Data.Ord (Ord (..))
 import Data.Vector.Generic qualified as Vector (foldl', length, snoc)
 import Data.Vector.Unboxed (Vector)
 import GHC.IsList (IsList (..))
-import GHC.Num (fromInteger, (+), (-))
-import GHC.Real (toInteger)
+import GHC.Num ((+), (-))
+import GHC.Real (fromIntegral)
 import Text.Show (Show)
 
 import MCSP.Data.Pair (Pair, both, cartesian, left, liftP, right, ($:), (&&&))
@@ -103,9 +103,7 @@ type Block = Interval Index
 -- >>> blockInterval 1 4
 -- Finite 1 <=..< Finite 5
 blockInterval :: Index -> Length -> Block
-blockInterval lo len = extend lo <=..< extend (lo + len)
-  where
-    extend = fromInteger . toInteger
+blockInterval lo len = fromIntegral lo <=..< fromIntegral (lo + len)
 
 -- | Extract the interval for the associated blocks in each string from an edge.
 --

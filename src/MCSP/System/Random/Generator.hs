@@ -25,7 +25,7 @@ import Control.Monad.ST (ST, runST)
 import Data.Bits (FiniteBits, finiteBitSize, shift, (.|.))
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
-import Data.Function (id, ($))
+import Data.Function (id, ($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (..), maybe)
@@ -43,9 +43,10 @@ import Language.Haskell.TH (conT)
 import System.IO (IO)
 import Text.Read (Read)
 import Text.Show (Show)
+import Unsafe.Coerce (unsafeCoerce)
 
 import System.Entropy (getEntropy, getHardwareEntropy)
-import System.Random.MWC qualified (Gen, Seed, restore, toSeed, uniformM, uniformRM)
+import System.Random.MWC qualified (Gen, restore, toSeed, uniformM, uniformRM)
 import System.Random.PCG qualified (Gen, initialize)
 import System.Random.PCG.Class qualified as PCG (uniform1, uniform1B, uniform2, uniformRW64)
 import System.Random.PCG.Fast qualified (Gen, initialize)
@@ -107,8 +108,13 @@ generateIO = generateIOWith randomSeed
 data MWC = MWC
     deriving stock (Eq, Ord, Show, Read, Generic)
 
+newtype MWCSeed = MWCSeed (Vector Word32)
+    deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance NFData MWCSeed
+
 toMWCSeed :: Vector Word32 -> Seed MWC
-toMWCSeed = System.Random.MWC.toSeed
+toMWCSeed = unsafeCoerce . System.Random.MWC.toSeed
 {-# INLINE toMWCSeed #-}
 
 randomMWCSeed :: Generator g m => g -> m (Seed MWC)
@@ -127,8 +133,8 @@ instance Generator (System.Random.MWC.Gen s) (ST s) where
 
 instance SeedableGenerator MWC (ST s) where
     type State MWC (ST s) = System.Random.MWC.Gen s
-    type Seed MWC = System.Random.MWC.Seed
-    initialize MWC = System.Random.MWC.restore
+    type Seed MWC = MWCSeed
+    initialize MWC = System.Random.MWC.restore . unsafeCoerce
     {-# INLINE initialize #-}
 
 wordsTo64Bit :: Word32 -> Word32 -> Word64

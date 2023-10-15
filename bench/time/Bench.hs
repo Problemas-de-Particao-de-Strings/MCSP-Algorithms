@@ -8,25 +8,24 @@ import Control.Monad (replicateM)
 import Control.Monad.ST (stToIO)
 import Criterion.Main (bench, bgroup, defaultMainWith, perRunEnv)
 import Criterion.Types (Benchmark, Config (..), Verbosity (Verbose))
-import Data.Int (Int64)
-import Data.Vector.Unboxed qualified as Vector (replicateM)
-import Data.Word (Word8)
+import Data.Vector.Unboxed.Mutable (MVector)
+import Data.Word (Word32, Word8)
+import GHC.Generics (Generic)
+import Unsafe.Coerce (unsafeCoerce)
 
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (
     Entropy (..),
-    HWEntropy (..),
     Lazy (..),
     MWC (..),
     PCG (..),
     PCGFast (..),
     PCGFastPure (..),
     PCGPure (..),
-    PCGSingle (..),
-    PCGUnique (..),
     Random,
     SeedableGenerator (..),
     evalRandom,
+    mwcSeed,
     uniform,
     uniformR,
  )
@@ -78,58 +77,24 @@ benchGen :: (Show g, NFData s) => g -> IO s -> (forall a. Random a -> s -> IO a)
 benchGen rng seed gen =
     bgroup
         (show rng)
-        [ benchCase "10 Int uniform" (replicateM 10 uniform :: Random [Int]) seed gen,
-          benchCase "100 Int uniform" (replicateM 100 uniform :: Random [Int]) seed gen,
-          benchCase "1000 Int uniform" (replicateM 1000 uniform :: Random [Int]) seed gen,
-          benchCase "10 Word8 uniform" (replicateM 10 uniform :: Random [Word8]) seed gen,
-          benchCase "100 Word8 uniform" (replicateM 100 uniform :: Random [Word8]) seed gen,
-          benchCase "1000 Word8 uniform" (replicateM 1000 uniform :: Random [Word8]) seed gen,
-          benchCase "10 Int64 uniform" (replicateM 10 uniform :: Random [Int64]) seed gen,
-          benchCase "100 Int64 uniform" (replicateM 100 uniform :: Random [Int64]) seed gen,
-          benchCase "1000 Int64 uniform" (replicateM 1000 uniform :: Random [Int64]) seed gen,
-          benchCase "10 Float uniform" (replicateM 10 uniform :: Random [Float]) seed gen,
-          benchCase "100 Float uniform" (replicateM 100 uniform :: Random [Float]) seed gen,
-          benchCase "1000 Float uniform" (replicateM 1000 uniform :: Random [Float]) seed gen,
-          benchCase "10 Double uniform" (replicateM 10 uniform :: Random [Double]) seed gen,
-          benchCase "100 Double uniform" (replicateM 100 uniform :: Random [Double]) seed gen,
+        [ benchCase "1000 Float uniform" (replicateM 1000 uniform :: Random [Float]) seed gen,
           benchCase "1000 Double uniform" (replicateM 1000 uniform :: Random [Double]) seed gen,
-          benchCase "10 Int (0,100)" (replicateM 10 (uniformR 0 100) :: Random [Int]) seed gen,
-          benchCase "100 Int (0,100)" (replicateM 100 (uniformR 0 100) :: Random [Int]) seed gen,
           benchCase "1000 Int (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Int]) seed gen,
-          benchCase "10 Word8 (0,100)" (replicateM 10 (uniformR 0 100) :: Random [Word8]) seed gen,
-          benchCase "100 Word8 (0,100)" (replicateM 100 (uniformR 0 100) :: Random [Word8]) seed gen,
-          benchCase "1000 Word8 (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Word8]) seed gen,
-          benchCase "10 Int64 (0,100)" (replicateM 10 (uniformR 0 100) :: Random [Int64]) seed gen,
-          benchCase "100 Int64 (0,100)" (replicateM 100 (uniformR 0 100) :: Random [Int64]) seed gen,
-          benchCase "1000 Int64 (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Int64]) seed gen
+          benchCase "1000 Word8 (0,100)" (replicateM 1000 (uniformR 0 100) :: Random [Word8]) seed gen
         ]
 {-# INLINE benchGen #-}
 
 benchIt :: [Benchmark]
 benchIt =
-    [ benchGen Entropy (pure Entropy) evalRandom,
-      benchGen HWEntropy (pure HWEntropy) evalRandom,
-      benchGen MWC mwcSeed (runRandom MWC),
-      benchGen PCG (evalRandom uniform Entropy) (runRandom PCG),
-      benchGen PCGPure (evalRandom uniform Entropy) (runRandom PCGPure),
-      benchGen PCGFast (evalRandom uniform Entropy) (runRandom PCGFast),
-      benchGen PCGFastPure (evalRandom uniform Entropy) (runRandom PCGFastPure),
-      benchGen PCGSingle (evalRandom uniform Entropy) (runRandom PCGSingle),
-      benchGen PCGUnique (evalRandom uniform Entropy) (evalIO PCGUnique),
-      benchGen (Lazy Entropy) (pure (Lazy Entropy)) evalRandom,
-      benchGen (Lazy HWEntropy) (pure (Lazy HWEntropy)) evalRandom,
-      benchGen (Lazy MWC) mwcSeed (runRandom (Lazy MWC)),
-      benchGen (Lazy PCG) (evalRandom uniform Entropy) (runRandom (Lazy PCG)),
-      benchGen (Lazy PCGPure) (evalRandom uniform Entropy) (runRandom (Lazy PCGPure)),
-      benchGen (Lazy PCGFast) (evalRandom uniform Entropy) (runRandom (Lazy PCGFast)),
-      benchGen (Lazy PCGFastPure) (evalRandom uniform Entropy) (runRandom (Lazy PCGFastPure)),
-      benchGen (Lazy PCGSingle) (evalRandom uniform Entropy) (runRandom (Lazy PCGSingle)),
-      benchGen (Lazy PCGUnique) (evalRandom uniform Entropy) (evalIO (Lazy PCGUnique))
+    [ benchGen PCG (evalLazy uniform) (runRandom PCG),
+      benchGen PCGFast (evalLazy uniform) (runRandom PCGFast),
+      benchGen PCGPure (evalLazy uniform) (runRandom PCGPure),
+      benchGen PCGFastPure (evalLazy uniform) (runRandom PCGFastPure),
+      benchGen MWC (evalLazy mwcSeed) (runRandom MWC)
     ]
   where
-    evalIO gen r s = initialize gen s >>= evalRandom r
+    evalLazy r = evalRandom r (Lazy Entropy)
     runRandom gen r seed = stToIO (initialize gen seed >>= evalRandom r)
-    mwcSeed = evalRandom (Vector.replicateM 258 uniform) Entropy
 {-# INLINE benchIt #-}
 
 -- | Run a matrix of benchmarks for each parameter set and heuristic.
