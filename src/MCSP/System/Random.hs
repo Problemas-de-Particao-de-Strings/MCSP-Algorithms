@@ -11,6 +11,7 @@ module MCSP.System.Random (
     randomSeed,
     showSeed,
     readSeed,
+    mwcSeed,
     Generator (..),
     SeedableGenerator (..),
     RandomGenerator (..),
@@ -77,6 +78,7 @@ import MCSP.System.Random.Generator (
     PCGUnique (..),
     RandomGenerator (..),
     SeedableGenerator (..),
+    randomMWCSeed,
  )
 import MCSP.System.Random.Uniform (Uniform (..))
 
@@ -171,6 +173,10 @@ generate r = do
     seed <- randomSeed
     pure (generateWith seed r)
 {-# INLINE generate #-}
+
+mwcSeed :: Random (Seed MWC)
+mwcSeed = liftRandom randomMWCSeed
+{-# INLINE mwcSeed #-}
 
 -- | Generate a new random seed.
 --

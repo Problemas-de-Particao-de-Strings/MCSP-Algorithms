@@ -13,6 +13,7 @@ module MCSP.System.Random.Generator (
     Entropy (..),
     HWEntropy (..),
     Lazy (..),
+    randomMWCSeed,
 ) where
 
 import Control.Applicative (pure)
@@ -31,7 +32,7 @@ import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
 import Data.Store (Size (ConstSize), Store, decodeIO, size)
 import Data.Tuple (uncurry)
-import Data.Vector.Unboxed (Vector)
+import Data.Vector.Unboxed (Vector, replicateM)
 import Data.Word (Word32, Word64, Word8)
 import GHC.Base (asTypeOf, ($!))
 import GHC.Enum (Bounded, maxBound)
@@ -44,7 +45,7 @@ import Text.Read (Read)
 import Text.Show (Show)
 
 import System.Entropy (getEntropy, getHardwareEntropy)
-import System.Random.MWC qualified (Gen, initialize, uniformM, uniformRM)
+import System.Random.MWC qualified (Gen, Seed, restore, toSeed, uniformM, uniformRM)
 import System.Random.PCG qualified (Gen, initialize)
 import System.Random.PCG.Class qualified as PCG (uniform1, uniform1B, uniform2, uniformRW64)
 import System.Random.PCG.Fast qualified (Gen, initialize)
@@ -89,11 +90,14 @@ randomSeed = case (size :: Size a) of
     _ -> fail "randomSeed: could not deduce size of seed"
 {-# INLINE randomSeed #-}
 
-generateIO :: Store a => (forall s. a -> ST s b) -> IO b
-generateIO gen = randomSeed >>= runIO
+generateIOWith :: IO a -> (forall s. a -> ST s b) -> IO b
+generateIOWith seed gen = seed >>= runIO
   where
     runIO x = pure (runST (gen x))
-{-# INLINE generateIO #-}
+{-# INLINE generateIOWith #-}
+
+generateIO :: Store a => (forall s. a -> ST s b) -> IO b
+generateIO = generateIOWith randomSeed
 
 -- | Pseudo-random number generation using Marsaglia's MWC256, (also known as MWC8222)
 -- multiply-with-carry generator
@@ -102,6 +106,14 @@ generateIO gen = randomSeed >>= runIO
 -- <https://hackage.haskell.org/package/mwc-random>.
 data MWC = MWC
     deriving stock (Eq, Ord, Show, Read, Generic)
+
+toMWCSeed :: Vector Word32 -> Seed MWC
+toMWCSeed = System.Random.MWC.toSeed
+{-# INLINE toMWCSeed #-}
+
+randomMWCSeed :: Generator g m => g -> m (Seed MWC)
+randomMWCSeed gen = toMWCSeed <$> replicateM 258 (uniform1 gen)
+{-# INLINE randomMWCSeed #-}
 
 instance Generator (System.Random.MWC.Gen s) (ST s) where
     uniform1 = System.Random.MWC.uniformM
@@ -115,13 +127,9 @@ instance Generator (System.Random.MWC.Gen s) (ST s) where
 
 instance SeedableGenerator MWC (ST s) where
     type State MWC (ST s) = System.Random.MWC.Gen s
-    type Seed MWC = Vector Word32
-    initialize MWC = System.Random.MWC.initialize
+    type Seed MWC = System.Random.MWC.Seed
+    initialize MWC = System.Random.MWC.restore
     {-# INLINE initialize #-}
-
-instance RandomGenerator MWC where
-    generateR gen r = generateIO (initialize gen >=> r)
-    {-# INLINE generateR #-}
 
 wordsTo64Bit :: Word32 -> Word32 -> Word64
 wordsTo64Bit x y = fromIntegral x `shift` 32 .|. fromIntegral y
@@ -366,4 +374,8 @@ instance (PrimBase m, SeedableGenerator g m) => SeedableGenerator (Lazy g) m whe
 
 instance RandomGenerator g => RandomGenerator (Lazy g) where
     generateR (Lazy gen) r = unsafeDupableInterleave $ generateR gen r
+    {-# INLINE generateR #-}
+
+instance RandomGenerator MWC where
+    generateR gen r = generateIOWith (randomMWCSeed Entropy) (initialize gen >=> r)
     {-# INLINE generateR #-}
