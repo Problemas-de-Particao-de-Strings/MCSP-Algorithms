@@ -2,10 +2,10 @@
 module MCSP.System.Random (
     -- * Random Monad
     Random,
-
-    -- * Evaluation
     evalRandom,
     liftRandom,
+
+    -- * Evaluation
     Seed,
     generate,
     generateWith,
@@ -25,21 +25,17 @@ module MCSP.System.Random (
     partitions,
 ) where
 
-import Control.Applicative (Applicative (..))
+import Control.Applicative (pure)
 import Control.Exception.Extra (errorWithoutStackTrace)
-import Control.Monad (Monad (..), mapM)
+import Control.Monad (mapM)
 import Data.Bits (complement)
 import Data.Foldable (length)
-import Data.Function (const, ($))
-import Data.Functor (Functor (..), (<$>))
+import Data.Function (($))
 import Data.Int (Int)
 import Data.List ((++))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (Maybe (..))
-import Data.Monoid (Monoid (..))
-import Data.Semigroup (Semigroup (..))
 import Data.String qualified as Text (String)
-import Data.Traversable (sequence)
 import Data.Tuple (fst)
 import Data.Vector.Generic (Vector, indexM, splitAt)
 import Data.Vector.Generic qualified as Vector (length)
@@ -52,80 +48,14 @@ import System.IO (IO)
 import Text.ParserCombinators.ReadP (ReadP, readP_to_S, readS_to_P, skipSpaces)
 
 import System.Random.PCG qualified as PCG
-import System.Random.PCG.Class (Generator, sysRandom)
+import System.Random.PCG.Class (sysRandom)
 import System.Random.Shuffle qualified as Shuffle (shuffle)
 
--- ------------ --
--- Random Monad --
--- ------------ --
-
--- | A monad capable of producing random values of @a@.
-newtype Random a = Random (forall g m. Generator g m => g -> m a)
-
-instance Functor Random where
-    fmap f (Random gena) = liftRandom $ \rng -> do
-        a <- gena rng
-        pure (f a)
-    {-# INLINE fmap #-}
-    x <$ _ = pure x
-    {-# INLINE (<$) #-}
-
-instance Applicative Random where
-    pure x = Random (const (pure x))
-    {-# INLINE pure #-}
-    liftA2 f (Random gena) (Random genb) = liftRandom $ \rng -> do
-        a <- gena rng
-        b <- genb rng
-        pure (f a b)
-    {-# INLINE liftA2 #-}
-    Random genf <*> Random gena = liftRandom $ \rng -> do
-        f <- genf rng
-        a <- gena rng
-        pure (f a)
-    {-# INLINE (<*>) #-}
-    Random gena *> Random genb = liftRandom $ \rng -> do
-        _ <- gena rng
-        genb rng
-    {-# INLINE (*>) #-}
-    Random gena <* Random genb = liftRandom $ \rng -> do
-        a <- gena rng
-        _ <- genb rng
-        pure a
-    {-# INLINE (<*) #-}
-
-instance Monad Random where
-    Random gena >>= f = liftRandom $ \rng -> do
-        a <- gena rng
-        evalRandom (f a) rng
-    {-# INLINE (>>=) #-}
-
-instance Semigroup a => Semigroup (Random a) where
-    (<>) = liftA2 (<>)
-    {-# INLINE (<>) #-}
-    sconcat xs = sconcat <$> sequence xs
-    {-# INLINE sconcat #-}
-    stimes n x = stimes n <$> x
-    {-# INLINE stimes #-}
-
-instance Monoid a => Monoid (Random a) where
-    mempty = pure mempty
-    {-# INLINE mempty #-}
-    mconcat xs = mconcat <$> sequence xs
-    {-# INLINE mconcat #-}
+import MCSP.System.Random.Monad (Random, evalRandom, liftRandom)
 
 -- ---------- --
 -- Evaluation --
 -- ---------- --
-
--- | Evaluate a random computation with the given initial generator and return the final value.
-evalRandom :: Generator g m => Random a -> g -> m a
-evalRandom (Random gen) = gen
-{-# INLINE evalRandom #-}
-
--- | Turn a standard RNG function into a `Random` monad.
-liftRandom :: (forall g m. Generator g m => g -> m a) -> Random a
-liftRandom = Random
-{-# INLINE liftRandom #-}
 
 -- | Values used to seed a random number generator.
 type Seed = (Word64, Word64)
