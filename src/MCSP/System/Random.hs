@@ -4,14 +4,16 @@ module MCSP.System.Random (
     Random,
     evalRandom,
     liftRandom,
+    generate,
+    generateFast,
 
     -- * Evaluation
     Seed,
-    generate,
+    readSeed,
+    showSeed,
+    generateFastWith,
     generateWith,
     randomSeed,
-    showSeed,
-    readSeed,
 
     -- * Random Values
     PCG.Variate,
@@ -26,102 +28,32 @@ module MCSP.System.Random (
 ) where
 
 import Control.Applicative (pure)
-import Control.Exception.Extra (errorWithoutStackTrace)
 import Control.Monad (mapM)
-import Data.Bits (complement)
 import Data.Foldable (length)
 import Data.Function (($))
 import Data.Int (Int)
-import Data.List ((++))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (Maybe (..))
-import Data.String qualified as Text (String)
-import Data.Tuple (fst)
 import Data.Vector.Generic (Vector, indexM, splitAt)
 import Data.Vector.Generic qualified as Vector (length)
-import Data.Word (Word64, bitReverse64)
 import GHC.Enum (Bounded (..), Enum (..))
 import GHC.Exts (IsList (..))
 import GHC.Num ((+), (-))
-import Numeric (readHex, showHex)
-import System.IO (IO)
-import Text.ParserCombinators.ReadP (ReadP, readP_to_S, readS_to_P, skipSpaces)
 
-import System.Random.PCG qualified as PCG
-import System.Random.PCG.Class (sysRandom)
+import System.Random.PCG qualified as PCG (Variate (..))
 import System.Random.Shuffle qualified as Shuffle (shuffle)
 
+import MCSP.System.Random.Generate (
+    Seed,
+    generate,
+    generateFast,
+    generateFastWith,
+    generateWith,
+    randomSeed,
+    readSeed,
+    showSeed,
+ )
 import MCSP.System.Random.Monad (Random, evalRandom, liftRandom)
-
--- ---------- --
--- Evaluation --
--- ---------- --
-
--- | Values used to seed a random number generator.
-type Seed = (Word64, Word64)
-
--- | Use given seed to generate value.
---
--- >>> generateWith (100,200) uniform :: Int
--- 3081816684322452293
-generateWith :: Seed -> Random a -> a
-generateWith (s1, s2) r = fst $ PCG.withFrozen seed (evalRandom r)
-  where
-    seed = PCG.initFrozen (complement s2) (bitReverse64 s1)
-{-# INLINE generateWith #-}
-
--- | Use random seed to generate value in IO.
---
--- >>> generate uniform :: IO Int
--- 3295836545219376626  -- Could be any Int
-generate :: Random a -> IO a
-generate r = PCG.withSystemRandom (evalRandom r)
-{-# INLINE generate #-}
-
--- | Generate a new random seed.
---
--- >>> randomSeed
--- (7193915830657461549,13617428908513093874) -- Could be any seed
-randomSeed :: IO Seed
-randomSeed = do
-    l <- sysRandom
-    r <- sysRandom
-    pure (l, r)
-{-# INLINE randomSeed #-}
-
--- | String representing the RNG seed in hex.
---
--- Inverse of `readSeed`.
---
--- >>> showSeed (0, 1)
--- "0 1"
-showSeed :: Seed -> Text.String
-showSeed (x, y) = showHex x " " ++ showHex y ""
-{-# INLINE showSeed #-}
-
--- | Parser combinator for reading seeds.
-readSeedP :: ReadP Seed
-readSeedP = do
-    l <- readS_to_P readHex
-    skipSpaces
-    r <- readS_to_P readHex
-    pure (l, r)
-
--- | Read a seed in hexadecimal format.
---
--- Inverse of `showSeed`.
---
--- >>> readSeed "0 1"
--- (0,1)
--- >>> readSeed (showSeed (5, 10))
--- (5,10)
--- >>> readSeed "75f9fea579c63117 8a3a15e4c0a7029f"
--- (8501105758304612631,9960297598112170655)
-readSeed :: Text.String -> Seed
-readSeed str = case readP_to_S readSeedP str of
-    [(seed, "")] -> seed
-    [] -> errorWithoutStackTrace "readSeed: no parse"
-    _ -> errorWithoutStackTrace "readSeed: ambiguous parse"
 
 -- ------------- --
 -- Random Values --
