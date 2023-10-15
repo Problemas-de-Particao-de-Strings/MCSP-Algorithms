@@ -2,6 +2,7 @@
 module MCSP.System.Random.Generator (
     Generator (..),
     SeedableGenerator (..),
+    RandomGenerator (..),
     MWC (..),
     PCG (..),
     PCGFast (..),
@@ -12,9 +13,9 @@ module MCSP.System.Random.Generator (
 ) where
 
 import Control.Applicative (pure)
-import Control.Monad (Monad (..), fail)
+import Control.Monad (Monad (..), fail, (>=>))
 import Control.Monad.Extra (concatForM)
-import Control.Monad.ST (ST)
+import Control.Monad.ST (ST, runST)
 import Data.Bits (FiniteBits, finiteBitSize, shift, (.|.))
 import Data.Bool (otherwise)
 import Data.Eq (Eq (..))
@@ -22,7 +23,7 @@ import Data.Function (id, ($))
 import Data.Int (Int)
 import Data.Maybe (Maybe (..), maybe)
 import Data.Ord (Ord (..))
-import Data.Store (decodeIO)
+import Data.Store (Size (ConstSize), Store, decodeIO, size)
 import Data.Tuple (uncurry)
 import Data.Vector.Unboxed (Vector)
 import Data.Word (Word32, Word64, Word8)
@@ -46,6 +47,16 @@ import System.Random.PCG.Pure qualified (Gen, initialize)
 import System.Random.PCG.Single qualified (Gen, initialize)
 import System.Random.PCG.Unique qualified (Gen, initialize)
 
+class Generator (State g m) m => SeedableGenerator g m where
+    -- | The actual generator that uses the seed to generate values.
+    type State g m
+
+    -- | The type used to seed the generator.
+    type Seed g
+
+    -- Construct the generator from a seed.
+    initialize :: g -> Seed g -> m (State g m)
+
 -- | A random number generator.
 --
 -- The numbers generated here may be from computer entropy or may be generated with a pseudo-random
@@ -63,28 +74,28 @@ class Monad m => Generator g m where
     -- | Generates a single 64-bit value up to a given limit with a uniform distribution.
     uniform2B :: Word64 -> g -> m Word64
 
-class Generator (State g m) m => SeedableGenerator g m where
-    -- | The actual generator that uses the seed to generate values.
-    type State g m
+class RandomGenerator g where
+    generateR :: g -> (forall g' m'. Generator g' m' => g' -> m' a) -> IO a
 
-    -- | The type used to seed the generator.
-    type Seed g
+randomSeed :: forall a. Store a => IO a
+randomSeed = case (size :: Size a) of
+    ConstSize n -> getHardwareEntropy n >>= maybe (getEntropy n) pure >>= decodeIO
+    _ -> fail "randomSeed: could not deduce size of seed"
+{-# INLINE randomSeed #-}
 
-    -- Construct the generator from a seed.
-    initialize :: g -> Seed g -> m (State g m)
+generateIO :: Store a => (forall s. a -> ST s b) -> IO b
+generateIO gen = randomSeed >>= runIO
+  where
+    runIO x = pure (runST (gen x))
+{-# INLINE generateIO #-}
 
 -- | Pseudo-random number generation using Marsaglia's MWC256, (also known as MWC8222)
 -- multiply-with-carry generator
 --
--- The MWC generator is supposed to be really fast. See <https://hackage.haskell.org/package/mwc-random>.
+-- The MWC generator is supposed to be really fast. See
+-- <https://hackage.haskell.org/package/mwc-random>.
 data MWC = MWC
     deriving stock (Eq, Ord, Show, Read, Generic)
-
-instance SeedableGenerator MWC (ST s) where
-    type State MWC (ST s) = System.Random.MWC.Gen s
-    type Seed MWC = Vector Word32
-    initialize MWC = System.Random.MWC.initialize
-    {-# INLINE initialize #-}
 
 instance Generator (System.Random.MWC.Gen s) (ST s) where
     uniform1 = System.Random.MWC.uniformM
@@ -95,6 +106,16 @@ instance Generator (System.Random.MWC.Gen s) (ST s) where
     {-# INLINE uniform1B #-}
     uniform2B bound = System.Random.MWC.uniformRM (0, bound)
     {-# INLINE uniform2B #-}
+
+instance SeedableGenerator MWC (ST s) where
+    type State MWC (ST s) = System.Random.MWC.Gen s
+    type Seed MWC = Vector Word32
+    initialize MWC = System.Random.MWC.initialize
+    {-# INLINE initialize #-}
+
+instance RandomGenerator MWC where
+    generateR gen r = generateIO (initialize gen >=> r)
+    {-# INLINE generateR #-}
 
 wordsTo64Bit :: Word32 -> Word32 -> Word64
 wordsTo64Bit x y = fromIntegral x `shift` 32 .|. fromIntegral y
@@ -133,6 +154,10 @@ instance SeedableGenerator PCG (ST s) where
     initialize PCG = uncurry System.Random.PCG.initialize
     {-# INLINE initialize #-}
 
+instance RandomGenerator PCG where
+    generateR gen r = generateIO (initialize gen >=> r)
+    {-# INLINE generateR #-}
+
 -- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
@@ -145,6 +170,10 @@ instance SeedableGenerator PCGFast (ST s) where
     type State PCGFast (ST s) = System.Random.PCG.Fast.Gen s
     initialize PCGFast = System.Random.PCG.Fast.initialize
     {-# INLINE initialize #-}
+
+instance RandomGenerator PCGFast where
+    generateR gen r = generateIO (initialize gen >=> r)
+    {-# INLINE generateR #-}
 
 -- | The standard generator for PCG (Permuted Congruential Generator) algorithm, implemented in
 -- Haskell.
@@ -160,6 +189,10 @@ instance SeedableGenerator PCGPure (ST s) where
     initialize PCGPure = uncurry System.Random.PCG.Pure.initialize
     {-# INLINE initialize #-}
 
+instance RandomGenerator PCGPure where
+    generateR gen r = generateIO (initialize gen >=> r)
+    {-# INLINE generateR #-}
+
 -- | A fast generator for PCG (Permuted Congruential Generator) algorithm, implemented in Haskell.
 --
 -- The PCG generators have good statstical quality, is fast and use very little memory. See
@@ -172,6 +205,10 @@ instance SeedableGenerator PCGFastPure (ST s) where
     type State PCGFastPure (ST s) = System.Random.PCG.Fast.Pure.Gen s
     initialize PCGFastPure = System.Random.PCG.Fast.Pure.initialize
     {-# INLINE initialize #-}
+
+instance RandomGenerator PCGFastPure where
+    generateR gen r = generateIO (initialize gen >=> r)
+    {-# INLINE generateR #-}
 
 -- | A single stream generator for PCG (Permuted Congruential Generator) algorithm, implemented in
 -- C.
@@ -186,6 +223,10 @@ instance SeedableGenerator PCGSingle (ST s) where
     type State PCGSingle (ST s) = System.Random.PCG.Single.Gen s
     initialize PCGSingle = System.Random.PCG.Single.initialize
     {-# INLINE initialize #-}
+
+instance RandomGenerator PCGSingle where
+    generateR gen r = generateIO (initialize gen >=> r)
+    {-# INLINE generateR #-}
 
 -- | A unique generator for PCG (Permuted Congruential Generator) algorithm, implemented in C.
 --
@@ -214,6 +255,10 @@ instance SeedableGenerator PCGUnique IO where
     type State PCGUnique IO = System.Random.PCG.Unique.Gen
     initialize PCGUnique = System.Random.PCG.Unique.initialize
     {-# INLINE initialize #-}
+
+instance RandomGenerator PCGUnique where
+    generateR gen r = randomSeed >>= initialize gen >>= r
+    {-# INLINE generateR #-}
 
 uniformBounded :: (Integral a, Bounded a, Monad m) => a -> m a -> m a
 uniformBounded hi genUniform
@@ -251,6 +296,10 @@ instance Generator Entropy IO where
     uniform2B hi gen = uniformBounded hi (uniform2 gen)
     {-# INLINE uniform2B #-}
 
+instance RandomGenerator Entropy where
+    generateR gen r = r gen
+    {-# INLINE generateR #-}
+
 data HWEntropy = HWEntropy
     deriving stock (Eq, Ord, Show, Read, Generic)
 
@@ -266,3 +315,7 @@ instance Generator HWEntropy IO where
     {-# INLINE uniform1B #-}
     uniform2B hi gen = uniformBounded hi (uniform2 gen)
     {-# INLINE uniform2B #-}
+
+instance RandomGenerator HWEntropy where
+    generateR gen r = r gen
+    {-# INLINE generateR #-}
