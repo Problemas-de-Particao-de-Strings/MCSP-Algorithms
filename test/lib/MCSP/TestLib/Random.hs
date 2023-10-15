@@ -17,7 +17,7 @@ import GHC.Num ((-))
 import MCSP.Data.Pair (Pair, both, bothM, dupe)
 import MCSP.Data.String (String (..), Unbox, concat, elem, empty, length, (!), (++))
 import MCSP.Data.String.Extra (Partition)
-import MCSP.System.Random (Random, partitions, shuffle, uniformB, uniformRE)
+import MCSP.System.Random (Random, partitions, shuffle, uniformR, uniformRE)
 
 -- | Common constraints for a character.
 type SimpleEnum a = (Enum a, Bounded a, Unbox a, Eq a)
@@ -39,7 +39,7 @@ randomReplicated size lo hi = go size lo hi empty
   where
     go 0 _ _ old = pure old
     go 1 _ _ old = do
-        index <- uniformB $ length old
+        index <- uniformR 0 (length old - 1)
         pure $ old :> (old ! index)
     go n lo' hi' old = do
         value <- uniformRE lo' hi'
