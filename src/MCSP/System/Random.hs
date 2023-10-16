@@ -4,6 +4,7 @@ module MCSP.System.Random (
     Random,
     evalRandom,
     liftRandom,
+    lazyRandom,
     generate,
     generateFast,
 
@@ -25,6 +26,7 @@ module MCSP.System.Random (
     choose,
     shuffle,
     partitions,
+    repeatR,
 ) where
 
 import Control.Applicative (pure)
@@ -53,7 +55,12 @@ import MCSP.System.Random.Generate (
     readSeed,
     showSeed,
  )
-import MCSP.System.Random.Monad (Random, evalRandom, liftRandom)
+import MCSP.System.Random.Monad (
+    Random,
+    evalRandom,
+    lazyRandom,
+    liftRandom,
+ )
 
 -- ------------- --
 -- Random Values --
@@ -178,3 +185,15 @@ partitions xs = case Vector.length xs of
         parts <- partitions rest
         pure (part : parts)
 {-# INLINEABLE partitions #-}
+
+-- | Generates an infinite list of random values.
+--
+-- >>> import Prelude (take, (<$>))
+-- >>> generateWith (1,3) (take 3 <$> repeatR (uniform :: Random Int))
+-- [-8858759364290496978,-2446124676014956441,1387719708863309077]
+repeatR :: Random a -> Random [a]
+repeatR r = lazyRandom $ do
+    value <- r
+    rest <- repeatR r
+    pure (value : rest)
+{-# INLINEABLE repeatR #-}
