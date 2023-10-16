@@ -115,7 +115,7 @@ type Seed = Pair Word64
 -- | Generate a new random seed.
 --
 -- >>> randomSeed
--- (7193915830657461549,13617428908513093874) -- Could be any seed
+-- ...
 randomSeed :: IO Seed
 randomSeed = zipM (dupe sysRandom)
 {-# INLINE randomSeed #-}
