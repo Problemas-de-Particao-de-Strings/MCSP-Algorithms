@@ -71,6 +71,7 @@ import MCSP.System.Random.Monad (
 -- * Use entire range for integral types.
 -- * Use (0,1] range for floating types.
 --
+-- >>> import Prelude (Double)
 -- >>> generateWith (1,2) uniform :: Double
 -- 0.6502342391751404
 uniform :: PCG.Variate a => Random a
@@ -103,6 +104,7 @@ uniformB b = liftRandom $ PCG.uniformB b
 --
 -- It should be equivalent to @`uniformR` (`minBound`, `maxBound`)@, but for non-`PCG.Variate`.
 --
+-- >>> import Prelude (Show)
 -- >>> data T = A | B | C | D deriving (Enum, Bounded, Show)
 -- >>> generateWith (1,3) uniformE :: T
 -- C
