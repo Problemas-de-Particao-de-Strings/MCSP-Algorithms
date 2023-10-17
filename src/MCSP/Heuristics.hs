@@ -5,6 +5,7 @@ module MCSP.Heuristics (
     trivial,
     module MCSP.Heuristics.Combine,
     module MCSP.Heuristics.Greedy,
+    module MCSP.Heuristics.PSOBased,
 
     -- * Correctness checking
     ErrorMessage,
@@ -33,6 +34,7 @@ import MCSP.Data.String (ShowString, String (..), concat)
 import MCSP.Data.String.Extra (Partition, alphabet, chars, occurrences)
 import MCSP.Heuristics.Combine (combine, combineS)
 import MCSP.Heuristics.Greedy (greedy)
+import MCSP.Heuristics.PSOBased (pso)
 
 -- | Heuristic for the MCSP problem.
 type Heuristic a = Pair (String a) -> Pair (Partition a)
