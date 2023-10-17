@@ -9,21 +9,16 @@ module MCSP.Algorithms.PSO (
     weighted,
     weightedN,
     sumVelocities,
-    defaultUpdater,
 
     -- * Data structures
     PsoGuide (..),
     Particle (..),
     Swarm (..),
-
-    -- * Swarm creation
-    createSwarm,
-    randomWeights,
-    iterateSwarm,
+    particleSwarmOptimization,
 ) where
 
 import Control.Applicative (pure, (<$>))
-import Control.Monad (fmap, mapM)
+import Control.Monad (fmap, mapM, (>>=))
 import Control.Monad qualified as Monad (replicateM)
 import Data.Eq (Eq, (==))
 import Data.Foldable1 (foldl1')
@@ -173,15 +168,6 @@ sumVelocities = foldl1' add
         pure (x .+ y)
 {-# INLINE sumVelocities #-}
 
--- | Default updater consider local best, global best and random components.
-defaultUpdater :: Updater a
-defaultUpdater =
-    sumVelocities
-        [ weighted 1.2 randomVelocity,
-          weighted 0.005 localGuideDirection,
-          weighted 0.005 globalGuideDirection
-        ]
-
 -- ----- --
 -- Swarm --
 -- ----- --
@@ -233,10 +219,6 @@ createSwarm eval originalV n gen = do
     let gGuide = maximum1 $ fmap pGuide parts
     pure $ Swarm {parts, gGuide, iteration = 0}
 
--- | Generate a random position given the number of coordinates.
-randomWeights :: Int -> Random (Vector Weight)
-randomWeights size = replicateM size (uniformR (-1.0) 1.0)
-
 -- ---------------- --
 -- Iterating swarms --
 -- ---------------- --
@@ -274,6 +256,17 @@ updateSwarm up eval originalV swarm = do
 -- | Create iterations of a swarm.
 iterateSwarm :: Unbox a => Updater a -> EvalFunction a -> Vector a -> Swarm a -> Random [Swarm a]
 iterateSwarm up eval originalV inital = repeatR (updateSwarm up eval originalV inital)
+
+particleSwarmOptimization ::
+    Unbox a =>
+    Updater a
+    -> EvalFunction a
+    -> Vector a
+    -> Random (Vector Weight)
+    -> Int
+    -> Random [Swarm a]
+particleSwarmOptimization updater eval values weights size =
+    createSwarm eval values size weights >>= iterateSwarm updater eval values
 
 -- ----------------- --
 -- Vector operations --
