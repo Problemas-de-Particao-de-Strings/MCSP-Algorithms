@@ -35,7 +35,6 @@
 - warn: { name: Use explicit module export list }
 
 # Rules for MCSP.Data.Pair
-- warn: { lhs: "(x, x)", rhs: "dupe x" }
 - warn: { lhs: "(f x, f y)", rhs: "f `both` (x, y)", side: "notEq x y" }
 - warn: { lhs: "(f &&& f) x", rhs: "dupe (f x)" }
 - warn: { lhs: "(f *** f) p", rhs: "f `both` p" }
