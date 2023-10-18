@@ -27,6 +27,7 @@ module MCSP.System.Random (
     shuffle,
     partitions,
     repeatR,
+    iterateR,
 ) where
 
 import Control.Applicative (pure)
@@ -34,7 +35,7 @@ import Control.Monad (mapM)
 import Data.Foldable (length)
 import Data.Function (($))
 import Data.Int (Int)
-import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
+import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty, (<|))
 import Data.Maybe (Maybe (..))
 import Data.Vector.Generic (Vector, indexM, splitAt)
 import Data.Vector.Generic qualified as Vector (length)
@@ -199,3 +200,16 @@ repeatR r = lazyRandom $ do
     rest <- repeatR r
     pure (value : rest)
 {-# INLINEABLE repeatR #-}
+
+-- | Random version of `Data.List.iterate`.
+--
+-- >>> import Prelude ((<$>))
+-- >>> import Data.List.NonEmpty (take)
+-- >>> generateWith (1,3) (take 3 <$> iterateR (\x -> pure (x + 1)) 1)
+-- [1,2,3]
+iterateR :: (a -> Random a) -> a -> Random (NonEmpty a)
+iterateR next value = lazyRandom $ do
+    newValue <- next value
+    rest <- iterateR next newValue
+    pure (value <| rest)
+{-# INLINEABLE iterateR #-}
