@@ -11,14 +11,21 @@ import Data.List (find, map, replicate, sort)
 import Data.List.Extra (nubSort)
 import Data.List.NonEmpty (last)
 import Data.Maybe (fromMaybe)
-import Data.Vector.Generic qualified as Vector (length)
+import Data.Vector.Generic qualified as Vector (ifilter, length, (!))
 import GHC.IsList (toList)
 import GHC.Num ((-))
 
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.QuickCheck (Testable, collect, testProperty, (===))
 
-import MCSP.Data.MatchingGraph (edgeSet, mergeness, solution, solutions, toPartitions)
+import MCSP.Data.MatchingGraph (
+    compatibleEdges,
+    edgeSet,
+    mergeness,
+    solution,
+    solutions,
+    toPartitions,
+ )
 import MCSP.Data.Pair (Pair, both, first, left, right, snd, swap)
 import MCSP.Data.String (String (..), concat, slice)
 import MCSP.Data.String.Extra (BalancedStrings (..), chars)
@@ -60,12 +67,19 @@ edgeSetTests =
           testPair "nubSort edgeSet === sort edgeSet" $ \strs ->
             nubSort (edges strs) === sort (edges strs),
           testPair "map (first swap) $ edgeSet strs === edgeSet $ swap strs" $ \strs ->
-            sort (map (first swap) (edges strs)) === sort (edges (swap strs))
+            sort (map (first swap) (edges strs)) === sort (edges (swap strs)),
+          testPair "toPartitions $ solutions $ compatibleEdges === toPartitions str $ solutions" $
+            \strs ->
+                let es = edgeSet strs
+                    partitions = toPartitions strs $ solution es
+                    compatible = compatibleEdges partitions es
+                 in toPartitions strs (solution $ select compatible es) === partitions
         ]
   where
     block get str (start, k) = slice (get start) k str
     blocks get str = map (block get str) . toList
     edges = toList . edgeSet
+    select which = Vector.ifilter (\i _ -> which Vector.! i)
 
 solutionTests :: TestTree
 solutionTests =

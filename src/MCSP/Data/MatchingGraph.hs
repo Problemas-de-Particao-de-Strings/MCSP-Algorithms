@@ -3,6 +3,7 @@ module MCSP.Data.MatchingGraph (
     -- * Finding Edges
     Edge,
     edgeSet,
+    compatibleEdges,
 
     -- * Building Solutions
     Solution,
@@ -24,14 +25,13 @@ import Data.IntMap.Strict qualified as IntMap (IntMap, insert, size, toDescList)
 import Data.Interval (Interval, (<=..<))
 import Data.IntervalSet (IntervalSet, insert, intersection)
 import Data.IntervalSet qualified as IntervalSet (null, singleton)
-import Data.List (concatMap, map, takeWhile)
+import Data.List (concatMap, map, replicate, takeWhile, (++))
 import Data.List.NonEmpty (NonEmpty (..), unfoldr)
 import Data.Maybe (Maybe (..))
 import Data.Monoid (Monoid (..), mappend, mempty)
 import Data.Ord (Ord (..))
-import Data.Vector.Generic qualified as Vector (foldl', length, snoc)
-import Data.Vector.Unboxed (Vector)
-import GHC.IsList (IsList (..))
+import Data.Vector.Generic qualified as Vector (foldl', fromList, fromListN, length, map, snoc)
+import Data.Vector.Unboxed (Vector, (!))
 import GHC.Num (fromInteger, (+), (-))
 import GHC.Real (toInteger)
 import Text.Show (Show)
@@ -86,10 +86,39 @@ edgesFrom strs start = takeWhile (isCommonBlock strs) $ map (start,) [2 ..]
 -- >>> edgeSet ("abab", "abba")
 -- [((0,0),2),((1,2),2),((2,0),2)]
 edgeSet :: Eq a => Pair (String a) -> Vector Edge
-edgeSet (l, r) = toVector $ concatMap (edgesFrom (l, r)) start
+edgeSet (l, r) = Vector.fromList $ concatMap (edgesFrom (l, r)) start
   where
     start = cartesian [0 .. length l - 1] [0 .. length r - 1]
-    toVector = fromList
+
+-- ----------------------- --
+-- Edges used in Partition --
+
+-- | Transform a partition into a vector that indicates, for a given
+-- index of the original string, what is the size of the block that
+-- starts in that position, or is zero if no block starts there.
+--
+-- >>> blockMap ["a", "test", "of", "this", "function"]
+-- [1,4,0,0,0,2,0,4,0,0,0,8,0,0,0,0,0,0,0]
+blockMap :: Partition a -> Vector Int
+blockMap x
+    | (_, result, _) <- go (x, [], 0) = Vector.fromList result
+  where
+    go :: (Partition a, [Int], Int) -> (Partition a, [Int], Int)
+    go ([], list, i) = ([], list, i)
+    go (p : ps, list, i) =
+        let size = length p
+         in go (ps, list ++ [size] ++ replicate (size - 1) 0, i + size)
+
+-- | Map each edge to a boolean to indicate wheter that edge
+-- is compatible with a given pair of partitions, i.e. could
+-- have been used to generate that pair.
+--
+-- >>> compatibleEdges (["a", "ba", "b"], ["a", "b", "ba"]) [((0,0),2),((1,2),2),((2,0),2)]
+-- [False,True,False]
+compatibleEdges :: Pair (Partition a) -> Vector Edge -> Vector Bool
+compatibleEdges (both blockMap -> maps) = Vector.map isEdgeIn
+  where
+    isEdgeIn (indices, k) = liftP (!) maps indices == (k, k)
 
 -- ------------------ --
 -- Building Solutions --
@@ -222,7 +251,7 @@ type Solution = Pair (Vector (Index, Length))
 toSolution :: MatchingInfo -> Solution
 toSolution Info {..} = toSolutionVector `both` partition
   where
-    toSolutionVector part = fromListN (IntMap.size part) (IntMap.toDescList part)
+    toSolutionVector part = Vector.fromListN (IntMap.size part) (IntMap.toDescList part)
 
 -- | The solution represented by the edge list.
 --
@@ -277,15 +306,15 @@ blockCount str sol = length str - mergeness sol
 
 -- | Extract the partition from a block slice map.
 --
--- >>> toPartition "abcd" (fromList [(1, 2)])
+-- >>> toPartition "abcd" [(1, 2)]
 -- [a,bc,d]
--- >>> toPartition "abcd" (fromList [(2, 2)])
+-- >>> toPartition "abcd" [(2, 2)]
 -- [a,b,cd]
--- >>> toPartition "abcd" (fromList [(0, 2)])
+-- >>> toPartition "abcd" [(0, 2)]
 -- [ab,c,d]
--- >>> toPartition "abcd" (fromList [(0, 4)])
+-- >>> toPartition "abcd" [(0, 4)]
 -- [abcd]
--- >>> toPartition "abcd" (fromList [])
+-- >>> toPartition "abcd" []
 -- [a,b,c,d]
 toPartition :: String a -> Vector (Index, Length) -> Partition a
 toPartition s = concatChars 0 . Vector.foldl' insertBlock (length s, [])
