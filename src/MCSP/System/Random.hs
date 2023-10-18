@@ -24,6 +24,7 @@ module MCSP.System.Random (
     uniformE,
     uniformRE,
     choice,
+    weightedChoice,
     shuffle,
     partitions,
     repeatR,
@@ -32,17 +33,25 @@ module MCSP.System.Random (
 
 import Control.Applicative (pure)
 import Control.Monad (mapM)
-import Data.Foldable (length)
-import Data.Function (($))
+import Control.Monad.ST (runST)
+import Data.Foldable (length, sum)
+import Data.Function (($), (.))
 import Data.Int (Int)
+import Data.List (map)
 import Data.List.NonEmpty (NonEmpty ((:|)), head, nonEmpty, (<|))
 import Data.List.NonEmpty.Extra ((!?))
 import Data.Maybe (Maybe (..), fromMaybe)
-import Data.Vector.Generic (Vector, splitAt)
-import Data.Vector.Generic qualified as Vector (length)
+import Data.Tuple (fst, snd)
+import Data.Vector (Vector, (!))
+import Data.Vector.Algorithms.Search (binarySearchL)
+import Data.Vector.Generic qualified as Vector (Vector, init, length, splitAt, unsafeThaw)
+import Data.Vector.Unboxed qualified as Unboxed (Vector)
+import Data.Word (Word32)
 import GHC.Enum (Bounded (..), Enum (..))
 import GHC.Exts (IsList (..))
-import GHC.Num ((+), (-))
+import GHC.Float (Double)
+import GHC.Num ((*), (+), (-))
+import GHC.Real (fromIntegral, truncate, (/))
 
 import System.Random.PCG qualified as PCG (Variate (..))
 import System.Random.Shuffle qualified as Shuffle (shuffle)
@@ -142,6 +151,39 @@ choice values = do
     headNE = head
 {-# INLINE choice #-}
 
+-- | /O(n)/ Generate weighted access table for a list of values.
+--
+-- >>> tabulate [(1, "hi"), (10, "hello")]
+-- ([390451572],["hi","hello"])
+tabulate :: NonEmpty (Double, a) -> (Unboxed.Vector Word32, Vector a)
+tabulate (toList -> values) =
+    ( Vector.init (fromList (map (toW32 . fst) values)),
+      fromList (map snd values)
+    )
+  where
+    maxWeight = sum (map fst values)
+    maxW32 = fromIntegral (maxBound :: Word32)
+    toW32 x = truncate (x * maxW32 / maxWeight)
+{-# INLINE tabulate #-}
+
+-- | /O(n)/ Choose a single random value from a non-empty with probability proportional to weight.
+--
+-- >>> import Control.Monad (replicateM)
+-- >>> generateWith (1,2) $ replicateM 10 $ weightedChoice [(1, "hi"), (10, "hello")]
+-- ["hello","hello","hello","hello","hi","hello","hello","hello","hello","hello"]
+weightedChoice :: NonEmpty (Double, a) -> Random a
+weightedChoice (tabulate -> (positions, values)) = do
+    weight <- uniform
+    let idx = binarySearch positions weight
+    pure (values ! idx)
+  where
+    binarySearch v x = runST $ do
+        -- SAFETY: binarySearchL does NOT modify the vector,
+        -- I don't why they chose to expose the mutable API only
+        mv <- Vector.unsafeThaw v
+        binarySearchL mv x
+{-# INLINE weightedChoice #-}
+
 -- | /O(n)/ Generates indices for `S.shuffle`.
 --
 -- See [random-shuffle](https://hackage.haskell.org/package/random-shuffle-0.0.4/docs/System-Random-Shuffle.html#v:shuffle).
@@ -173,16 +215,15 @@ shuffle values = case nonEmpty (toList values) of
 
 -- | /O(n)/ Generate random partitions of a vector.
 --
--- >>> import Data.Vector as V
--- >>> generateWith (1,4) $ partitions (V.fromList [1..10])
+-- >>> generateWith (1,4) $ partitions ([1..10] :: Vector Int)
 -- [[1,2,3],[4,5,6,7,8],[9],[10]]
-partitions :: Vector v a => v a -> Random [v a]
+partitions :: Vector.Vector v a => v a -> Random [v a]
 partitions xs = case Vector.length xs of
     0 -> pure []
     1 -> pure [xs]
     n -> do
         idx <- uniformB n
-        let (part, rest) = splitAt (idx + 1) xs
+        let (part, rest) = Vector.splitAt (idx + 1) xs
         parts <- partitions rest
         pure (part : parts)
 {-# INLINEABLE partitions #-}
