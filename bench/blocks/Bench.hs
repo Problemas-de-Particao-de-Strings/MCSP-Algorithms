@@ -43,7 +43,7 @@ timeLimit = 10.0
 
 -- | Lower and upper limit on the number of runs for a single benchmark.
 runs :: (Int, Int)
-runs = (6, 60)
+runs = (4, 60)
 {-# INLINE runs #-}
 
 -- | Number of initial data points to be ignored.
@@ -51,7 +51,7 @@ runs = (6, 60)
 -- Data points with small number of iterations are much more susceptible to high variance, yet they
 -- have the same weight in linear regression. This is a way of reducing their impact.
 skip :: Int
-skip = 2
+skip = 0
 {-# INLINE skip #-}
 
 -- | Confidence level expected for each benchmark.
@@ -123,7 +123,7 @@ runBenchmark = go (indexed 1 $ take (max $: runs) series) G.empty 0 G.empty
         -- \* a minimum number of runs is executed
         -- \* the time limit ran out and
         -- \* the confidence interval is less than 1% score
-        if run >= (min $: runs) && totalElapsed > timeLimit && estimateCI scores' < 0.01
+        if run >= (min $: runs) && (totalElapsed > timeLimit || estimateCI scores' < 0.01)
             then pure result
             else go iters scores' totalElapsed result m
 

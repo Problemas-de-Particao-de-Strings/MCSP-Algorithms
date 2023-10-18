@@ -13,9 +13,9 @@ import MCSP.TestLib.Sample (ShuffleMethod (..), StringParameters (..), randomPai
 
 randomPair :: Random (String Word8, String Word8)
 randomPair = do
-    r <- uniformR 1 10
-    s <- uniformR 2 50
-    n <- uniformR (r + s + 10) 200
+    r <- uniformR 5 10
+    s <- uniformR 5 30
+    n <- uniformR (2 * r + s) 80
     randomPairWith
         StringParameters
             { size = n,

@@ -72,6 +72,6 @@ randomPairWith (StringParameters {..}) = do
 -- | Parameters to generate strings for benchmarking.
 benchParams :: [StringParameters]
 benchParams =
-    [ StringParameters {size = 100, nReplicated = 2, nSingletons = 5, shuffle = Chars},
-      StringParameters {size = 100, nReplicated = 2, nSingletons = 60, shuffle = Chars}
+    [ StringParameters {size = 60, nReplicated = 5, nSingletons = 5, shuffle = Chars},
+      StringParameters {size = 60, nReplicated = 5, nSingletons = 30, shuffle = Chars}
     ]
