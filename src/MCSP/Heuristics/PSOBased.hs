@@ -46,7 +46,7 @@ defaultUpdater =
 
 -- | Number of iterations in the particle swarm optimization.
 maximumIterations :: Int
-maximumIterations = 100
+maximumIterations = 10
 
 -- | Number of particles used for each swarm.
 numberOfParticles :: Int
