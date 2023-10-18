@@ -40,7 +40,7 @@ import GHC.Stack (HasCallStack)
 import Numeric (showFFloat)
 import Text.Show (Show, show, showListWith)
 
-import MCSP.System.Random (Random, repeatR, uniformR)
+import MCSP.System.Random (Random, iterateR, uniformR)
 
 -- -------------------------------------------------------------
 -- Based on https://github.com/brianshourd/haskell-Calypso
@@ -254,8 +254,14 @@ updateSwarm up eval originalV swarm = do
     pure Swarm {parts = newParts, gGuide = newGuide, iteration = iteration swarm + 1}
 
 -- | Create iterations of a swarm.
-iterateSwarm :: Unbox a => Updater a -> EvalFunction a -> Vector a -> Swarm a -> Random [Swarm a]
-iterateSwarm up eval originalV inital = repeatR (updateSwarm up eval originalV inital)
+iterateSwarm ::
+    Unbox a =>
+    Updater a
+    -> EvalFunction a
+    -> Vector a
+    -> Swarm a
+    -> Random (NonEmpty (Swarm a))
+iterateSwarm up eval originalV = iterateR (updateSwarm up eval originalV)
 
 particleSwarmOptimization ::
     Unbox a =>
@@ -264,7 +270,7 @@ particleSwarmOptimization ::
     -> Vector a
     -> Random (Vector Weight)
     -> Int
-    -> Random [Swarm a]
+    -> Random (NonEmpty (Swarm a))
 particleSwarmOptimization updater eval values weights size =
     createSwarm eval values size weights >>= iterateSwarm updater eval values
 
