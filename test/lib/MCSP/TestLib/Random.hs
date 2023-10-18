@@ -7,13 +7,15 @@ module MCSP.TestLib.Random (
 ) where
 
 import Control.Applicative (pure, (<$>))
-import Data.Eq (Eq)
+import Data.Eq (Eq (..))
 import Data.Function (($))
 import Data.Int (Int)
+import Data.Ord (Ord (..))
 import GHC.Enum (Bounded, Enum, succ)
 import GHC.IsList (fromList)
 import GHC.Num ((-))
 
+import Data.Bool (otherwise)
 import MCSP.Data.Pair (Pair, both, bothM, dupe)
 import MCSP.Data.String (String (..), Unbox, concat, elem, empty, length, (!), (++))
 import MCSP.Data.String.Extra (Partition)
@@ -35,17 +37,18 @@ type SimpleEnum a = (Enum a, Bounded a, Unbox a, Eq a)
 -- >>> generateWith (1,2) (randomReplicated 10 1 6) :: (String Word8)
 -- 1 1 4 4 1 5 5 3 3 4
 randomReplicated :: SimpleEnum a => Int -> a -> a -> Random (String a)
-randomReplicated size lo hi = go size lo hi empty
+randomReplicated size lo hi = go size empty
   where
-    go 0 _ _ old = pure old
-    go 1 _ _ old = do
-        index <- uniformB $ length old
-        pure $ old :> (old ! index)
-    go n lo' hi' old = do
-        value <- uniformRE lo' hi'
-        if value `elem` old
-            then go (n - 1) lo' hi' (old :> value)
-            else go (n - 2) lo' hi' (old :> value :> value)
+    go n old
+        | n <= 0 = pure old
+        | n == 1 = do
+            index <- uniformB $ length old
+            pure $ old :> (old ! index)
+        | otherwise = do
+            value <- uniformRE lo hi
+            if value `elem` old
+                then go (n - 1) (old :> value)
+                else go (n - 2) (old :> value :> value)
 
 -- | Generates a string with a fixed range of singletons and shuffled characters.
 --
