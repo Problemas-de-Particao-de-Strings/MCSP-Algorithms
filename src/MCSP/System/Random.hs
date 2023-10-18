@@ -23,7 +23,7 @@ module MCSP.System.Random (
     uniformB,
     uniformE,
     uniformRE,
-    choose,
+    choice,
     shuffle,
     partitions,
     repeatR,
@@ -35,9 +35,10 @@ import Control.Monad (mapM)
 import Data.Foldable (length)
 import Data.Function (($))
 import Data.Int (Int)
-import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty, (<|))
-import Data.Maybe (Maybe (..))
-import Data.Vector.Generic (Vector, indexM, splitAt)
+import Data.List.NonEmpty (NonEmpty ((:|)), head, nonEmpty, (<|))
+import Data.List.NonEmpty.Extra ((!?))
+import Data.Maybe (Maybe (..), fromMaybe)
+import Data.Vector.Generic (Vector, splitAt)
 import Data.Vector.Generic qualified as Vector (length)
 import GHC.Enum (Bounded (..), Enum (..))
 import GHC.Exts (IsList (..))
@@ -129,26 +130,23 @@ uniformRE lo hi = do
     pure (toEnum value)
 {-# INLINE uniformRE #-}
 
--- | /O(1)/ Choose a single random value from a vector.
+-- | /O(1)/ Choose a single random value from a non-empty list.
 --
--- >>> import Data.Vector as V
--- >>> generateWith (1,2) $ choose (V.fromList ["hi", "hello", "ola"])
+-- >>> generateWith (1,2) $ choice ["hi", "hello", "ola"]
 -- "hello"
-choose :: Vector v a => v a -> Random a
-choose v = do
-    let n = Vector.length v
-    idx <- uniformB n
-    indexM v idx
-{-# INLINE choose #-}
+choice :: NonEmpty a -> Random a
+choice values = do
+    i <- uniformB (length values)
+    pure $ fromMaybe (headNE values) (values !? i)
+  where
+    headNE = head
+{-# INLINE choice #-}
 
 -- | /O(n)/ Generates indices for `S.shuffle`.
 --
 -- See [random-shuffle](https://hackage.haskell.org/package/random-shuffle-0.0.4/docs/System-Random-Shuffle.html#v:shuffle).
 treeIndices :: Int -> Random [Int]
-treeIndices n = mapM sample bounds
-  where
-    bounds = [n, n - 1 .. 2]
-    sample (i :: Int) = uniformB i
+treeIndices n = mapM uniformB [n, n - 1 .. 2]
 {-# INLINE treeIndices #-}
 
 -- | /O(?)/ Shuffles a non-empty list.
@@ -203,10 +201,10 @@ repeatR r = lazyRandom $ do
 
 -- | Random version of `Data.List.iterate`.
 --
--- >>> import Prelude ((<$>))
+-- >>> import Prelude ((<$>), (.), liftA2)
 -- >>> import Data.List.NonEmpty (take)
--- >>> generateWith (1,3) (take 3 <$> iterateR (\x -> pure (x + 1)) 1)
--- [1,2,3]
+-- >>> generateWith (1,3) $ take 3 <$> iterateR (liftA2 (+) uniform . pure) 2
+-- [2.0,2.0197656927151786,2.3871610084947057]
 iterateR :: (a -> Random a) -> a -> Random (NonEmpty a)
 iterateR next value = lazyRandom $ do
     newValue <- next value
