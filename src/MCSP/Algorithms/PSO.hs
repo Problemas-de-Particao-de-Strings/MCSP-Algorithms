@@ -52,9 +52,6 @@ type Grade = Double
 -- | Element of a vector used to sort values of a permutation problem.
 type Weight = Double
 
--- | Function used to evaluate a permutation.
-type EvalFunction a = Vector a -> Grade
-
 -- ----- --
 -- Guide --
 -- ----- --
@@ -191,37 +188,33 @@ data Swarm a = Swarm
 instance Show (Swarm a) where
     show Swarm {..} = show iteration ++ " - " ++ show gGuide
 
+-- | Implicit parameters used in iterations of the PSO algorithm.
+type PSOContext a =
+    ( Unbox a,
+      ?eval :: Vector a -> Grade,
+      ?values :: Vector a
+    )
+
 -- | Create a particle using the evaluation function, the vector of
 -- original values and a specific position.
-createParticle ::
-    (HasCallStack, Unbox a) =>
-    EvalFunction a
-    -> Vector a
-    -> Vector Weight
-    -> Particle a
-createParticle eval originalV weights =
+createParticle :: (HasCallStack, PSOContext a) => Vector Weight -> Particle a
+createParticle weights =
     Particle
         { particleWeights =
-            if length weights == length originalV
+            if length weights == length ?values
                 then weights
                 else error "size mismatch while creating particle",
           vel = zeros (length weights),
           pGuide =
-            let sortedValues = sortByWeight originalV weights
-             in PsoGuide {guideWeights = weights, guideGrade = eval sortedValues, sortedValues}
+            let sortedValues = sortByWeight ?values weights
+             in PsoGuide {guideWeights = weights, guideGrade = ?eval sortedValues, sortedValues}
         }
 
 -- | Creates a swarm from the evaluation function, the vector of
 -- original values, the number of particles and a generator of positions.
-createSwarm ::
-    (HasCallStack, Unbox a) =>
-    EvalFunction a
-    -> Vector a
-    -> Int
-    -> Random (Vector Weight)
-    -> Random (Swarm a)
-createSwarm eval originalV n gen = do
-    parts <- fromListN n <$> Monad.replicateM n (createParticle eval originalV <$> gen)
+createSwarm :: (HasCallStack, PSOContext a) => Int -> Random (Vector Weight) -> Random (Swarm a)
+createSwarm n gen = do
+    parts <- fromListN n <$> Monad.replicateM n (createParticle <$> gen)
     let gGuide = maximum1 $ fmap pGuide parts
     pure $ Swarm {parts, gGuide, iteration = 0}
 
@@ -231,19 +224,12 @@ createSwarm eval originalV n gen = do
 
 -- | Updates a single particle using an updater, the evaluation function,
 -- the vector of original values and swarm information.
-updateParticle ::
-    Unbox a =>
-    Updater a
-    -> EvalFunction a
-    -> Vector a
-    -> Swarm a
-    -> Particle a
-    -> Random (Particle a)
-updateParticle newVel eval originalV Swarm {..} part = do
+updateParticle :: PSOContext a => Updater a -> Swarm a -> Particle a -> Random (Particle a)
+updateParticle newVel Swarm {..} part = do
     vel <- newVel
     let w' = particleWeights part .+ vel
-    let sortedValues = sortByWeight originalV w'
-    let newVal = eval sortedValues
+    let sortedValues = sortByWeight ?values w'
+    let newVal = ?eval sortedValues
     let oldGuide = pGuide part
     let pGuide' =
             if newVal >= guideGrade oldGuide
@@ -256,33 +242,18 @@ updateParticle newVel eval originalV Swarm {..} part = do
     ?iteration = iteration
 
 -- | Updates all particles in the swarm once.
-updateSwarm :: Unbox a => Updater a -> EvalFunction a -> Vector a -> Swarm a -> Random (Swarm a)
-updateSwarm up eval originalV swarm = do
-    newParts <- mapM (updateParticle up eval originalV swarm) (parts swarm)
+updateSwarm :: PSOContext a => Updater a -> Swarm a -> Random (Swarm a)
+updateSwarm up swarm = do
+    newParts <- mapM (updateParticle up swarm) (parts swarm)
     let bestGuide = maximum1 $ fmap pGuide newParts
     let newGuide = max bestGuide (gGuide swarm)
     pure Swarm {parts = newParts, gGuide = newGuide, iteration = iteration swarm + 1}
 
--- | Create iterations of a swarm.
-iterateSwarm ::
-    Unbox a =>
-    Updater a
-    -> EvalFunction a
-    -> Vector a
-    -> Swarm a
-    -> Random (NonEmpty (Swarm a))
-iterateSwarm up eval originalV = iterateR (updateSwarm up eval originalV)
-
+-- | Create iterations of swarms, trying to minimize the objective funtion.
 particleSwarmOptimization ::
-    Unbox a =>
-    Updater a
-    -> EvalFunction a
-    -> Vector a
-    -> Random (Vector Weight)
-    -> Int
-    -> Random (NonEmpty (Swarm a))
-particleSwarmOptimization updater eval values weights size =
-    createSwarm eval values size weights >>= iterateSwarm updater eval values
+    PSOContext a => Updater a -> Random (Vector Weight) -> Int -> Random (NonEmpty (Swarm a))
+particleSwarmOptimization update weights size =
+    createSwarm size weights >>= iterateR (updateSwarm update)
 
 -- ----------------- --
 -- Vector operations --

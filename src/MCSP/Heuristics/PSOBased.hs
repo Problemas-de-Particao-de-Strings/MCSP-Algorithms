@@ -58,11 +58,12 @@ numberOfParticles = 1000
 
 -- | Create an iterated PSO swarm for the MCSP problem.
 mcspSwarm :: Ord a => Int -> Int -> Pair (String a) -> Random [Swarm Edge]
-mcspSwarm iterations particles (edgeSet -> es) =
-    take iterations
-        <$> particleSwarmOptimization defaultUpdater weight es (randomWeights (length es)) particles
+mcspSwarm iterations particles (edgeSet -> edges) =
+    take iterations <$> particleSwarmOptimization defaultUpdater ?initialWeights particles
   where
-    weight = fromIntegral . mergeness . solution
+    ?eval = fromIntegral . mergeness . solution
+    ?values = edges
+    ?initialWeights = randomWeights (length edges)
 
 -- | Monadic PSO heuristic.
 psoM :: Ord a => Pair (String a) -> Random (Pair (Partition a))
