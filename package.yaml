@@ -27,6 +27,7 @@ language: GHC2021
 default-extensions:
   - DerivingStrategies
   - DerivingVia
+  - ImplicitParams
   - NoImplicitPrelude
   - OverloadedLists
   - OverloadedStrings
