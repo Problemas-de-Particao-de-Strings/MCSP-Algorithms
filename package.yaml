@@ -58,6 +58,7 @@ dependencies:
   - pcg-random >= 0.1.4 && < 1
   - QuickCheck >= 2.14.3 && < 3
   - random-shuffle >= 0.0.4 && < 1
+  - safe >= 0.3.19 && < 1
   - template-haskell > 2.20 && < 3
   - vector >= 0.13.1 && < 1
   - vector-algorithms >= 0.9.0.1 && < 1
