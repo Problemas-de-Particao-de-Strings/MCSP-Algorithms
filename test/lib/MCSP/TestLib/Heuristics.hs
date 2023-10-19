@@ -16,15 +16,18 @@ import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.String qualified as Text
+import Data.Vector.Generic qualified as Vector (length)
 import GHC.Generics (Generic)
 import Numeric.Extra (showDP)
+import Safe.Foldable (maximumBound)
 
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
-import MCSP.Data.String.Extra (repeated, singletons)
+import MCSP.Data.String.Extra (occurrences, repeated, singletons)
 import MCSP.Heuristics (Debug, Heuristic, checkedIO, combine, combineS, greedy, pso)
 import MCSP.System.TimeIt (timeIt)
 
+import MCSP.Data.MatchingGraph (edgeSet)
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
 -- | The heuristic with its defined name.
@@ -48,8 +51,12 @@ data Measured = Measured
       time :: Double,
       -- | Number of unique characters in the input pair or strings.
       singles :: Int,
-      -- | Number of non-singletons in the input strings.
+      -- | Number of distinct non-singletons in the input strings.
       repeats :: Int,
+      -- | Maximum occurence of a character in the input strings.
+      maxRepeat :: Int,
+      -- | Number of edges of the graph representation of the strings.
+      edges :: Int,
       -- | The partition found for the left string.
       left :: Text.String,
       -- | The partition found for the right string.
@@ -108,8 +115,23 @@ measure (name, heuristic) pair = do
     let time = fromRational $ toRational timePs
     singles <- checkedLen "singletons" (singletons `both` pair)
     repeats <- checkedLen "repeated" (repeated `both` pair)
+    let maxRepeat = maximumBound 0 (occurrences $ fst pair)
+    let edges = Vector.length (edgeSet pair)
     let (left, right) = show `both` partitions
-    pure Measured {heuristic = name, blocks, size, score, time, singles, repeats, left, right}
+    pure
+        Measured
+            { heuristic = name,
+              blocks,
+              size,
+              score,
+              time,
+              singles,
+              repeats,
+              maxRepeat,
+              edges,
+              left,
+              right
+            }
 
 -- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
 --
@@ -120,6 +142,8 @@ csvColumns =
     [ second (showColumn 3 show) $(mkNamed 'size),
       second (showColumn 2 show) $(mkNamed 'repeats),
       second (showColumn 2 show) $(mkNamed 'singles),
+      second (showColumn 3 show) $(mkNamed 'maxRepeat),
+      second (showColumn 3 show) $(mkNamed 'edges),
       second (showColumn 8 id) $(mkNamed 'heuristic),
       second (showColumn 3 show) $(mkNamed 'blocks),
       second (showColumn 4 (showDP 2)) $(mkNamed 'score),
