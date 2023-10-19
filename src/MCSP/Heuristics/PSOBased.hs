@@ -3,15 +3,15 @@ module MCSP.Heuristics.PSOBased (
 ) where
 
 import Control.Applicative (pure)
+import Control.Monad (sequence, (>>=))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List (reverse)
 import Data.List.NonEmpty (take)
 import Data.Ord (Ord)
-import Data.Vector.Unboxed (Vector, length, replicateM)
+import Data.Vector.Unboxed (length)
 import GHC.Err (error)
-import GHC.Float (Double)
 import GHC.Real (fromIntegral)
 
 import MCSP.Algorithms.PSO (
@@ -21,6 +21,7 @@ import MCSP.Algorithms.PSO (
     localGuideDirection,
     particleSwarmOptimization,
     randomVelocity,
+    randomWeights,
     sortedValues,
     sumVelocities,
     weighted,
@@ -29,20 +30,17 @@ import MCSP.Data.MatchingGraph (Edge, edgeSet, mergeness, solution, toPartitions
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
-import MCSP.System.Random (Random, generateWith, uniformR)
-
--- | Generate a random position given the number of coordinates.
-randomWeights :: Int -> Random (Vector Double)
-randomWeights size = replicateM size (uniformR (-1.0) 1.0)
+import MCSP.System.Random (Random, generateWith)
 
 -- | Default updater consider local best, global best and random components.
 defaultUpdater :: Updater Edge
 defaultUpdater =
     sumVelocities
-        [ weighted 1.2 randomVelocity,
-          weighted 0.005 localGuideDirection,
-          weighted 0.005 globalGuideDirection
-        ]
+        <$> sequence
+            [ randomVelocity >>= weighted 1.2,
+              weighted 0.005 localGuideDirection,
+              weighted 0.005 globalGuideDirection
+            ]
 
 -- | Number of iterations in the particle swarm optimization.
 maximumIterations :: Int
