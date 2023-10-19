@@ -11,7 +11,7 @@ module MCSP.Algorithms.PSO (
     sumVelocities,
 
     -- * Data structures
-    PsoGuide (..),
+    PSOGuide (..),
     Particle (..),
     Swarm (..),
     particleSwarmOptimization,
@@ -61,7 +61,7 @@ type EvalFunction a = Vector a -> Grade
 
 -- | Information about a specific position (weights) and
 -- the value of the objective function at that point.
-data PsoGuide a = PsoGuide
+data PSOGuide a = PsoGuide
     { -- | Position (weights).
       guideWeights :: Vector Weight,
       -- | Grade of the position.
@@ -70,15 +70,15 @@ data PsoGuide a = PsoGuide
       sortedValues :: Vector a
     }
 
-instance Show (PsoGuide a) where
+instance Show (PSOGuide a) where
     show g = showListWith showF (toList $ guideWeights g) " -> " ++ show (guideGrade g)
       where
         showF = showFFloat (Just 3)
 
-instance Eq (PsoGuide a) where
+instance Eq (PSOGuide a) where
     PsoGuide _ x _ == PsoGuide _ y _ = x == y
 
-instance Ord (PsoGuide a) where
+instance Ord (PSOGuide a) where
     PsoGuide _ x _ <= PsoGuide _ y _ = x <= y
 
 -- -------- --
@@ -92,7 +92,7 @@ data Particle a = Particle
       -- | Velocity of the particle.
       vel :: Vector Weight,
       -- | Best position the particle found so far.
-      pGuide :: PsoGuide a
+      pGuide :: PSOGuide a
     }
 
 instance Show (Particle a) where
@@ -111,7 +111,7 @@ instance Show (Particle a) where
 -- | Implicit parameters used in `Updater`.
 type UpdaterContext a =
     ( ?particle :: Particle a,
-      ?global :: PsoGuide a,
+      ?global :: PSOGuide a,
       ?iteration :: Int
     )
 
@@ -183,7 +183,7 @@ data Swarm a = Swarm
     { -- | Particles in the swarm.
       parts :: NonEmpty (Particle a),
       -- | Global guide.
-      gGuide :: PsoGuide a,
+      gGuide :: PSOGuide a,
       -- | Current iteration.
       iteration :: Int
     }
