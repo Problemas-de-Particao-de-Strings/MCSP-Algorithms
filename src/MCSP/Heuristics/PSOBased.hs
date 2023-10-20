@@ -23,9 +23,9 @@ import MCSP.Algorithms.PSO (
     randomVelocity,
     randomWeights,
     sortedValues,
-    sumVelocities,
     weighted,
  )
+import MCSP.Algorithms.Vector (sum)
 import MCSP.Data.MatchingGraph (Edge, edgeSet, mergeness, solution, toPartitions)
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
@@ -35,7 +35,7 @@ import MCSP.System.Random (Random, Seed, generateWith)
 -- | Default updater consider local best, global best and random components.
 defaultUpdater :: Updater Edge
 defaultUpdater =
-    sumVelocities
+    sum
         <$> sequence
             [ randomVelocity >>= weighted 1.2,
               weighted 0.005 localGuideDirection,
