@@ -6,13 +6,13 @@ module MCSP.Data.RadixTree.Suffix (
 ) where
 
 import Data.Eq (Eq (..))
-import Data.Foldable (Foldable, foldMap', foldl')
+import Data.Foldable (foldl')
 import Data.Function ((.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Ord (Ord (..))
-import Data.Semigroup (Max (..), Semigroup (..))
+import Data.Semigroup (Semigroup (..))
 import Safe.Foldable (maximumMay)
 import Text.Show (Show)
 
