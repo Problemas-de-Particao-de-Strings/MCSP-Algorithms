@@ -27,7 +27,7 @@ packages:
       hackage: tasty-quickcheck-0.10.3
 snapshots:
   - completed:
-      sha256: 917b397e40f0d5bc99e350f5bc5921456f091cf35b61a869838e14dfbc46e6e1
-      size: 684486
-      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/10/9.yaml
-    original: nightly-2023-10-09
+      sha256: 66b65f683de06ee98d3cb2d261e111ff3e1e6be92ca396c8c3dc21464d8d95ca
+      size: 695329
+      url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2023/10/20.yaml
+    original: nightly-2023-10-20
