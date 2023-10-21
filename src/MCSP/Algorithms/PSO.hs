@@ -1,13 +1,10 @@
 module MCSP.Algorithms.PSO (
     -- * Updaters
     Updater,
-    randomWeights,
     randomVelocity,
     globalGuideDirection,
     localGuideDirection,
     previousVelocity,
-    weighted,
-    weightedN,
 
     -- * Data structures
     PSOGuide (..),
@@ -20,8 +17,7 @@ module MCSP.Algorithms.PSO (
 ) where
 
 import Control.Applicative (pure)
-import Control.Monad (fmap, mapM, (>>=))
-import Control.Monad qualified as Monad (replicateM)
+import Control.Monad (fmap, mapM, replicateM, (>>=))
 import Data.Eq (Eq, (==))
 import Data.Function (on, ($))
 import Data.Functor ((<$>))
@@ -33,7 +29,7 @@ import Data.Maybe (Maybe (..))
 import Data.Ord (Ord (compare), max, (<=), (>=))
 import Data.Tuple (fst, snd)
 import Data.Vector.Algorithms.Merge (sortBy)
-import Data.Vector.Unboxed (Unbox, Vector, length, map, modify, replicateM, zip)
+import Data.Vector.Unboxed (Unbox, Vector, length, map, modify, zip)
 import GHC.Err (error)
 import GHC.Exts (fromListN, toList)
 import GHC.Float (Double)
@@ -42,8 +38,8 @@ import GHC.Stack (HasCallStack)
 import Numeric (showFFloat)
 import Text.Show (Show, show, showListWith)
 
-import MCSP.Algorithms.Vector (zeros, (.*), (.*.), (.+), (.-))
-import MCSP.System.Random (Random, iterateR, uniformR)
+import MCSP.Algorithms.Vector (uniformSN, zeros, (.+), (.-))
+import MCSP.System.Random (Random, iterateR)
 
 -- -------------------------------------------------------------
 -- Based on https://github.com/brianshourd/haskell-Calypso
@@ -118,13 +114,9 @@ type UpdaterContext a =
 -- | Evaluate the new velocity of a particle using the global best and iteration number.
 type Updater a = UpdaterContext a => Random (Vector Weight)
 
--- | Generate a random position given the number of coordinates.
-randomWeights :: Int -> Random (Vector Double)
-randomWeights size = replicateM size (uniformR (-1.0) 1.0)
-
 -- | Produce random velocity with components up to given limit.
 randomVelocity :: UpdaterContext a => Random (Vector Weight)
-randomVelocity = randomWeights (length $ particleWeights ?particle)
+randomVelocity = uniformSN (length $ particleWeights ?particle)
 {-# INLINE randomVelocity #-}
 
 -- | Produce random velocity in the direction of the current global best,
@@ -143,20 +135,6 @@ localGuideDirection = guideWeights (pGuide ?particle) .- particleWeights ?partic
 previousVelocity :: UpdaterContext a => Vector Weight
 previousVelocity = vel ?particle
 {-# INLINE previousVelocity #-}
-
--- | Scale all components of the velocity by the same random weight.
-weighted :: Weight -> Vector Weight -> Random (Vector Weight)
-weighted maxWeight updater = do
-    k <- uniformR 0 maxWeight
-    pure (k .*. updater)
-{-# INLINE weighted #-}
-
--- | Scale each component of the velocity by a random weight.
-weightedN :: Weight -> Vector Weight -> Random (Vector Weight)
-weightedN maxWeight velocity = do
-    ks <- replicateM (length velocity) (uniformR 0 maxWeight)
-    pure (ks .* velocity)
-{-# INLINE weightedN #-}
 
 -- ----- --
 -- Swarm --
@@ -201,7 +179,7 @@ createParticle weights =
 -- original values, the number of particles and a generator of positions.
 createSwarm :: (HasCallStack, PSOContext a) => Int -> Random (Vector Weight) -> Random (Swarm a)
 createSwarm n gen = do
-    parts <- fromListN n <$> Monad.replicateM n (createParticle <$> gen)
+    parts <- fromListN n <$> replicateM n (createParticle <$> gen)
     let gGuide = maximum1 $ fmap pGuide parts
     pure $ Swarm {parts, gGuide, iteration = 0}
 

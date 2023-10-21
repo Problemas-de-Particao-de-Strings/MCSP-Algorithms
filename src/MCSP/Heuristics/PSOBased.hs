@@ -3,7 +3,7 @@ module MCSP.Heuristics.PSOBased (
 ) where
 
 import Control.Applicative (pure)
-import Control.Monad (sequence, (>>=))
+import Control.Monad ((>>=))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
@@ -21,11 +21,9 @@ import MCSP.Algorithms.PSO (
     localGuideDirection,
     particleSwarmOptimization,
     randomVelocity,
-    randomWeights,
     sortedValues,
-    weighted,
  )
-import MCSP.Algorithms.Vector (sum)
+import MCSP.Algorithms.Vector (sumM, uniformSN, weighted)
 import MCSP.Data.MatchingGraph (Edge, edgeSet, mergeness, solution, toPartitions)
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
@@ -35,12 +33,11 @@ import MCSP.System.Random (Random, Seed, generateWith)
 -- | Default updater consider local best, global best and random components.
 defaultUpdater :: Updater Edge
 defaultUpdater =
-    sum
-        <$> sequence
-            [ randomVelocity >>= weighted 1.2,
-              weighted 0.005 localGuideDirection,
-              weighted 0.005 globalGuideDirection
-            ]
+    sumM
+        [ randomVelocity >>= weighted 1.2,
+          weighted 0.005 localGuideDirection,
+          weighted 0.005 globalGuideDirection
+        ]
 
 -- --------- --
 -- Heuristic --
@@ -60,7 +57,7 @@ mcspSwarm (edgeSet -> edges) =
   where
     ?eval = fromIntegral . mergeness . solution
     ?values = edges
-    ?initialWeights = randomWeights (length edges)
+    ?initialWeights = uniformSN (length edges)
 
 -- | PSO heuristic with implicit parameters.
 psoWithParams :: (Ord a, PSOParams) => Pair (String a) -> Pair (Partition a)
