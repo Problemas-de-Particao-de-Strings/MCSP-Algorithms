@@ -3,6 +3,7 @@ module MCSP.Algorithms.Vector (
     -- * Initialization
     zeros,
     replicate,
+    choose,
 
     -- * Element-wise Operations
     (.+),
@@ -24,21 +25,48 @@ module MCSP.Algorithms.Vector (
 ) where
 
 import Control.Applicative (pure)
+import Control.Exception.Extra (errorWithoutStackTrace)
 import Control.Monad (Monad, sequence)
+import Data.Bool (Bool (..), bool)
+import Data.Eq (Eq (..))
 import Data.Foldable1 (foldl1')
+import Data.Function (($))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Vector.Generic qualified as Vector (replicateM)
-import Data.Vector.Unboxed (Vector, length, map, replicate, zipWith)
+import Data.Vector.Generic qualified as Vector (replicate, replicateM)
+import Data.Vector.Unboxed (Unbox, Vector, length, map, zipWith)
 import GHC.Float (Double)
 import GHC.Num ((*), (+), (-))
+import Text.Printf (printf)
 
 import MCSP.System.Random (Random, uniformR)
+
+-- | Checks that both input vectors have same length before applying an operation.
+--
+-- >>> withSameLength (zipWith (+)) [1, 2, 3] [4, 5, 6]
+-- [5.0,7.0,9.0]
+-- >>> withSameLength (zipWith (+)) [1, 2, 3] [4, 5]
+-- *** Exception: length mismatch: 3 != 2
+withSameLength :: (Unbox a, Unbox b) => (Vector a -> Vector b -> c) -> Vector a -> Vector b -> c
+withSameLength f v1 v2 =
+    if length v1 == length v2
+        then f v1 v2
+        else errorWithoutStackTrace $ printf "length mismatch: %d != %d" (length v1) (length v2)
+{-# INLINE withSameLength #-}
 
 -- -------------- --
 -- Initialization --
 -- -------------- --
+
+-- | A vector of the given length with the same value in each position.
+--
+-- Specialized version of `Vector.replicate`.
+--
+-- >>> replicate 3 10
+-- [10.0,10.0,10.0]
+replicate :: Int -> Double -> Vector Double
+replicate = Vector.replicate
 
 -- | Create a vector of zeros given the length.
 --
@@ -48,6 +76,20 @@ import MCSP.System.Random (Random, uniformR)
 -- []
 zeros :: Int -> Vector Double
 zeros s = replicate s 0
+
+-- | Case analysis for the Bool type.
+--
+-- @`choose` x y p@ evaluates to @x@ in every position that is `False` in @p@, and evaluates to @y@
+-- everywehere else. Works as a vector version of `bool`.
+--
+-- The name is taken from
+-- [numpy.choose](https://numpy.org/doc/stable/reference/generated/numpy.choose.html).
+--
+-- >>> choose 10 (-5) [True, False, False, True]
+-- [-5.0,10.0,10.0,-5.0]
+choose :: Unbox a => a -> a -> Vector Bool -> Vector a
+choose falsy truthy = map (bool falsy truthy)
+{-# SPECIALIZE choose :: Double -> Double -> Vector Bool -> Vector Double #-}
 
 -- ------------ --
 -- Element-Wise --
@@ -65,14 +107,14 @@ zeros s = replicate s 0
 -- >>> [1, 2, 3] .- [5, 6, 7]
 -- [-4.0,-4.0,-4.0]
 (.-) :: Vector Double -> Vector Double -> Vector Double
-(.-) = zipWith (-)
+(.-) = withSameLength $ zipWith (-)
 
 -- | Element-wise multiplication.
 --
 -- >>> [1, 2, 3] .* [5, 6, 7]
 -- [5.0,12.0,21.0]
 (.*) :: Vector Double -> Vector Double -> Vector Double
-(.*) = zipWith (*)
+(.*) = withSameLength $ zipWith (*)
 
 -- | Multiplication by a scalar.
 --
@@ -96,28 +138,30 @@ sum = foldl1' (.+)
 -- | Lifted version of `sum`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (sumM [uniformN 4, uniformSN 4])
+-- >>> generateWith (2,3) $ sumM [uniformN 4, uniformSN 4]
 -- [0.17218197108856648,0.21998774703644852,-0.16158831286684616,1.0345635554897776]
 sumM :: Monad m => NonEmpty (m (Vector Double)) -> m (Vector Double)
 sumM values = sum <$> sequence values
 {-# INLINE sumM #-}
+{-# SPECIALIZE INLINE sumM :: NonEmpty (Random (Vector Double)) -> Random (Vector Double) #-}
 
 -- | Execute the monadic action the given number of times and store the results in a vector.
 --
 -- Specialized version of `Vector.replicateM`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (replicateM 3 (uniformR 10 100))
+-- >>> generateWith (2,3) $ replicateM 3 (uniformR 10 100)
 -- [11.778912346364445,43.065578409152636,61.77055926021891]
 replicateM :: Monad m => Int -> m Double -> m (Vector Double)
 replicateM = Vector.replicateM
+{-# SPECIALIZE replicateM :: Int -> Random Double -> Random (Vector Double) #-}
 
 -- | Generate multiple uniformly distributed values in the given range.
 --
 -- Replicated version of `uniformR`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (uniformRN 5 50 3)
+-- >>> generateWith (2,3) $ uniformRN 5 50 3
 -- [5.889456173182222,21.532789204576318,30.885279630109455]
 uniformRN :: Double -> Double -> Int -> Random (Vector Double)
 uniformRN lo hi count = replicateM count (uniformR lo hi)
@@ -127,7 +171,7 @@ uniformRN lo hi count = replicateM count (uniformR lo hi)
 -- Replicated version of `uniform`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (uniformN 3)
+-- >>> generateWith (2,3) $ uniformN 3
 -- [1.9765692737382712e-2,0.3673953156572515,0.5752284362246546]
 uniformN :: Int -> Random (Vector Double)
 uniformN = uniformRN 0 1
@@ -137,7 +181,7 @@ uniformN = uniformRN 0 1
 -- Signed version of `uniformN`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (uniformSN 3)
+-- >>> generateWith (2,3) $ uniformSN 3
 -- [-0.9604686145252346,-0.26520936868549705,0.15045687244930916]
 uniformSN :: Int -> Random (Vector Double)
 uniformSN = uniformRN (-1) 1
@@ -147,7 +191,7 @@ uniformSN = uniformRN (-1) 1
 -- Randomized version of `.*.`. See also `weightedN`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (weighted 10 [1, 2, 10])
+-- >>> generateWith (2,3) $ weighted 10 [1, 2, 10]
 -- [0.19765692737382712,0.39531385474765424,1.9765692737382712]
 weighted :: Double -> Vector Double -> Random (Vector Double)
 weighted maxWeight vec = do
@@ -159,7 +203,7 @@ weighted maxWeight vec = do
 -- Randomized version of `.*`. See also `weighted`.
 --
 -- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) (weightedN 10 [1, 2, 10])
+-- >>> generateWith (2,3) $ weightedN 10 [1, 2, 10]
 -- [0.19765692737382712,7.34790631314503,57.52284362246546]
 weightedN :: Double -> Vector Double -> Random (Vector Double)
 weightedN maxWeight vec = do
