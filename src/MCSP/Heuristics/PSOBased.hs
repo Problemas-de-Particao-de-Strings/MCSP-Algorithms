@@ -1,5 +1,6 @@
 module MCSP.Heuristics.PSOBased (
     pso,
+    partitionWeights,
 ) where
 
 import Control.Applicative (pure)
@@ -24,11 +25,21 @@ import MCSP.Algorithms.PSO (
     randomVelocity,
     sortedValues,
  )
-import MCSP.Algorithms.Vector (choice, normalized, sumM, uniformSN, weighted, weightedN)
-import MCSP.Data.MatchingGraph (Edge, edgeSet, mergeness, solution, toPartitions)
+import MCSP.Algorithms.Vector (
+    choice,
+    choose,
+    normalized,
+    sumM,
+    uniformSN,
+    weighted,
+    weightedN,
+ )
+import MCSP.Data.MatchingGraph (Edge, compatibleEdges, edgeSet, mergeness, solution, toPartitions)
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
+import MCSP.Heuristics.Combine (combineS)
+import MCSP.Heuristics.Greedy (greedy)
 import MCSP.System.Random (Random, Seed, generateWith)
 
 -- | Default updater consider local best, global best and random components.
@@ -40,12 +51,27 @@ defaultUpdater =
           weighted 0.005 globalGuideDirection
         ]
 
--- | Generates the initial weight for a particle.
-initialWeights :: Vector Edge -> Random (Vector Weight)
-initialWeights edges =
+-- | Produce random weights for an edge set such that a given
+-- partition would be the result of creating a solution using those weights.
+--
+-- >>> let ps = (["a", "ba", "b"], ["a", "b", "ba"])
+-- >>> let es = [((0,0),2),((1,2),2),((2,0),2)]
+-- >>> compatibleEdges ps es
+-- [False,True,False]
+--
+-- >>> generateWith (1,2) $ partitionWeights ps es
+-- [0.6502342,-0.8818351,7.536712e-2]
+partitionWeights :: Pair (Partition a) -> Vector Edge -> Random (Vector Weight)
+partitionWeights p es = weightedN 1 $ choose 1 (-1) (compatibleEdges p es)
+
+-- | Generates the initial weights for a particle.
+initialWeights :: Ord a => Pair (String a) -> Vector Edge -> Random (Vector Weight)
+initialWeights strs edges =
     choice
-        [ (0.3, uniformSN $ length edges),
-          (0.7, weightedN 1 (normalized $ map edgeLen edges))
+        [ (1, uniformSN $ length edges),
+          (1, weightedN 1 (normalized $ map edgeLen edges)),
+          (1, partitionWeights (combineS strs) edges),
+          (1, partitionWeights (greedy strs) edges)
         ]
   where
     edgeLen (_, n) = fromIntegral n
@@ -63,12 +89,12 @@ type PSOParams =
 
 -- | Create an iterated PSO swarm for the MCSP problem.
 mcspSwarm :: (Ord a, PSOParams) => Pair (String a) -> Random [Swarm Edge]
-mcspSwarm (edgeSet -> edges) =
+mcspSwarm strs@(edgeSet -> edges) =
     take ?iterations <$> particleSwarmOptimization defaultUpdater ?initialWeights ?particles
   where
     ?eval = fromIntegral . mergeness . solution
     ?values = edges
-    ?initialWeights = initialWeights edges
+    ?initialWeights = initialWeights strs edges
 
 -- | PSO heuristic with implicit parameters.
 psoWithParams :: (Ord a, PSOParams) => Pair (String a) -> Pair (Partition a)
@@ -87,5 +113,4 @@ pso = psoWithParams
   where
     ?iterations = 10
     ?particles = 1000
-    -- from https://www.random.org
     ?seed = (0x7f166a5f52178da7, 0xe190ca41e26454c3)

@@ -1,5 +1,6 @@
 module MCSP.Tests.MatchingGraph (matchingGraphTests) where
 
+import Control.Applicative (pure, (<$>))
 import Data.Char (Char)
 import Data.Eq ((/=))
 import Data.ExtendedReal (inf)
@@ -18,6 +19,7 @@ import GHC.Num ((-))
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.QuickCheck (Testable, collect, testProperty, (===))
 
+import MCSP.Algorithms.Vector (sortLike)
 import MCSP.Data.MatchingGraph (
     compatibleEdges,
     edgeSet,
@@ -29,12 +31,14 @@ import MCSP.Data.MatchingGraph (
 import MCSP.Data.Pair (Pair, both, first, left, right, snd, swap)
 import MCSP.Data.String (String (..), concat, slice)
 import MCSP.Data.String.Extra (BalancedStrings (..), chars)
+import MCSP.Heuristics.PSOBased (partitionWeights)
+import MCSP.System.Random ((=~=))
 
 matchingGraphTests :: TestTree
 matchingGraphTests =
     testGroup
         "MatchingGraph"
-        [edgeSetTests, solutionTests]
+        [edgeSetTests, solutionTests, psoBasedTests]
 
 rangeOf :: Int -> Interval Int
 rangeOf val =
@@ -106,3 +110,11 @@ solutionTests =
             (pl, pr) = length `both` parts
             (ml, mr) = (nl - pl, nr - pr)
          in if ml /= mr then -ml else mr
+
+psoBasedTests :: TestTree
+psoBasedTests = testPair "solution $ sortLike $ partitionWeights =~= solution" $
+    \strs ->
+        let es = edgeSet strs
+            partitions = toPartitions strs $ solution es
+            weights = partitionWeights partitions es
+         in (toPartitions strs . solution . sortLike es <$> weights) =~= pure partitions
