@@ -41,6 +41,7 @@ default-extensions:
 library:
   source-dirs: src
   exposed-modules:
+    - MCSP.Algorithms.Vector
     - MCSP.Data.MatchingGraph
     - MCSP.Data.Pair
     - MCSP.Data.RadixTree
@@ -48,6 +49,7 @@ library:
     - MCSP.Data.String.TH
     - MCSP.Data.String.Extra
     - MCSP.Heuristics
+    - MCSP.Heuristics.PSOBased
     - MCSP.System.Random
 
 dependencies:
