@@ -1,7 +1,12 @@
 -- | Working with edges of a matching graph.
 module MCSP.Data.MatchingGraph (
-    -- * Finding Edges
+    -- * Data Type
     Edge,
+    pattern Edge,
+    start,
+    blockLen,
+
+    -- * Finding Edges
     edgeSet,
     compatibleEdges,
 

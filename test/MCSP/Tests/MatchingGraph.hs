@@ -12,15 +12,17 @@ import Data.List (find, map, replicate, sort)
 import Data.List.Extra (nubSort)
 import Data.List.NonEmpty (last)
 import Data.Maybe (fromMaybe)
+import Data.Tuple (snd)
 import Data.Vector.Generic qualified as Vector (ifilter, length, (!))
 import GHC.IsList (toList)
-import GHC.Num ((-))
+import GHC.Num (negate, (-))
 
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.QuickCheck (Testable, collect, testProperty, (===))
 
-import MCSP.Algorithms.Vector (sortLike)
+import MCSP.Algorithms.Vector (sortLike, sortOn)
 import MCSP.Data.MatchingGraph (
+    blockLen,
     compatibleEdges,
     edgeSet,
     mergeness,
@@ -28,10 +30,10 @@ import MCSP.Data.MatchingGraph (
     solutions,
     toPartitions,
  )
-import MCSP.Data.Pair (Pair, both, first, left, right, snd, swap)
+import MCSP.Data.Pair (Pair, both, first, left, right, swap)
 import MCSP.Data.String (String (..), concat, slice)
 import MCSP.Data.String.Extra (BalancedStrings (..), chars)
-import MCSP.Heuristics.PSOBased (partitionWeights)
+import MCSP.Heuristics.PSOBased (edgeSizeWeights, partitionWeights)
 import MCSP.System.Random ((=~=))
 
 matchingGraphTests :: TestTree
@@ -112,9 +114,15 @@ solutionTests =
          in if ml /= mr then -ml else mr
 
 psoBasedTests :: TestTree
-psoBasedTests = testPair "solution $ sortLike $ partitionWeights =~= solution" $
-    \strs ->
-        let es = edgeSet strs
-            partitions = toPartitions strs $ solution es
-            weights = partitionWeights partitions es
-         in (toPartitions strs . solution . sortLike es <$> weights) =~= pure partitions
+psoBasedTests =
+    testGroup
+        "pso heuristic use valid initial weights"
+        [ testPair "solution $ sortLike $ partitionWeights =~= solution" $ \strs ->
+            let es = edgeSet strs
+                partitions = toPartitions strs $ solution es
+                weights = partitionWeights partitions es
+             in (toPartitions strs . solution . sortLike es <$> weights) =~= pure partitions,
+          testPair "sortLike $ edgeSizeWeights =~= sortOn (negate . blockLen)" $ \strs ->
+            let es = edgeSet strs
+             in (sortLike es <$> edgeSizeWeights es) =~= pure (sortOn (negate . blockLen) es)
+        ]
