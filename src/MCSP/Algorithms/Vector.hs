@@ -1,5 +1,7 @@
--- | Operations on vector of `Double`.
+-- | Operations on vector of `Default`.
 module MCSP.Algorithms.Vector (
+    Default,
+
     -- * Initialization
     zeros,
     replicate,
@@ -43,14 +45,28 @@ import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Ord (Ord (..), Ordering (..))
 import Data.Vector.Algorithms.Merge qualified as Vector (sort, sortBy)
-import Data.Vector.Generic qualified as Vector (replicate, replicateM, unsafeBackpermute)
-import Data.Vector.Unboxed (Unbox, Vector, create, length, map, modify, unsafeIndex, zipWith)
+import Data.Vector.Unboxed (
+    Unbox,
+    Vector,
+    create,
+    length,
+    map,
+    modify,
+    replicate,
+    replicateM,
+    unsafeBackpermute,
+    unsafeIndex,
+    zipWith,
+ )
 import Data.Vector.Unboxed.Mutable (generate)
 import GHC.Float (Double)
-import GHC.Num ((*), (+), (-))
+import GHC.Num (Num, (*), (+), (-))
 import Text.Printf (printf)
 
-import MCSP.System.Random (Random, uniformR)
+import MCSP.System.Random (Random, Variate, uniformR)
+
+-- | Default type used in specialized vector operations.
+type Default = Double
 
 -- | Checks that both input vectors have same length before applying an operation.
 --
@@ -69,23 +85,15 @@ withSameLength f v1 v2 =
 -- Initialization --
 -- -------------- --
 
--- | A vector of the given length with the same value in each position.
---
--- Specialized version of `Vector.replicate`.
---
--- >>> replicate 3 10
--- [10.0,10.0,10.0]
-replicate :: Int -> Double -> Vector Double
-replicate = Vector.replicate
-
 -- | Create a vector of zeros given the length.
 --
 -- >>> zeros 3
 -- [0.0,0.0,0.0]
 -- >>> zeros 0
 -- []
-zeros :: Int -> Vector Double
+zeros :: (Unbox a, Num a) => Int -> Vector a
 zeros s = replicate s 0
+{-# SPECIALIZE zeros :: Int -> Vector Default #-}
 
 -- | Case analysis for the Bool type.
 --
@@ -99,7 +107,7 @@ zeros s = replicate s 0
 -- [-5.0,10.0,10.0,-5.0]
 choose :: Unbox a => a -> a -> Vector Bool -> Vector a
 choose falsy truthy = map (bool falsy truthy)
-{-# SPECIALIZE choose :: Double -> Double -> Vector Bool -> Vector Double #-}
+{-# SPECIALIZE choose :: Default -> Default -> Vector Bool -> Vector Default #-}
 
 -- ----------------------- --
 -- Element-Wise Operations --
@@ -109,37 +117,42 @@ choose falsy truthy = map (bool falsy truthy)
 --
 -- >>> [1, 2, 3] .+ [5, 6, 7]
 -- [6.0,8.0,10.0]
-(.+) :: Vector Double -> Vector Double -> Vector Double
+(.+) :: (Unbox a, Num a) => Vector a -> Vector a -> Vector a
 (.+) = zipWith (+)
+{-# SPECIALIZE (.+) :: Vector Default -> Vector Default -> Vector Default #-}
 
 -- | Element-wise subtraction.
 --
 -- >>> [1, 2, 3] .- [5, 6, 7]
 -- [-4.0,-4.0,-4.0]
-(.-) :: Vector Double -> Vector Double -> Vector Double
+(.-) :: (Unbox a, Num a) => Vector a -> Vector a -> Vector a
 (.-) = withSameLength $ zipWith (-)
+{-# SPECIALIZE (.-) :: Vector Default -> Vector Default -> Vector Default #-}
 
 -- | Element-wise multiplication.
 --
 -- >>> [1, 2, 3] .* [5, 6, 7]
 -- [5.0,12.0,21.0]
-(.*) :: Vector Double -> Vector Double -> Vector Double
+(.*) :: (Unbox a, Num a) => Vector a -> Vector a -> Vector a
 (.*) = withSameLength $ zipWith (*)
+{-# SPECIALIZE (.*) :: Vector Default -> Vector Default -> Vector Default #-}
 
 -- | Multiplication by a scalar.
 --
 -- >>> 3 .*. [5, 6, 7]
 -- [15.0,18.0,21.0]
-(.*.) :: Double -> Vector Double -> Vector Double
+(.*.) :: (Unbox a, Num a) => a -> Vector a -> Vector a
 factor .*. vector = map (factor *) vector
+{-# SPECIALIZE (.*.) :: Default -> Vector Default -> Vector Default #-}
 
 -- | Element-wise sum of all vectors.
 --
 -- >>> sum [[1, 2], [3, 4], [5, 6]]
 -- [9.0,12.0]
-sum :: NonEmpty (Vector Double) -> Vector Double
+sum :: (Unbox a, Num a) => NonEmpty (Vector a) -> Vector a
 sum = foldl1' (.+)
 {-# INLINE sum #-}
+{-# SPECIALIZE INLINE sum :: NonEmpty (Vector Default) -> Vector Default #-}
 
 -- ------- --
 -- Sorting --
@@ -151,7 +164,7 @@ sum = foldl1' (.+)
 -- [1.0,2.0,3.0]
 sort :: (Unbox a, Ord a) => Vector a -> Vector a
 sort = modify Vector.sort
-{-# SPECIALIZE sort :: Vector Double -> Vector Double #-}
+{-# SPECIALIZE sort :: Vector Default -> Vector Default #-}
 
 -- | Sorts a vector using a custom comparison.
 --
@@ -166,7 +179,7 @@ sortBy cmp = modify (Vector.sortBy cmp)
 -- [-1.0,2.0,-3.0]
 sortOn :: (Unbox a, Ord b) => (a -> b) -> Vector a -> Vector a
 sortOn key = sortBy (compare `on` key)
-{-# SPECIALIZE sortOn :: Unbox a => (a -> Double) -> Vector a -> Vector a #-}
+{-# SPECIALIZE sortOn :: Unbox a => (a -> Default) -> Vector a -> Vector a #-}
 
 -- | Returns the indices that would sort the vector.
 --
@@ -178,7 +191,7 @@ argSort vec = create $ do
     -- SAFETY: index was created above, so it must be inbounds
     Vector.sortBy (compare `on` unsafeIndex vec) idx
     pure idx
-{-# SPECIALIZE argSort :: Vector Double -> Vector Int #-}
+{-# SPECIALIZE argSort :: Vector Default -> Vector Int #-}
 
 -- | Sort a vector based on the values of another array.
 --
@@ -187,8 +200,8 @@ argSort vec = create $ do
 sortLike :: (Unbox a, Unbox b, Ord b) => Vector a -> Vector b -> Vector a
 sortLike = withSameLength $ \x y ->
     -- SAFETY: beckpermute is safe here because both vector have the same length
-    Vector.unsafeBackpermute x (argSort y)
-{-# SPECIALIZE sortLike :: Unbox a => Vector a -> Vector Double -> Vector a #-}
+    unsafeBackpermute x (argSort y)
+{-# SPECIALIZE sortLike :: Unbox a => Vector a -> Vector Default -> Vector a #-}
 
 -- ------------------ --
 -- Monadic Operations --
@@ -199,21 +212,11 @@ sortLike = withSameLength $ \x y ->
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (2,3) $ sumM [uniformN 4, uniformSN 4]
 -- [0.17218197108856648,0.21998774703644852,-0.16158831286684616,1.0345635554897776]
-sumM :: Monad m => NonEmpty (m (Vector Double)) -> m (Vector Double)
+sumM :: (Unbox a, Num a, Monad m) => NonEmpty (m (Vector a)) -> m (Vector a)
 sumM values = sum <$> sequence values
 {-# INLINE sumM #-}
-{-# SPECIALIZE INLINE sumM :: NonEmpty (Random (Vector Double)) -> Random (Vector Double) #-}
-
--- | Execute the monadic action the given number of times and store the results in a vector.
---
--- Specialized version of `Vector.replicateM`.
---
--- >>> import MCSP.System.Random (generateWith)
--- >>> generateWith (2,3) $ replicateM 3 (uniformR 10 100)
--- [11.778912346364445,43.065578409152636,61.77055926021891]
-replicateM :: Monad m => Int -> m Double -> m (Vector Double)
-replicateM = Vector.replicateM
-{-# SPECIALIZE replicateM :: Int -> Random Double -> Random (Vector Double) #-}
+{-# SPECIALIZE INLINE sumM :: Monad m => NonEmpty (m (Vector Default)) -> m (Vector Default) #-}
+{-# SPECIALIZE INLINE sumM :: NonEmpty (Random (Vector Default)) -> Random (Vector Default) #-}
 
 -- | Generate multiple uniformly distributed values in the given range.
 --
@@ -222,8 +225,9 @@ replicateM = Vector.replicateM
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (2,3) $ uniformRN 5 50 3
 -- [5.889456173182222,21.532789204576318,30.885279630109455]
-uniformRN :: Double -> Double -> Int -> Random (Vector Double)
+uniformRN :: (Unbox a, Variate a) => a -> a -> Int -> Random (Vector a)
 uniformRN lo hi count = replicateM count (uniformR lo hi)
+{-# SPECIALIZE uniformRN :: Default -> Default -> Int -> Random (Vector Default) #-}
 
 -- | Generate multiple uniformly distributed values between @[0,1]@.
 --
@@ -232,8 +236,9 @@ uniformRN lo hi count = replicateM count (uniformR lo hi)
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (2,3) $ uniformN 3
 -- [1.9765692737382712e-2,0.3673953156572515,0.5752284362246546]
-uniformN :: Int -> Random (Vector Double)
+uniformN :: (Unbox a, Variate a, Num a) => Int -> Random (Vector a)
 uniformN = uniformRN 0 1
+{-# SPECIALIZE uniformN :: Int -> Random (Vector Default) #-}
 
 -- | Generate multiple uniformly distributed values between @[-1,1]@.
 --
@@ -242,8 +247,9 @@ uniformN = uniformRN 0 1
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (2,3) $ uniformSN 3
 -- [-0.9604686145252346,-0.26520936868549705,0.15045687244930916]
-uniformSN :: Int -> Random (Vector Double)
+uniformSN :: (Unbox a, Variate a, Num a) => Int -> Random (Vector a)
 uniformSN = uniformRN (-1) 1
+{-# SPECIALIZE uniformSN :: Int -> Random (Vector Default) #-}
 
 -- | Multiplies the vector by a single random value between @[0,maxWeight]@.
 --
@@ -252,10 +258,11 @@ uniformSN = uniformRN (-1) 1
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (2,3) $ weighted 10 [1, 2, 10]
 -- [0.19765692737382712,0.39531385474765424,1.9765692737382712]
-weighted :: Double -> Vector Double -> Random (Vector Double)
+weighted :: (Unbox a, Variate a, Num a) => a -> Vector a -> Random (Vector a)
 weighted maxWeight vec = do
     k <- uniformR 0 maxWeight
     pure (k .*. vec)
+{-# SPECIALIZE weighted :: Default -> Vector Default -> Random (Vector Default) #-}
 
 -- | Multiplies the vector by multiple random values between @[0,maxWeight]@.
 --
@@ -264,7 +271,8 @@ weighted maxWeight vec = do
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> generateWith (2,3) $ weightedN 10 [1, 2, 10]
 -- [0.19765692737382712,7.34790631314503,57.52284362246546]
-weightedN :: Double -> Vector Double -> Random (Vector Double)
+weightedN :: (Unbox a, Variate a, Num a) => a -> Vector a -> Random (Vector a)
 weightedN maxWeight vec = do
     k <- uniformRN 0 maxWeight (length vec)
     pure (k .* vec)
+{-# SPECIALIZE weightedN :: Default -> Vector Default -> Random (Vector Default) #-}
