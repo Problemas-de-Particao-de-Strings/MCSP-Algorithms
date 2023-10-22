@@ -1,5 +1,6 @@
 module MCSP.Algorithms.PSO (
     -- * Updaters
+    Weight,
     Updater,
     randomVelocity,
     globalGuideDirection,

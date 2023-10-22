@@ -10,20 +10,21 @@ import Data.Int (Int)
 import Data.List (reverse)
 import Data.List.NonEmpty (take)
 import Data.Ord (Ord)
-import Data.Vector.Unboxed (length)
+import Data.Vector.Unboxed (Vector, length, map)
 import GHC.Err (error)
 import GHC.Real (fromIntegral)
 
 import MCSP.Algorithms.PSO (
     Swarm (..),
     Updater,
+    Weight,
     globalGuideDirection,
     localGuideDirection,
     particleSwarmOptimization,
     randomVelocity,
     sortedValues,
  )
-import MCSP.Algorithms.Vector (sumM, uniformSN, weighted)
+import MCSP.Algorithms.Vector (choice, normalized, sumM, uniformSN, weighted, weightedN)
 import MCSP.Data.MatchingGraph (Edge, edgeSet, mergeness, solution, toPartitions)
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
@@ -38,6 +39,16 @@ defaultUpdater =
           weighted 0.005 localGuideDirection,
           weighted 0.005 globalGuideDirection
         ]
+
+-- | Generates the initial weight for a particle.
+initialWeights :: Vector Edge -> Random (Vector Weight)
+initialWeights edges =
+    choice
+        [ (0.3, uniformSN $ length edges),
+          (0.7, weightedN 1 (normalized $ map edgeLen edges))
+        ]
+  where
+    edgeLen (_, n) = fromIntegral n
 
 -- --------- --
 -- Heuristic --
@@ -57,7 +68,7 @@ mcspSwarm (edgeSet -> edges) =
   where
     ?eval = fromIntegral . mergeness . solution
     ?values = edges
-    ?initialWeights = uniformSN (length edges)
+    ?initialWeights = initialWeights edges
 
 -- | PSO heuristic with implicit parameters.
 psoWithParams :: (Ord a, PSOParams) => Pair (String a) -> Pair (Partition a)
