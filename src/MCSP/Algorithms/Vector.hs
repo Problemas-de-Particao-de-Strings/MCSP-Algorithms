@@ -12,6 +12,13 @@ module MCSP.Algorithms.Vector (
     (.*.),
     sum,
 
+    -- * Sorting
+    sort,
+    sortOn,
+    sortBy,
+    argSort,
+    sortLike,
+
     -- * Monadic Operations
     sumM,
     replicateM,
@@ -30,12 +37,15 @@ import Control.Monad (Monad, sequence)
 import Data.Bool (Bool (..), bool)
 import Data.Eq (Eq (..))
 import Data.Foldable1 (foldl1')
-import Data.Function (($))
+import Data.Function (id, on, ($))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Vector.Generic qualified as Vector (replicate, replicateM)
-import Data.Vector.Unboxed (Unbox, Vector, length, map, zipWith)
+import Data.Ord (Ord (..), Ordering (..))
+import Data.Vector.Algorithms.Merge qualified as Vector (sort, sortBy)
+import Data.Vector.Generic qualified as Vector (replicate, replicateM, unsafeBackpermute)
+import Data.Vector.Unboxed (Unbox, Vector, create, length, map, modify, unsafeIndex, zipWith)
+import Data.Vector.Unboxed.Mutable (generate)
 import GHC.Float (Double)
 import GHC.Num ((*), (+), (-))
 import Text.Printf (printf)
@@ -91,9 +101,9 @@ choose :: Unbox a => a -> a -> Vector Bool -> Vector a
 choose falsy truthy = map (bool falsy truthy)
 {-# SPECIALIZE choose :: Double -> Double -> Vector Bool -> Vector Double #-}
 
--- ------------ --
--- Element-Wise --
--- ------------ --
+-- ----------------------- --
+-- Element-Wise Operations --
+-- ----------------------- --
 
 -- | Element-wise addition.
 --
@@ -130,6 +140,55 @@ factor .*. vector = map (factor *) vector
 sum :: NonEmpty (Vector Double) -> Vector Double
 sum = foldl1' (.+)
 {-# INLINE sum #-}
+
+-- ------- --
+-- Sorting --
+-- ------- --
+
+-- | Sorts an array using the default comparison.
+--
+-- >>> sort [3, 1, 2]
+-- [1.0,2.0,3.0]
+sort :: (Unbox a, Ord a) => Vector a -> Vector a
+sort = modify Vector.sort
+{-# SPECIALIZE sort :: Vector Double -> Vector Double #-}
+
+-- | Sorts a vector using a custom comparison.
+--
+-- >>> sortBy (\x y -> if x * x < y * y then LT else GT) [-3, -1, 2]
+-- [-1.0,2.0,-3.0]
+sortBy :: Unbox a => (a -> a -> Ordering) -> Vector a -> Vector a
+sortBy cmp = modify (Vector.sortBy cmp)
+
+-- | Sorts a vector by comparing the results of a key function applied to each element.
+--
+-- >>> sortOn (\x -> x * x) [-3, -1, 2]
+-- [-1.0,2.0,-3.0]
+sortOn :: (Unbox a, Ord b) => (a -> b) -> Vector a -> Vector a
+sortOn key = sortBy (compare `on` key)
+{-# SPECIALIZE sortOn :: Unbox a => (a -> Double) -> Vector a -> Vector a #-}
+
+-- | Returns the indices that would sort the vector.
+--
+-- >>> argSort [30, 10, 20]
+-- [1,2,0]
+argSort :: (Unbox a, Ord a) => Vector a -> Vector Int
+argSort vec = create $ do
+    idx <- generate (length vec) id
+    -- SAFETY: index was created above, so it must be inbounds
+    Vector.sortBy (compare `on` unsafeIndex vec) idx
+    pure idx
+{-# SPECIALIZE argSort :: Vector Double -> Vector Int #-}
+
+-- | Sort a vector based on the values of another array.
+--
+-- >>> sortLike [30, 10, 20] [0.2, 0.9, 0.1]
+-- [20.0,30.0,10.0]
+sortLike :: (Unbox a, Unbox b, Ord b) => Vector a -> Vector b -> Vector a
+sortLike = withSameLength $ \x y ->
+    -- SAFETY: beckpermute is safe here because both vector have the same length
+    Vector.unsafeBackpermute x (argSort y)
+{-# SPECIALIZE sortLike :: Unbox a => Vector a -> Vector Double -> Vector a #-}
 
 -- ------------------ --
 -- Monadic Operations --

@@ -11,25 +11,20 @@ module MCSP.Algorithms.PSO (
     Particle (..),
     Swarm (..),
     particleSwarmOptimization,
-
-    -- * Vector operations
-    sortByWeight,
 ) where
 
 import Control.Applicative (pure)
 import Control.Monad (fmap, mapM, replicateM, (>>=))
 import Data.Eq (Eq, (==))
-import Data.Function (on, ($))
+import Data.Function (($))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List (intercalate, (++))
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty.Extra (maximum1)
 import Data.Maybe (Maybe (..))
-import Data.Ord (Ord (compare), max, (<=), (>=))
-import Data.Tuple (fst, snd)
-import Data.Vector.Algorithms.Merge (sortBy)
-import Data.Vector.Unboxed (Unbox, Vector, length, map, modify, zip)
+import Data.Ord (Ord (..))
+import Data.Vector.Unboxed (Unbox, Vector, length)
 import GHC.Err (error)
 import GHC.Exts (fromListN, toList)
 import GHC.Float (Double)
@@ -38,7 +33,7 @@ import GHC.Stack (HasCallStack)
 import Numeric (showFFloat)
 import Text.Show (Show, show, showListWith)
 
-import MCSP.Algorithms.Vector (uniformSN, zeros, (.+), (.-))
+import MCSP.Algorithms.Vector (sortLike, uniformSN, zeros, (.+), (.-))
 import MCSP.System.Random (Random, iterateR)
 
 -- -------------------------------------------------------------
@@ -171,7 +166,7 @@ createParticle weights =
                 else error "size mismatch while creating particle",
           vel = zeros (length weights),
           pGuide =
-            let sortedValues = sortByWeight ?values weights
+            let sortedValues = ?values `sortLike` weights
              in PsoGuide {guideWeights = weights, guideGrade = ?eval sortedValues, sortedValues}
         }
 
@@ -193,7 +188,7 @@ updateParticle :: PSOContext a => Updater a -> Swarm a -> Particle a -> Random (
 updateParticle newVel Swarm {..} part = do
     vel <- newVel
     let w' = particleWeights part .+ vel
-    let sortedValues = sortByWeight ?values w'
+    let sortedValues = ?values `sortLike` w'
     let newVal = ?eval sortedValues
     let oldGuide = pGuide part
     let pGuide' =
@@ -219,16 +214,3 @@ particleSwarmOptimization ::
     PSOContext a => Updater a -> Random (Vector Weight) -> Int -> Random (NonEmpty (Swarm a))
 particleSwarmOptimization update weights size =
     createSwarm size weights >>= iterateR (updateSwarm update)
-
--- ----------------- --
--- Vector operations --
--- ----------------- --
-
--- | Sort values according to weights.
---
--- >>> sortByWeight [1, 2, 3, 4, 5] [0.1, 0.8, 0.2, 1.0, -0.4] :: Vector Int
--- [5,1,3,2,4]
-sortByWeight :: Unbox a => Vector a -> Vector Weight -> Vector a
-sortByWeight v weights = map snd (sortValues (zip weights v))
-  where
-    sortValues = modify (sortBy (compare `on` fst))

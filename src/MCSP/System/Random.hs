@@ -179,7 +179,7 @@ weightedChoice (tabulate -> (positions, values)) = do
   where
     binarySearch v x = runST $ do
         -- SAFETY: binarySearchL does NOT modify the vector,
-        -- I don't why they chose to expose the mutable API only
+        -- I don't know why they chose to expose a mutable API only
         mv <- Vector.unsafeThaw v
         binarySearchL mv x
 {-# INLINE weightedChoice #-}
