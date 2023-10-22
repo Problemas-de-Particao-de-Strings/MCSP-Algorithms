@@ -5,9 +5,10 @@ module MCSP.Algorithms.Vector (
     -- * Initialization
     zeros,
     replicate,
-    choose,
 
     -- * Element-wise Operations
+    map,
+    choose,
     (.+),
     (.-),
     (.*),
@@ -21,6 +22,10 @@ module MCSP.Algorithms.Vector (
     argSort,
     sortLike,
 
+    -- * Statistics
+    normalized,
+    standardized,
+
     -- * Monadic Operations
     sumM,
     replicateM,
@@ -31,20 +36,22 @@ module MCSP.Algorithms.Vector (
     uniformRN,
     weighted,
     weightedN,
+    choice,
 ) where
 
 import Control.Applicative (pure)
 import Control.Exception.Extra (errorWithoutStackTrace)
-import Control.Monad (Monad, sequence)
-import Data.Bool (Bool (..), bool)
+import Control.Monad (Monad, join, sequence)
+import Data.Bool (Bool (..), bool, otherwise, (||))
 import Data.Eq (Eq (..))
 import Data.Foldable1 (foldl1')
-import Data.Function (id, on, ($))
+import Data.Function (id, on, ($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Ord (Ord (..), Ordering (..))
 import Data.Vector.Algorithms.Merge qualified as Vector (sort, sortBy)
+import Data.Vector.Generic qualified as Vector (maximumOn, sum)
 import Data.Vector.Unboxed (
     Unbox,
     Vector,
@@ -52,6 +59,7 @@ import Data.Vector.Unboxed (
     length,
     map,
     modify,
+    null,
     replicate,
     replicateM,
     unsafeBackpermute,
@@ -59,11 +67,12 @@ import Data.Vector.Unboxed (
     zipWith,
  )
 import Data.Vector.Unboxed.Mutable (generate)
-import GHC.Float (Float)
-import GHC.Num (Num, (*), (+), (-))
+import GHC.Float (Double, Float, Floating (sqrt))
+import GHC.Num (Num (..))
+import GHC.Real (Fractional, fromIntegral, (/))
 import Text.Printf (printf)
 
-import MCSP.System.Random (Random, Variate, uniformR)
+import MCSP.System.Random (Random, Variate, uniformR, weightedChoice)
 
 -- | Default type used in specialized vector operations.
 type Default = Float
@@ -95,6 +104,10 @@ zeros :: (Unbox a, Num a) => Int -> Vector a
 zeros s = replicate s 0
 {-# SPECIALIZE zeros :: Int -> Vector Default #-}
 
+-- ----------------------- --
+-- Element-Wise Operations --
+-- ----------------------- --
+
 -- | Case analysis for the Bool type.
 --
 -- @`choose` x y p@ evaluates to @x@ in every position that is `False` in @p@, and evaluates to @y@
@@ -108,10 +121,6 @@ zeros s = replicate s 0
 choose :: Unbox a => a -> a -> Vector Bool -> Vector a
 choose falsy truthy = map (bool falsy truthy)
 {-# SPECIALIZE choose :: Default -> Default -> Vector Bool -> Vector Default #-}
-
--- ----------------------- --
--- Element-Wise Operations --
--- ----------------------- --
 
 -- | Element-wise addition.
 --
@@ -203,6 +212,64 @@ sortLike = withSameLength $ \x y ->
     unsafeBackpermute x (argSort y)
 {-# SPECIALIZE sortLike :: Unbox a => Vector a -> Vector Default -> Vector a #-}
 
+-- ---------- --
+-- Statistics --
+-- ---------- --
+
+-- | Normalize a vector by its maximum absolute value.
+--
+-- >>> normalized [1, 2, 5, 10]
+-- [0.1,0.2,0.5,1.0]
+-- >>> normalized []
+-- []
+-- >>> normalized [0]
+-- [0.0]
+normalized :: (Unbox a, Fractional a, Ord a) => Vector a -> Vector a
+normalized vector
+    | null vector || absMax == 0 = vector
+    | otherwise = map (/ absMax) vector
+  where
+    absMax = Vector.maximumOn abs vector
+{-# SPECIALIZE normalized :: Vector Default -> Vector Default #-}
+
+-- | Average value in a vector.
+--
+-- >>> mean [1, 2, 5, 10]
+-- 4.5
+mean :: (Unbox a, Fractional a) => Vector a -> a
+mean vector = Vector.sum vector / fromIntegral (length vector)
+{-# SPECIALIZE mean :: Vector Default -> Default #-}
+
+-- | Variance of the values in a vector.
+--
+-- >>> variance [1, 2, 5, 10]
+-- 12.25
+variance :: (Unbox a, Fractional a) => Vector a -> a
+variance vector = Vector.sum (dev .* dev) / fromIntegral (length vector)
+  where
+    u = mean vector
+    dev = map (\x -> x - u) vector
+{-# SPECIALIZE variance :: Vector Default -> Default #-}
+
+-- | Standard Deviation of the values in a vector.
+--
+-- >>> stdev [1, 2, 5, 10]
+-- 3.5
+stdev :: (Unbox a, Floating a) => Vector a -> a
+stdev = sqrt . variance
+{-# SPECIALIZE stdev :: Vector Default -> Default #-}
+
+-- | Adapt values for such that the mean becomes zero and standard deviation, one.
+--
+-- >>> standardized [1, 2, 5, 10]
+-- [-1.0,-0.7142857142857143,0.14285714285714285,1.5714285714285714]
+standardized :: (Unbox a, Floating a) => Vector a -> Vector a
+standardized vector = map (\x -> (x - u) / s) vector
+  where
+    u = mean vector
+    s = stdev vector
+{-# SPECIALIZE standardized :: Vector Default -> Vector Default #-}
+
 -- ------------------ --
 -- Monadic Operations --
 -- ------------------ --
@@ -276,3 +343,9 @@ weightedN maxWeight vec = do
     k <- uniformRN 0 maxWeight (length vec)
     pure (k .* vec)
 {-# SPECIALIZE weightedN :: Default -> Vector Default -> Random (Vector Default) #-}
+
+-- | Choose randomly between multiple `Random` monad, with probablity proportional to its given
+-- weight.
+choice :: NonEmpty (Double, Random a) -> Random a
+choice options = join (weightedChoice options)
+{-# INLINE choice #-}
