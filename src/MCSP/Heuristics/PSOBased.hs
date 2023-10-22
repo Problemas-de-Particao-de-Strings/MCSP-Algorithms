@@ -1,6 +1,7 @@
 module MCSP.Heuristics.PSOBased (
     pso,
     partitionWeights,
+    edgeSizeWeights,
 ) where
 
 import Control.Applicative (pure)
@@ -13,6 +14,7 @@ import Data.List.NonEmpty (take)
 import Data.Ord (Ord)
 import Data.Vector.Unboxed (Vector, length, map)
 import GHC.Err (error)
+import GHC.Num (negate)
 import GHC.Real (fromIntegral)
 
 import MCSP.Algorithms.PSO (
@@ -26,15 +28,25 @@ import MCSP.Algorithms.PSO (
     sortedValues,
  )
 import MCSP.Algorithms.Vector (
+    argSort,
     choice,
     choose,
-    normalized,
+    sort,
+    sortLike,
     sumM,
     uniformSN,
     weighted,
     weightedN,
  )
-import MCSP.Data.MatchingGraph (Edge, compatibleEdges, edgeSet, mergeness, solution, toPartitions)
+import MCSP.Data.MatchingGraph (
+    Edge,
+    blockLen,
+    compatibleEdges,
+    edgeSet,
+    mergeness,
+    solution,
+    toPartitions,
+ )
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
@@ -64,17 +76,25 @@ defaultUpdater =
 partitionWeights :: Pair (Partition a) -> Vector Edge -> Random (Vector Weight)
 partitionWeights p es = weightedN 1 $ choose 1 (-1) (compatibleEdges p es)
 
+-- | Produce random weights for an edge set sorted in such a way
+-- that longer edges are prioritized.
+-- >>> generateWith (1,2) $ edgeSizeWeights [((0,0),4),((1,2),1),((2,0),10)]
+-- [0.30046844,0.7636702,-0.84926575]
+edgeSizeWeights :: Vector Edge -> Random (Vector Weight)
+edgeSizeWeights es = do
+    weights <- sort <$> uniformSN (length es)
+    let indices = argSort $ map (negate . blockLen) es
+    pure $ sortLike weights indices
+
 -- | Generates the initial weights for a particle.
 initialWeights :: Ord a => Pair (String a) -> Vector Edge -> Random (Vector Weight)
 initialWeights strs edges =
     choice
         [ (1, uniformSN $ length edges),
-          (1, weightedN 1 (normalized $ map edgeLen edges)),
+          (1, edgeSizeWeights edges),
           (1, partitionWeights (combineS strs) edges),
           (1, partitionWeights (greedy strs) edges)
         ]
-  where
-    edgeLen (_, n) = fromIntegral n
 
 -- --------- --
 -- Heuristic --

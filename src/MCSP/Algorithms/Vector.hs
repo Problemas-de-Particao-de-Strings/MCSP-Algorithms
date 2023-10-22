@@ -194,6 +194,9 @@ sortOn key = sortBy (compare `on` key)
 --
 -- >>> argSort [30, 10, 20]
 -- [1,2,0]
+--
+-- >>> argSort $ argSort [30, 10, 20]
+-- [2,0,1]
 argSort :: (Unbox a, Ord a) => Vector a -> Vector Int
 argSort vec = create $ do
     idx <- generate (length vec) id
@@ -201,6 +204,7 @@ argSort vec = create $ do
     Vector.sortBy (compare `on` unsafeIndex vec) idx
     pure idx
 {-# SPECIALIZE argSort :: Vector Default -> Vector Int #-}
+{-# SPECIALIZE argSort :: Vector Int -> Vector Int #-}
 
 -- | Sort a vector based on the values of another array.
 --
@@ -211,6 +215,7 @@ sortLike = withSameLength $ \x y ->
     -- SAFETY: beckpermute is safe here because both vector have the same length
     unsafeBackpermute x (argSort y)
 {-# SPECIALIZE sortLike :: Unbox a => Vector a -> Vector Default -> Vector a #-}
+{-# SPECIALIZE sortLike :: Vector Default -> Vector Int -> Vector Default #-}
 
 -- ---------- --
 -- Statistics --
