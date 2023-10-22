@@ -33,7 +33,7 @@ import GHC.Stack (HasCallStack)
 import Numeric (showFFloat)
 import Text.Show (Show, show, showListWith)
 
-import MCSP.Algorithms.Vector (sortLike, uniformSN, zeros, (.+), (.-))
+import MCSP.Algorithms.Vector (Default, sortLike, uniformSN, zeros, (.+), (.-))
 import MCSP.System.Random (Random, iterateR)
 
 -- -------------------------------------------------------------
@@ -44,7 +44,7 @@ import MCSP.System.Random (Random, iterateR)
 type Grade = Double
 
 -- | Element of a vector used to sort values of a permutation problem.
-type Weight = Double
+type Weight = Default
 
 -- ----- --
 -- Guide --

@@ -59,14 +59,14 @@ import Data.Vector.Unboxed (
     zipWith,
  )
 import Data.Vector.Unboxed.Mutable (generate)
-import GHC.Float (Double)
+import GHC.Float (Float)
 import GHC.Num (Num, (*), (+), (-))
 import Text.Printf (printf)
 
 import MCSP.System.Random (Random, Variate, uniformR)
 
 -- | Default type used in specialized vector operations.
-type Default = Double
+type Default = Float
 
 -- | Checks that both input vectors have same length before applying an operation.
 --
