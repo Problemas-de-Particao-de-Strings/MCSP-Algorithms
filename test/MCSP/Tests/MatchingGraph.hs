@@ -46,16 +46,13 @@ rangeOf :: Int -> Interval Int
 rangeOf val =
     fromMaybe whole $
         find (val `member`) $
-            list
+            id @[Interval Int]
                 [ 0 <=..<= 10,
                   11 <=..<= 50,
                   51 <=..<= 99,
                   100 <=..<= 200,
                   200 <=..<= inf
                 ]
-  where
-    list :: [a] -> [a]
-    list = id
 
 testPair :: Testable prop => TestName -> (Pair (String Char) -> prop) -> TestTree
 testPair name prop =

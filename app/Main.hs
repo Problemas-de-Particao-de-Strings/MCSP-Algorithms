@@ -9,9 +9,9 @@ import System.IO (hFlush, stdout)
 import MCSP.Data.String (String)
 import MCSP.System.Random (Random, generate, uniformR)
 import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, toCsvRow)
-import MCSP.TestLib.Sample (ShuffleMethod (..), StringParameters (..), randomPairWith)
+import MCSP.TestLib.Sample (ShuffleMethod (..), SimpleEnum, StringParameters (..), randomPairWith)
 
-randomPair :: Random (String Word8, String Word8)
+randomPair :: SimpleEnum a => Random (String a, String a)
 randomPair = do
     r <- uniformR 5 10
     s <- uniformR 5 30
@@ -30,7 +30,7 @@ main = do
     replicateM_ 10_000 $ do
         pair <- generate randomPair
         forM_ heuristics $ \heuristc -> do
-            result <- measure heuristc pair
+            result <- measure @Word8 heuristc pair
             putLn $ toCsvRow result
   where
     putLn line = putStrLn line >> hFlush stdout

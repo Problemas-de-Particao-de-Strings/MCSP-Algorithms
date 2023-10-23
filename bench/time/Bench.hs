@@ -11,7 +11,7 @@ import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (cl95)
 import MCSP.TestLib.Heuristics (NamedHeuristic, heuristics)
-import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
+import MCSP.TestLib.Sample (SimpleEnum, StringParameters, benchParams, randomPairWith, repr)
 
 -- | Generates a configuration for Criterion that saves the outputs by default.
 --
@@ -46,14 +46,14 @@ defaultMain benchmarks = do
     defaultMainWith config benchmarks
 
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
-benchHeuristic :: StringParameters -> NamedHeuristic Word8 -> Benchmark
+benchHeuristic :: SimpleEnum a => StringParameters -> NamedHeuristic a -> Benchmark
 benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair (pure . heuristic)
   where
     genPair = generate (randomPairWith params)
 
 -- | Creates a benchmark group running each heuristic against the given parameters.
 benchWithParams :: StringParameters -> Benchmark
-benchWithParams params = bgroup (repr params) $ map (benchHeuristic params) heuristics
+benchWithParams params = bgroup (repr params) $ map (benchHeuristic @Word8 params) heuristics
 
 -- | Run a matrix of benchmarks for each parameter set and heuristic.
 main :: IO ()

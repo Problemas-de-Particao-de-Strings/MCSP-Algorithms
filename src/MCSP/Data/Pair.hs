@@ -96,7 +96,7 @@ bothM f (x, y) = liftA2 (,) (f x) (f y)
 -- >>> zipM (Just 1, Just 2)
 -- Just (1,2)
 -- >>> import Data.Int (Int)
--- >>> zipM ([1, 2, 3], [4, 5] :: [Int])
+-- >>> zipM @[] ([1, 2, 3], [4, 5])
 -- [(1,4),(1,5),(2,4),(2,5),(3,4),(3,5)]
 zipM :: Applicative m => Pair (m a) -> m (Pair a)
 zipM = bothM id

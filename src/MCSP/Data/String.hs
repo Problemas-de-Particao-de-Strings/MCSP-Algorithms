@@ -543,7 +543,7 @@ instance Unbox a => Generic.Vector String a where
     {-# INLINE basicUnsafeIndexM #-}
     basicUnsafeCopy (MString mv) (String v) = Generic.basicUnsafeCopy mv v
     {-# INLINE basicUnsafeCopy #-}
-    elemseq _ = Generic.elemseq (undefined :: Vector a)
+    elemseq _ = Generic.elemseq @Vector undefined
     {-# INLINE elemseq #-}
 
 -- --------------------------------------- --
@@ -624,7 +624,7 @@ single s@Unboxed
 --
 -- See [Data.Vactor.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:indexM).
 --
--- >>> indexM "xyz" 5 :: Maybe Char
+-- >>> indexM @Maybe "xyz" 5
 -- Nothing
 indexM :: (Alternative m, Monad m) => String a -> Int -> m a
 indexM s@Unboxed i
@@ -639,7 +639,7 @@ indexM s@Unboxed i
 --
 -- See [Data.Vactor.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:indexM).
 --
--- >>> headM "" :: Maybe Char
+-- >>> headM @Maybe ""
 -- Nothing
 headM :: (Alternative m, Monad m) => String a -> m a
 headM s@Unboxed
@@ -654,7 +654,7 @@ headM s@Unboxed
 --
 -- See [Data.Vactor.Unbox](https://hackage.haskell.org/package/vector-0.13.0.0/docs/Data-Vector-Unboxed.html#v:indexM).
 --
--- >>> lastM "" :: Maybe Char
+-- >>> lastM @Maybe ""
 -- Nothing
 lastM :: (Alternative m, Monad m) => String a -> m a
 lastM s@Unboxed
@@ -828,7 +828,7 @@ create f = Generic.create (MString <$> f)
 -- The generator function yields -- `Just` the next character and the new seed or `Nothing` if
 -- there are no more characters.
 --
--- >>> unfoldr (\n -> if n == 0 then Nothing else Just (n, n-1)) (10 :: Int)
+-- >>> unfoldr @Int (\n -> if n == 0 then Nothing else Just (n, n-1)) 10
 -- 10 9 8 7 6 5 4 3 2 1
 unfoldr :: Unbox a => (b -> Maybe (a, b)) -> b -> String a
 unfoldr = Generic.unfoldr
@@ -839,7 +839,7 @@ unfoldr = Generic.unfoldr
 --
 -- The generator function yields the next character and the new seed.
 --
--- >>> unfoldrExactN 3 (\n -> (n, n-1)) (10 :: Int)
+-- >>> unfoldrExactN @Int 3 (\n -> (n, n-1)) 10
 -- 10 9 8
 unfoldrExactN :: Unbox a => Int -> (b -> (a, b)) -> b -> String a
 unfoldrExactN = Generic.unfoldrExactN
@@ -850,7 +850,7 @@ unfoldrExactN = Generic.unfoldrExactN
 -- The generator function yields -- `Just` the next character and the new seed or `Nothing` if
 -- there are no more characters.
 --
--- >>> unfoldr (\n -> if n == 0 then Nothing else Just (n, n-1)) (10 :: Int)
+-- >>> unfoldr @Int (\n -> if n == 0 then Nothing else Just (n, n-1)) 10
 -- 10 9 8 7 6 5 4 3 2 1
 unfoldrM :: (Unbox a, Monad m) => (b -> m (Maybe (a, b))) -> b -> m (String a)
 unfoldrM = Generic.unfoldrM
@@ -861,7 +861,7 @@ unfoldrM = Generic.unfoldrM
 --
 -- The generator function yields the next character and the new seed.
 --
--- >>> unfoldrExactN 3 (\n -> (n, n-1)) (10 :: Int)
+-- >>> unfoldrExactN @Int 3 (\n -> (n, n-1)) 10
 -- 10 9 8
 unfoldrExactNM :: (Unbox a, Monad m) => Int -> (b -> m (a, b)) -> b -> m (String a)
 unfoldrExactNM = Generic.unfoldrExactNM
@@ -874,7 +874,7 @@ unfoldrExactNM = Generic.unfoldrExactNM
 --
 -- This operation is usually more efficient than `Data.Vector.Generic.enumFromTo`.
 --
--- >>> enumFromN 5 3 :: String Int
+-- >>> enumFromN @Int 5 3
 -- 5 6 7
 enumFromN :: (Unbox a, Num a) => a -> Int -> String a
 enumFromN = Generic.enumFromN
@@ -884,7 +884,7 @@ enumFromN = Generic.enumFromN
 --
 -- This operations is usually more efficient than `Data.Vector.Generic.enumFromThenTo`.
 --
--- >>> enumFromStepN 1 2 5 :: String Int
+-- >>> enumFromStepN @Int 1 2 5
 -- 1 3 5 7 9
 enumFromStepN :: (Unbox a, Num a) => a -> a -> Int -> String a
 enumFromStepN = Generic.enumFromStepN
@@ -923,7 +923,7 @@ l@Unboxed ++ r = l Generic.++ r
 --
 -- >>> concat ["abc", "123", "def"]
 -- abc123def
--- >>> concat ([] :: [String Char])
+-- >>> concat @Char []
 -- <BLANKLINE>
 concat :: Unbox a => [String a] -> String a
 concat = Generic.concat
@@ -974,7 +974,7 @@ update s@Unboxed idx = Generic.update_ s (fromList idx)
 -- | /O(m+n)/ For each pair @(i,b)@ from the list, replace the character at position @i@ by @f a b@.
 --
 -- >>> import GHC.Num ((+))
--- >>> accum (+) [1000,2000,3000] [(2,4),(1,6),(0,3),(1,10)] :: String Int
+-- >>> accum @Int (+) [1000,2000,3000] [(2,4),(1,6),(0,3),(1,10)]
 -- 1003 2016 3004
 accum :: (a -> b -> a) -> String a -> [(Int, b)] -> String a
 accum f s@Unboxed = Generic.accum f s
@@ -984,7 +984,7 @@ accum f s@Unboxed = Generic.accum f s
 -- replace the character of the initial string at position @i@ by @f a b@.
 --
 -- >>> import GHC.Num ((+))
--- >>> accumulate (+) [5,9,2] [2,1,0,1] [4,6,3,7] :: String Int
+-- >>> accumulate @Int (+) [5,9,2] [2,1,0,1] [4,6,3,7]
 -- 8 22 6
 accumulate :: (a -> b -> a) -> String a -> [Int] -> String b -> String a
 accumulate f s@Unboxed idx v@Unboxed = Generic.accumulate_ f s (fromList idx) v

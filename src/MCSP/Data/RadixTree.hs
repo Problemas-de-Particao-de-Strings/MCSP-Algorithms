@@ -48,7 +48,7 @@ type RadixTree a = Map.RadixTreeMap a (String a)
 -- | /O(1)/ The empty tree.
 --
 -- >>> import Prelude (Char)
--- >>> empty :: RadixTree Char
+-- >>> empty @Char
 -- Tree []
 empty :: RadixTree a
 empty = Map.empty
@@ -77,7 +77,7 @@ member = Map.member
 -- >>> findMin (construct ["abc", "def", "abb"])
 -- Just abb
 -- >>> import Prelude (Char)
--- >>> findMin (empty :: RadixTree Char)
+-- >>> findMin @Char empty
 -- Nothing
 findMin :: RadixTree a -> Maybe (String a)
 findMin = Map.lookupMin
@@ -88,7 +88,7 @@ findMin = Map.lookupMin
 -- >>> findMax (construct ["abc", "def", "abb"])
 -- Just def
 -- >>> import Prelude (Char)
--- >>> findMax (empty :: RadixTree Char)
+-- >>> findMax @Char empty
 -- Nothing
 findMax :: RadixTree a -> Maybe (String a)
 findMax = Map.lookupMax

@@ -145,7 +145,7 @@ data Edge a v = {-# UNPACK #-} !(String a) :~> {-# UNPACK #-} !(RadixTreeMap a v
 -- | /O(1)/ The empty map.
 --
 -- >>> import Prelude (Char, Int)
--- >>> empty :: RadixTreeMap Char Int
+-- >>> empty @Char @Int
 -- Tree []
 empty :: RadixTreeMap a v
 empty = Empty
@@ -154,7 +154,7 @@ empty = Empty
 -- | /O(?)/ Build a map from a list of key/value pairs.
 --
 -- >>> import Prelude (Char, Int)
--- >>> construct [("abc", 1), ("def", 3), ("abb", 5)] :: RadixTreeMap Char Int
+-- >>> construct [("abc", 1), ("def", 3), ("abb", 5)]
 -- Tree [ab :~> Tree [b :~> Tree (5) [],c :~> Tree (1) []],def :~> Tree (3) []]
 construct :: Ord a => [(String a, v)] -> RadixTreeMap a v
 construct = foldl' (flip $ uncurry insert) empty
@@ -166,12 +166,12 @@ construct = foldl' (flip $ uncurry insert) empty
 -- | /O(n log r)/ Lookup the value at a key in the map.
 --
 -- >>> import Prelude (Int)
--- >>> lookup "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> lookup "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 1
--- >>> lookup "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> lookup "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Nothing
 --
--- >>> lookupMax (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> lookupMax (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 3
 lookup :: Ord a => String a -> RadixTreeMap a v -> Maybe v
 lookup Null t = value t
@@ -185,7 +185,7 @@ lookup k@(Head h) t = do
 --
 -- >>> lookupMinWithKey (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just (abb,5)
--- >>> lookupMinWithKey empty :: Maybe (String Char, Int)
+-- >>> lookupMinWithKey @Char @Int empty
 -- Nothing
 lookupMinWithKey :: Unbox a => RadixTreeMap a v -> Maybe (String a, v)
 lookupMinWithKey (Tree (Just !x) _) = Just (mempty, x)
@@ -199,7 +199,7 @@ lookupMinWithKey (Tree Nothing es) = do
 --
 -- >>> lookupMaxWithKey (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just (def,3)
--- >>> lookupMaxWithKey empty :: Maybe (String Char, Int)
+-- >>> lookupMaxWithKey @Char @Int empty
 -- Nothing
 lookupMaxWithKey :: Unbox a => RadixTreeMap a v -> Maybe (String a, v)
 lookupMaxWithKey (Leaf x) = Just (mempty, x)
@@ -211,9 +211,9 @@ lookupMaxWithKey (Tree _ es) = do
 
 -- | /O(n log r)/ Extract the value associated with the minimal key in the map.
 --
--- >>> lookupMin (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> lookupMin @Char @Int (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 5
--- >>> lookupMin empty :: Maybe Int
+-- >>> lookupMin @Char @Int empty
 -- Nothing
 lookupMin :: RadixTreeMap a v -> Maybe v
 lookupMin (Tree (Just !x) _) = Just x
@@ -224,9 +224,9 @@ lookupMin (Tree Nothing es) = do
 
 -- | /O(n log r)/ Extract the value associated with the maximal key in the map.
 --
--- >>> lookupMax (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Maybe Int
+-- >>> lookupMax @Char @Int (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 3
--- >>> lookupMax empty :: Maybe Int
+-- >>> lookupMax @Char @Int empty
 -- Nothing
 lookupMax :: RadixTreeMap a v -> Maybe v
 lookupMax (Leaf !x) = Just x
@@ -237,9 +237,9 @@ lookupMax (Tree _ es) = do
 
 -- | /O(n log r)/ Check if there is an associated value for the key.
 --
--- >>> member "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Bool
+-- >>> member "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- True
--- >>> member "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)]) :: Bool
+-- >>> member "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- False
 member :: Ord a => String a -> RadixTreeMap a v -> Bool
 member k t = isJust (lookup k t)

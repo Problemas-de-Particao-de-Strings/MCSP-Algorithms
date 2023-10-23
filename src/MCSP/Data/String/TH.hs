@@ -8,7 +8,7 @@ import Control.Applicative (pure)
 import Control.Monad (fail, (>>=))
 import Data.Bool (otherwise, (&&))
 import Data.Char (toLower)
-import Data.Data (Proxy (Proxy), Typeable, typeRep)
+import Data.Data (Proxy (..), Typeable, typeRep)
 import Data.Function (($), (.))
 import Data.Int (Int)
 import Data.List ((++))
@@ -91,8 +91,8 @@ cast = toEnum . fromEnum
 clamp :: forall a b. (EnumLike a, EnumLike b) => b -> a
 clamp = toEnum . max minA . min maxA . fromEnum
   where
-    minA = fromEnum (minBound :: a)
-    maxA = fromEnum (maxBound :: a)
+    minA = fromEnum @a minBound
+    maxA = fromEnum @a maxBound
 {-# INLINE clamp #-}
 
 -- | Holds information about an `EnumLike` @a@.
@@ -102,9 +102,9 @@ data Info a = Info {minVal :: !Int, maxVal :: !Int, name :: !String}
 info :: forall a. EnumLike a => Info a
 info =
     Info
-        { minVal = fromEnum (minBound :: a),
-          maxVal = fromEnum (maxBound :: a),
-          name = show $ typeRep (Proxy :: Proxy a)
+        { minVal = fromEnum @a minBound,
+          maxVal = fromEnum @a maxBound,
+          name = show $ typeRep (Proxy @a)
         }
 
 -- | Checks if @a@ is safely convertible to @b@ via `Enum` and `Bounded`, then returns the casts.
@@ -114,5 +114,5 @@ safeCasts
     | otherwise =
         error $ name typ ++ " is larger than " ++ name rep ++ " and cannot be safely converted"
   where
-    typ = info :: Info a
-    rep = info :: Info b
+    typ = info @a
+    rep = info @b

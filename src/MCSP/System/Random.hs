@@ -86,7 +86,7 @@ import MCSP.System.Random.Monad (
 -- * Use (0,1] range for floating types.
 --
 -- >>> import Prelude (Double)
--- >>> generateWith (1,2) uniform :: Double
+-- >>> generateWith @Double (1,2) uniform
 -- 0.6502342391751404
 uniform :: PCG.Variate a => Random a
 uniform = liftRandom PCG.uniform
@@ -97,7 +97,7 @@ uniform = liftRandom PCG.uniform
 -- * Use inclusive range for integral types.
 -- * Use (a,b] range for floating types.
 --
--- >>> generateWith (1,2) $ uniformR 10 50 :: Int
+-- >>> generateWith (1,2) $ uniformR @Int 10 50
 -- 16
 uniformR :: PCG.Variate a => a -> a -> Random a
 uniformR lo hi = liftRandom $ PCG.uniformR (lo, hi)
@@ -108,7 +108,7 @@ uniformR lo hi = liftRandom $ PCG.uniformR (lo, hi)
 -- * For integral types the bound must be less than the max bound of `Data.Word.Word32`
 -- (4294967295). Behaviour is undefined for negative bounds.
 --
--- >>> generateWith (1,2) $ uniformB 200 :: Int
+-- >>> generateWith (1,2) $ uniformB @Int 200
 -- 143
 uniformB :: PCG.Variate a => a -> Random a
 uniformB b = liftRandom $ PCG.uniformB b
@@ -120,7 +120,7 @@ uniformB b = liftRandom $ PCG.uniformB b
 --
 -- >>> import Prelude (Show)
 -- >>> data T = A | B | C | D deriving (Enum, Bounded, Show)
--- >>> generateWith (1,3) uniformE :: T
+-- >>> generateWith @T (1,3) uniformE
 -- C
 uniformE :: (Enum a, Bounded a) => Random a
 uniformE = uniformRE minBound maxBound
@@ -130,7 +130,7 @@ uniformE = uniformRE minBound maxBound
 --
 -- It should be equivalent to `uniformR`, but for non-`PCG.Variate`.
 --
--- >>> generateWith (1,3) $ uniformRE 0 10 :: Int
+-- >>> generateWith (1,3) $ uniformRE @Int 0 10
 -- 5
 -- >>> generateWith (1,3) $ uniformRE 'a' 'z'
 -- 'n'
@@ -165,7 +165,7 @@ tabulate (toList -> values) =
     )
   where
     maxWeight = sum (map fst values)
-    maxW32 = fromIntegral (maxBound :: Word32)
+    maxW32 = fromIntegral @Word32 maxBound
     toW32 x = truncate (x * maxW32 / maxWeight)
 {-# INLINE tabulate #-}
 
@@ -208,7 +208,7 @@ shuffleNonEmpty (h :| rest) = do
 
 -- | /O(?)/ Shuffles a list randomly.
 --
--- >>> generateWith (1,2) $ shuffle [1..5] :: [Int]
+-- >>> generateWith (1,2) $ shuffle @[Int] [1..5]
 -- [4,1,2,3,5]
 shuffle :: IsList l => l -> Random l
 shuffle values = case nonEmpty (toList values) of
@@ -218,7 +218,7 @@ shuffle values = case nonEmpty (toList values) of
 
 -- | /O(n)/ Generate random partitions of a vector.
 --
--- >>> generateWith (1,4) $ partitions ([1..10] :: Vector Int)
+-- >>> generateWith (1,4) $ partitions @Vector @Int [1..10]
 -- [[1,2,3],[4,5,6,7,8],[9],[10]]
 partitions :: Vector.Vector v a => v a -> Random [v a]
 partitions xs = case Vector.length xs of
@@ -234,7 +234,7 @@ partitions xs = case Vector.length xs of
 -- | Generates an infinite list of random values.
 --
 -- >>> import Prelude (take, (<$>))
--- >>> generateWith (1,3) (take 3 <$> repeatR (uniform :: Random Int))
+-- >>> generateWith (1,3) (take 3 <$> repeatR (uniform @Int))
 -- [-8858759364290496978,-2446124676014956441,1387719708863309077]
 repeatR :: Random a -> Random [a]
 repeatR r = lazyRandom $ do

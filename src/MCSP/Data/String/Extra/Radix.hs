@@ -64,10 +64,10 @@ p `isPrefixOf` str = take (length p) str == p
 -- >>> commonPrefixLength "abc" "abd"
 -- 2
 commonPrefixLength :: Eq a => String a -> String a -> Int
-commonPrefixLength lhs rhs = fromMaybe n (find notMatching indices)
+commonPrefixLength lhs rhs = fromMaybe n (find @[] notMatching indices)
   where
     n = min (length lhs) (length rhs)
-    indices = [0 .. n - 1] :: [Int]
+    indices = [0 .. n - 1]
     -- SAFETY: index i is in range [0, n = min(lhs, rhs)) and is guaranteed to be in bounds for
     -- both strings
     notMatching i = unsafeIndex lhs i /= unsafeIndex rhs i

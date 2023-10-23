@@ -1,5 +1,6 @@
 -- | Tools for testing heuristics.
 module MCSP.TestLib.Heuristics (
+    Debug,
     Heuristic,
     NamedHeuristic,
     heuristics,
@@ -68,10 +69,10 @@ instance NFData Measured
 
 -- | Returns the length of the foldables, if both have the same length, or throws an error.
 --
--- >>> checkedLen "list" ([1..4], [2..5] :: [Int])
+-- >>> checkedLen @[] @Int "list" ([1..4], [2..5])
 -- 4
 --
--- >>> checkedLen "string" ("", "abc" :: String Char)
+-- >>> checkedLen @String @Char "string" ("", "abc")
 -- user error (length mismatch for string: 0 != 3)
 checkedLen :: Text.String -> Foldable t => (t a, t a) -> IO Int
 checkedLen name (x, y)

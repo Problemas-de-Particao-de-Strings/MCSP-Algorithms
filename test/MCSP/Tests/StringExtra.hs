@@ -116,10 +116,10 @@ prefixOpTests =
             stripPrefix x y === (fromList <$> List.stripPrefix (toList x) (toList y)),
           testStr "commonPrefix (c ++ x) (c ++ y) == c" $ \c x y ->
             take (length c) (commonPrefix (c ++ x) (c ++ y)) === c,
-          testStr "splitCommonPrefix x y == (commonPrefix x y, stripPrefix x, stripPrefix y)" $ \x y ->
-            splitCommonPrefix x y
-                === let c = commonPrefix x y
-                     in (c, drop (length c) x, drop (length c) y)
+          testStr "splitCommonPrefix x y == (commonPrefix x y, stripPrefix x, stripPrefix y)" $
+            \x y ->
+                let c = commonPrefix x y
+                 in splitCommonPrefix x y === (c, drop (length c) x, drop (length c) y)
         ]
 
 suffixOpTests :: TestTree

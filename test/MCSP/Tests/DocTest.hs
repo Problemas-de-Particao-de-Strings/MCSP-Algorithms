@@ -106,6 +106,4 @@ instance IsOption DocTestVerbose where
 
 -- | Tasty options understood by DocTest.
 docTestOptions :: [OptionDescription]
-docTestOptions =
-    [ Option (Proxy :: Proxy DocTestVerbose)
-    ]
+docTestOptions = [Option (Proxy @DocTestVerbose)]

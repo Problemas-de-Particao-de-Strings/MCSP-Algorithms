@@ -1,6 +1,7 @@
 module MCSP.TestLib.Sample (
     ShuffleMethod (..),
     StringParameters (..),
+    SimpleEnum,
     benchParams,
     randomPairWith,
     repr,
@@ -53,7 +54,7 @@ repr (StringParameters n reps sings shuffle) =
 --
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> import Data.Word (Word8)
--- >>> generateWith (1,2) $ randomPairWith (StringParameters 10 2 2 Chars) :: (String Word8, String Word8)
+-- >>> generateWith (1,2) $ randomPairWith @Word8 (StringParameters 10 2 2 Chars)
 -- (0 0 0 0 1 3 1 0 1 2,1 1 0 1 2 0 0 3 0 0)
 randomPairWith :: forall a. SimpleEnum a => StringParameters -> Random (String a, String a)
 randomPairWith (StringParameters {..}) = do
@@ -67,7 +68,7 @@ randomPairWith (StringParameters {..}) = do
         Chars -> pairShufflingChars str
         Blocks -> pairShufflingBlocks str
   where
-    fromMinBound n = toEnum (fromEnum (minBound :: a) + n)
+    fromMinBound n = toEnum (fromEnum @a minBound + n)
 
 -- | Parameters to generate strings for benchmarking.
 benchParams :: [StringParameters]

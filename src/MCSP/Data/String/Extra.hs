@@ -156,11 +156,11 @@ pattern BalancedStrings {getBalancedStrings} <- (extractStrings -> getBalancedSt
 --
 -- From <https://wiki.haskell.org/Generic_number_type#squareRoot>.
 --
--- >>> squareRoot 10 :: Int
+-- >>> squareRoot @Int 10
 -- 3
--- >>> squareRoot 15 :: Int
+-- >>> squareRoot @Int 15
 -- 3
--- >>> squareRoot 16 :: Int
+-- >>> squareRoot @Int 16
 -- 4
 squareRoot :: (Integral a, FiniteBits a) => a -> a
 squareRoot n | n <= 0 = 0

@@ -45,7 +45,7 @@ class ShowString a where
 -- | Shows all characters without quoting or separation.
 --
 -- >>> import Data.Vector (fromList)
--- >>> showMany shows (fromList [1, 2, 12 :: Int]) ""
+-- >>> showMany shows (fromList @Int [1, 2, 12]) ""
 -- "1212"
 showMany :: Vector v a => (a -> ShowS) -> v a -> ShowS
 showMany showItem str text = foldr' showItem text str
@@ -63,7 +63,7 @@ instance ShowString Char where
 --
 -- >>> import Data.Vector (fromList)
 -- >>> import Text.Show (showString)
--- >>> showSeparated (showString ", ") shows (fromList [1, 2, 12 :: Int]) ""
+-- >>> showSeparated (showString ", ") shows (fromList @Int [1, 2, 12]) ""
 -- "1, 2, 12"
 showSeparated :: Vector v a => ShowS -> (a -> ShowS) -> v a -> ShowS
 showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
@@ -77,7 +77,7 @@ showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
 -- This implementation uses the default converter for @Show a@.
 --
 -- >>> import Data.Vector (fromList)
--- >>> showSpaced (fromList [1, 2, 12 :: Int]) ""
+-- >>> showSpaced (fromList @Int [1, 2, 12]) ""
 -- "1 2 12"
 showSpaced :: (Vector v a, Show a) => v a -> ShowS
 showSpaced = showSeparated (showChar ' ') shows
@@ -181,9 +181,9 @@ readOr x readItem = readItem <++ pure x
 --
 -- No text is consumed, but the parser will fail in case of `Nothing`.
 --
--- >>> readP_to_S (fromJustP (Just 12)) "text"
+-- >>> readP_to_S (fromJustP $ Just 12) "text"
 -- [(12,"text")]
--- >>> readP_to_S (fromJustP (Nothing)) "text"
+-- >>> readP_to_S (fromJustP Nothing) "text"
 -- []
 fromJustP :: Maybe a -> ReadP a
 fromJustP = maybe pfail pure
@@ -193,7 +193,7 @@ fromJustP = maybe pfail pure
 -- Parsers usually try to match on a full token at once. For Strings, partially matching on
 -- characters is more useful. This parser will return a match even if it is part of a larger token.
 --
--- >>> readP_to_S (readPartialMinimal $ ignorePrec readPrec :: ReadP Int) "1234 5"
+-- >>> readP_to_S (readPartialMinimal @Int $ ignorePrec readPrec) "1234 5"
 -- [(1,"234 5")]
 readPartialMinimal :: ReadP a -> ReadP a
 readPartialMinimal readItem = readUntilFirstMatch ""
@@ -207,7 +207,7 @@ readPartialMinimal readItem = readUntilFirstMatch ""
 -- characters is more useful. This parser receives an initial match and the text it consumed and
 -- tries to make another match consuming more text.
 --
--- >>> readP_to_S (readPartialFrom (ignorePrec readPrec :: ReadP Int) ("1", 1)) "234 5"
+-- >>> readP_to_S (readPartialFrom @Int (ignorePrec readPrec) ("1", 1)) "234 5"
 -- [(1234," 5")]
 readPartialFrom :: ReadP a -> (String, a) -> ReadP a
 readPartialFrom readItem (buffer, currentMatch) = readOr currentMatch $ do
@@ -226,14 +226,14 @@ readPartialFrom readItem (buffer, currentMatch) = readOr currentMatch $ do
 -- (like Enums).
 --
 --
--- >>> readP_to_S (readPartial $ ignorePrec readPrec :: ReadP Int) "1234 5"
+-- >>> readP_to_S (readPartial @Int $ ignorePrec readPrec) "1234 5"
 -- [(1234," 5")]
 readPartial :: ReadP a -> ReadP a
 readPartial readItem = gather (readPartialMinimal readItem) >>= readPartialFrom readItem
 
 -- | Reads a list of unquoted and unseparated items.
 --
--- >>> readP_to_S (readMany (ignorePrec readPrec :: ReadP Int)) "1234 5"
+-- >>> readP_to_S (readMany @Int $ ignorePrec readPrec) "1234 5"
 -- [([1234,5],"")]
 readMany :: ReadP a -> ReadP [a]
 readMany readItem = readOr [] $ do
@@ -261,7 +261,7 @@ instance ReadString Char where
 
 -- | Reads characters split as tokens, using the default parser for `Read a`.
 --
--- >>> readP_to_S (readTokensInLine :: ReadP [Int]) "1234 5"
+-- >>> readP_to_S (readTokensInLine @Int) "1234 5"
 -- [([1234,5],"")]
 readTokensInLine :: Read a => ReadP [a]
 readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)

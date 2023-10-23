@@ -22,6 +22,7 @@ import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
 import MCSP.TestLib.Heuristics (
+    Debug,
     Measured,
     NamedHeuristic,
     blocks,
@@ -31,7 +32,7 @@ import MCSP.TestLib.Heuristics (
     score,
     toCsvRow,
  )
-import MCSP.TestLib.Sample (StringParameters, benchParams, randomPairWith, repr)
+import MCSP.TestLib.Sample (SimpleEnum, StringParameters, benchParams, randomPairWith, repr)
 
 -- ---------------- --
 -- Benchmark Limits --
@@ -69,9 +70,9 @@ resamples = 1000
 
 -- | The x-axis of the regression, counting the number of iterations to run for each data point.
 series :: Integral a => [a]
-series = squish $ map truncate $ iterate (ratio *) 1
+series = squish $ map truncate $ iterate @Double (ratio *) 1
   where
-    ratio = 1.05 :: Double
+    ratio = 1.05
     squish = foldr dropRepeated []
     dropRepeated x xs = x : dropWhile (x ==) xs
 
@@ -191,7 +192,7 @@ regress f v = do
 -- Benchmark groups and setup --
 
 -- | Creates an `IO` that generatores a pair of strings, run the heuristic and run measuments on it.
-measuring :: StringParameters -> NamedHeuristic Word8 -> IO Measured
+measuring :: (SimpleEnum a, Debug a) => StringParameters -> NamedHeuristic a -> IO Measured
 measuring params heuristic = generate (randomPairWith params) >>= measure heuristic
 
 -- | Writes the measured information in CSV format and returns it unchanged.
@@ -206,7 +207,7 @@ report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics 
     run params heuristic = do
         printLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
         -- run benchmark and analyse results
-        results <- runBenchmark $ measuring params heuristic >>= writeCsv putRow
+        results <- runBenchmark $ measuring @Word8 params heuristic >>= writeCsv putRow
         Estimated {..} <- regress blocks results
         -- formatted output
         printLn $ "blocks:     \t" ++ showEstimate "" linearCoefficient
