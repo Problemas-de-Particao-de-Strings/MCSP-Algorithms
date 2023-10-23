@@ -7,20 +7,30 @@ import Data.Ord (Ord (..))
 import Data.Tuple (fst, snd)
 import Data.Vector.Unboxed (Unbox, Vector, backpermute, imap, length, null, (!))
 import GHC.Float (Double, Float)
-import GHC.Num ((-))
+import GHC.Num (Num (..))
 import Text.Show (Show)
 
 import Test.Tasty (TestName, TestTree, testGroup)
-import Test.Tasty.QuickCheck (Arbitrary, Testable, classify, testProperty, (===), pattern Fn)
+import Test.Tasty.QuickCheck (
+    Arbitrary,
+    Testable,
+    classify,
+    testProperty,
+    (===),
+    (==>),
+    pattern Fn,
+ )
 
 import MCSP.Algorithms.Vector (
     argSort,
     choose,
     map,
+    normalized,
     replicate,
     sort,
     sortLike,
     sortOn,
+    standardized,
     sum,
     zeros,
     (.*),
@@ -35,7 +45,8 @@ vectorAlgorithmsTests =
     testGroup
         "Algorithms.Vector"
         [ elementWiseOpsTests,
-          sortingTests
+          sortingTests,
+          statisticsTests
         ]
 
 testVector ::
@@ -78,4 +89,24 @@ sortingTests =
             backpermute vec (argSort vec) === sort vec,
           testVector @Int "sortLike vec (map f vec) == sortOn f vec" $ \vec (Fn f) ->
             vec `sortLike` map @Int @Double f vec === sortOn f vec
+        ]
+
+statisticsTests :: TestTree
+statisticsTests =
+    testGroup
+        "statistics on vectors"
+        [ testVector @Double "-1 <= normalized vec <= 1" $ \vec ->
+            map abs (normalized vec) <= replicate (length vec) 1,
+          testVector @Float "map signum normalized vec == map signum vec" $ \vec ->
+            map signum (normalized vec) === map signum vec,
+          testVector @Double "normalized . normalized == normalized" $ \vec ->
+            normalized (normalized vec) === normalized vec,
+          testVector @Float "normalized . (x .*.) == normalized" $ \vec x ->
+            x > 0 ==> normalized (x .*. vec) === normalized vec,
+          testVector @Double "standardized . standardized == standardized" $ \vec ->
+            standardized (standardized vec) === standardized vec,
+          testVector @Float "standardized . (x .*.) == standardized" $ \vec x ->
+            x > 0 ==> standardized (x .*. vec) === standardized vec,
+          testVector @Double "standardized . normalized == standardized" $ \vec ->
+            standardized (normalized vec) === standardized vec
         ]

@@ -67,7 +67,7 @@ import Data.Vector.Unboxed (
     zipWith,
  )
 import Data.Vector.Unboxed.Mutable (generate)
-import GHC.Float (Double, Float, Floating (sqrt))
+import GHC.Float (Double, Float, Floating, sqrt)
 import GHC.Num (Num (..))
 import GHC.Real (Fractional, fromIntegral, (/))
 import Text.Printf (printf)
@@ -228,8 +228,13 @@ sortLike = withSameLength $ \x y ->
 --
 -- >>> normalized [1, 2, 5, 10]
 -- [0.1,0.2,0.5,1.0]
+--
+-- >>> normalized [1, 2, 5, -10]
+-- [0.1,0.2,0.5,-1.0]
+--
 -- >>> normalized []
 -- []
+--
 -- >>> normalized [0]
 -- [0.0]
 normalized :: (Unbox a, Fractional a, Ord a) => Vector a -> Vector a
@@ -237,23 +242,31 @@ normalized vector
     | null vector || absMax == 0 = vector
     | otherwise = map (/ absMax) vector
   where
-    absMax = Vector.maximumOn abs vector
+    absMax = abs (Vector.maximumOn abs vector)
 {-# SPECIALIZE normalized :: Vector Default -> Vector Default #-}
 
 -- | Average value in a vector.
 --
 -- >>> mean [1, 2, 5, 10]
 -- 4.5
+--
+-- >>> mean []
+-- 0.0
 mean :: (Unbox a, Fractional a) => Vector a -> a
-mean vector = Vector.sum vector / fromIntegral (length vector)
+mean vector
+    | null vector = 0
+    | otherwise = Vector.sum vector / fromIntegral (length vector)
 {-# SPECIALIZE mean :: Vector Default -> Default #-}
 
 -- | Variance of the values in a vector.
 --
 -- >>> variance [1, 2, 5, 10]
 -- 12.25
+--
+-- >>> variance []
+-- 0.0
 variance :: (Unbox a, Fractional a) => Vector a -> a
-variance vector = Vector.sum (dev .* dev) / fromIntegral (length vector)
+variance vector = mean (dev .* dev)
   where
     u = mean vector
     dev = map (\x -> x - u) vector
@@ -271,8 +284,17 @@ stdev = sqrt . variance
 --
 -- >>> standardized [1, 2, 5, 10]
 -- [-1.0,-0.7142857142857143,0.14285714285714285,1.5714285714285714]
-standardized :: (Unbox a, Floating a) => Vector a -> Vector a
-standardized vector = map (\x -> (x - u) / s) vector
+--
+-- >>> standardized []
+-- []
+--
+-- >>> standardized [1, 1]
+-- [0.0,0.0]
+standardized :: (Unbox a, Floating a, Eq a) => Vector a -> Vector a
+standardized vector
+    | null vector = vector
+    | s == 0 = map (\x -> x - u) vector
+    | otherwise = map (\x -> (x - u) / s) vector
   where
     u = mean vector
     s = stdev vector
