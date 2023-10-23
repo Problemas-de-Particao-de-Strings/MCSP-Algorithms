@@ -122,6 +122,9 @@ choose :: Unbox a => a -> a -> Vector Bool -> Vector a
 choose falsy truthy = map (bool falsy truthy)
 {-# SPECIALIZE choose :: Default -> Default -> Vector Bool -> Vector Default #-}
 
+infixl 7 .*, .*.
+infixl 6 .+, .-
+
 -- | Element-wise addition.
 --
 -- >>> [1, 2, 3] .+ [5, 6, 7]
