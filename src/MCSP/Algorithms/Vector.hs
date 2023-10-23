@@ -202,10 +202,10 @@ sortOn key = sortBy (compare `on` key)
 -- [2,0,1]
 argSort :: (Unbox a, Ord a) => Vector a -> Vector Int
 argSort vec = create $ do
-    idx <- generate (length vec) id
+    index <- generate (length vec) id
     -- SAFETY: index was created above, so it must be inbounds
-    Vector.sortBy (compare `on` unsafeIndex vec) idx
-    pure idx
+    Vector.sortBy (compare `on` unsafeIndex vec) index
+    pure index
 {-# SPECIALIZE argSort :: Vector Default -> Vector Int #-}
 {-# SPECIALIZE argSort :: Vector Int -> Vector Int #-}
 
