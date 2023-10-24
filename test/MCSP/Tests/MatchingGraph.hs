@@ -32,8 +32,9 @@ import MCSP.Data.MatchingGraph (
  )
 import MCSP.Data.Pair (Pair, both, first, left, right, swap)
 import MCSP.Data.String (String (..), concat, slice)
-import MCSP.Data.String.Extra (BalancedStrings (..), chars)
+import MCSP.Data.String.Extra (chars)
 import MCSP.Heuristics.PSOBased (edgeSizeWeights, partitionWeights)
+import MCSP.QuickCheck.Modifiers (getBalancedStrings)
 import MCSP.System.Random ((=~=))
 
 matchingGraphTests :: TestTree
