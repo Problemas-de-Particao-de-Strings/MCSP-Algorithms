@@ -60,7 +60,6 @@ dependencies:
   - deepseq >= 1.4.8.1 && < 2
   - extra >= 1.7.14 && < 2
   - pcg-random >= 0.1.4 && < 1
-  - QuickCheck >= 2.14.3 && < 3
   - random-shuffle >= 0.0.4 && < 1
   - safe >= 0.3.19 && < 1
   - template-haskell > 2.20 && < 3
@@ -111,6 +110,7 @@ tests:
       - mcsp-test-lib
       - doctest >= 0.22.2 && < 1
       - extended-reals >= 0.2.4.0 && < 1
+      - QuickCheck >= 2.14.3 && < 3
       - tasty >= 1.5 && < 2
       - tasty-quickcheck >= 0.10.3 && < 1
       # these dependencies are repeated here for Haskell Language Server to work in 'mcsp-test-lib'

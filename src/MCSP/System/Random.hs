@@ -15,7 +15,6 @@ module MCSP.System.Random (
     generateFastWith,
     generateWith,
     randomSeed,
-    (=~=),
 
     -- * Random Values
     PCG.Variate,
@@ -35,7 +34,6 @@ module MCSP.System.Random (
 import Control.Applicative (pure)
 import Control.Monad (mapM)
 import Control.Monad.ST (runST)
-import Data.Eq (Eq)
 import Data.Foldable (length, sum)
 import Data.Function (($), (.))
 import Data.Int (Int)
@@ -56,8 +54,6 @@ import GHC.Num ((*), (+), (-))
 import GHC.Real (fromIntegral, truncate, (/))
 import System.Random.PCG qualified as PCG (Variate (..))
 import System.Random.Shuffle qualified as Shuffle (shuffle)
-import Test.QuickCheck (Property, property, (===))
-import Text.Show (Show)
 
 import MCSP.System.Random.Generate (
     Seed,
@@ -255,13 +251,3 @@ iterateR next value = lazyRandom $ do
     rest <- iterateR next newValue
     pure (value <| rest)
 {-# INLINEABLE iterateR #-}
-
--- ---------- --
--- QuickCheck --
--- ---------- --
-
-infix 4 =~=
-
-(=~=) :: (Eq a, Show a) => Random a -> Random a -> Property
-genA =~= genB = property $ \seed ->
-    generateWith seed genA === generateWith seed genB
