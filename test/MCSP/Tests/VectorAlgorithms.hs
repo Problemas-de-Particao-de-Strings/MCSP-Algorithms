@@ -1,7 +1,10 @@
 module MCSP.Tests.VectorAlgorithms (vectorAlgorithmsTests) where
 
+import Control.Applicative (liftA2, pure)
 import Data.Bool (Bool (..), not, (||))
+import Data.Eq ((==))
 import Data.Function (($))
+import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.Ord (Ord (..))
 import Data.Tuple (fst, snd)
@@ -23,6 +26,7 @@ import Test.Tasty.QuickCheck (
 
 import MCSP.Algorithms.Vector (
     argSort,
+    choice,
     choose,
     map,
     normalized,
@@ -32,13 +36,18 @@ import MCSP.Algorithms.Vector (
     sortOn,
     standardized,
     sum,
+    sumM,
+    uniformRN,
+    weighted,
+    weightedN,
     zeros,
     (.*),
     (.*.),
     (.+),
     (.-),
  )
-import MCSP.QuickCheck.Modifiers (getViaList)
+import MCSP.QuickCheck.Modifiers (getRandom, getViaList, (=~=))
+import MCSP.System.Random (uniformR)
 
 vectorAlgorithmsTests :: TestTree
 vectorAlgorithmsTests =
@@ -46,7 +55,8 @@ vectorAlgorithmsTests =
         "Algorithms.Vector"
         [ elementWiseOpsTests,
           sortingTests,
-          statisticsTests
+          statisticsTests,
+          randomizedVectorsTests
         ]
 
 testVector ::
@@ -70,7 +80,8 @@ elementWiseOpsTests =
           testVector @Int "x .*. vec == replicate x .* vec" $ \vec x ->
             x .*. vec === replicate (length vec) x .* vec,
           testVector @Float "sum [v1, v2] == v2 .+ v1" $ \v1 (getViaList -> v2) ->
-            sum [v1, v2] === v2 .+ v1,
+            classify (length v1 == length v2) "same-length" $
+                sum [v1, v2] === v2 .+ v1,
           testVector @Bool "choose False True == id" $ \vec ->
             choose False True vec === vec
         ]
@@ -79,7 +90,7 @@ sortingTests :: TestTree
 sortingTests =
     testGroup
         "sorting vectors"
-        [ testVector @Double "allIncreasing (sort vec)" $ \vec ->
+        [ testVector @Int "allIncreasing (sort vec)" $ \vec ->
             imap (\i x -> i <= 0 || vec ! (i - 1) <= x) (sort vec) === replicate (length vec) True,
           testVector @Double "sort . sort == sort" $ \vec ->
             sort (sort vec) === sort vec,
@@ -110,3 +121,22 @@ statisticsTests =
           testVector @Double "standardized . normalized == standardized" $ \vec ->
             standardized (normalized vec) === standardized vec
         ]
+
+randomizedVectorsTests :: TestTree
+randomizedVectorsTests =
+    testGroup
+        "randomized vector operations"
+        [ testProperty "sumM [v1, v2] =~= liftA2 (.+) v1 v2" $
+            \(getRandomVector -> v1) (getRandomVector -> v2) ->
+                sumM @Int [v1, v2] =~= liftA2 (.+) v1 v2,
+          testProperty "choice [(1, v1)] =~= v1" $ \(getViaList -> v1) ->
+            choice @(Vector Double) [(1, pure v1)] =~= pure v1,
+          testProperty "(>>= weighted x) =~= liftA2 (.*.) (uniformR 0 x)" $
+            \(getViaList -> v1) x ->
+                weighted @Int x v1 =~= liftA2 (.*.) (uniformR 0 x) (pure v1),
+          testProperty "(>>= weightedN x) =~= liftA2 (.*) (uniformRN 0 x)" $
+            \(getViaList -> v1) x ->
+                weightedN @Int x v1 =~= liftA2 (.*) (uniformRN 0 x (length v1)) (pure v1)
+        ]
+  where
+    getRandomVector arb = getViaList <$> getRandom arb

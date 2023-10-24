@@ -376,6 +376,13 @@ weightedN maxWeight vec = do
 
 -- | Choose randomly between multiple `Random` monad, with probablity proportional to its given
 -- weight.
+--
+-- >>> import MCSP.System.Random (generateWith)
+-- >>> generateWith (1,2) $ replicateM 10 $ choice [(1, pure 'a'), (2, pure 'b')]
+-- "abbbaabbbb"
+--
+-- >>> generateWith (1,2) $ replicateM 10 $ choice [(1, uniformR (-1) 0), (2, uniformR 0 1)]
+-- [-0.11816487538074749,0.5798377716767166,0.12231072251084052,0.754750234725723,0.5163453222019222,0.9673060222002038,-0.28900858364465354,0.609061325679456,-0.15187385001852494,0.4987697781636008]
 choice :: NonEmpty (Double, Random a) -> Random a
 choice options = join (weightedChoice options)
 {-# INLINE choice #-}
