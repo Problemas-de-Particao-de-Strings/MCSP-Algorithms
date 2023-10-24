@@ -6,16 +6,17 @@ import Data.Eq ((/=))
 import Data.Foldable (Foldable (..))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
+import Data.Int (Int)
 import Data.List.Extra (nubSort, snoc)
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Ord (max, min)
 import Data.Semigroup (Max (..), Min (..))
+import Data.Word (Word8)
 
-import Test.Tasty (TestName, TestTree, testGroup)
-import Test.Tasty.QuickCheck (Property, Testable, classify, testProperty, (===), (==>))
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.QuickCheck (classify, testProperty, (===), (==>))
 
 import MCSP.Data.RadixTree (
-    RadixTree,
     construct,
     delete,
     findMax,
@@ -24,7 +25,7 @@ import MCSP.Data.RadixTree (
     member,
     union,
  )
-import MCSP.Data.String (String, concat)
+import MCSP.Data.String (concat)
 import MCSP.QuickCheck.Modifiers (ArbitraryTree (getTree))
 
 radixTreeTests :: TestTree
@@ -40,24 +41,23 @@ radixTreeFoldsAreSorted =
     testGroup
         "folds are sorted and deduplicated"
         [ testFromList "toList . construct == nubSort" $ \list ->
-            toList (construct list) === nubSort list,
+            toList (construct @Char list) === nubSort list,
           testFromList "foldMap (: []) . construct == nubSort" $ \list ->
-            foldMap (: []) (construct list) === nubSort list,
+            foldMap (: []) (construct @Int list) === nubSort list,
           testFromList "foldMap' (: []) . construct == nubSort" $ \list ->
-            foldMap' (: []) (construct list) === nubSort list,
+            foldMap' (: []) (construct @Word8 list) === nubSort list,
           testFromList "foldr (:) [] . construct == nubSort" $ \list ->
-            foldr (:) [] (construct list) === nubSort list,
+            foldr (:) [] (construct @Char list) === nubSort list,
           testFromList "foldr' (:) [] . construct == nubSort" $ \list ->
-            foldr' (:) [] (construct list) === nubSort list,
+            foldr' (:) [] (construct @Int list) === nubSort list,
           testFromList "foldl snoc [] . construct == nubSort" $ \list ->
-            foldl snoc [] (construct list) === nubSort list,
+            foldl snoc [] (construct @Word8 list) === nubSort list,
           testFromList "foldl' snoc [] . construct == nubSort" $ \list ->
-            foldl' snoc [] (construct list) === nubSort list,
+            foldl' snoc [] (construct @Char list) === nubSort list,
           testFromList "fold . construct == concat . nubSort" $ \list ->
-            fold (construct list) === concat (nubSort list)
+            fold (construct @Int list) === concat (nubSort list)
         ]
   where
-    testFromList :: Testable prop => TestName -> ([String Char] -> prop) -> TestTree
     testFromList name prop = testProperty name $ \xs ->
         classify (length xs /= length (nubSort xs)) "deduplicated" (prop xs)
 
@@ -67,25 +67,24 @@ treeStructureHolds =
         "tree structure holds"
         [ testProperty "findMin == getMin <$> foldMap (Just . Min)" $
             markNonEmpty $ \tree ->
-                findMin tree === (getMin <$> foldMap' (Just . Min) tree),
+                findMin @Char tree === (getMin <$> foldMap' (Just . Min) tree),
           testProperty "findMax == getMax <$> foldMap (Just . Max)" $
             markNonEmpty $ \tree ->
-                findMax tree === (getMax <$> foldMap' (Just . Max) tree),
+                findMax @Int tree === (getMax <$> foldMap' (Just . Max) tree),
           testProperty "findMin (x `union` y) == findMin x `min` findMin y" $
             markNonEmpty $ \x -> markNonEmpty $ \y ->
-                findMin (x `union` y) === findMin x `minJust` findMin y,
+                findMin @Word8 (x `union` y) === findMin x `minJust` findMin y,
           testProperty "findMax (x `union` y) == findMax x `max` findMax y" $
             markNonEmpty $ \x -> markNonEmpty $ \y ->
-                findMax (x `union` y) === findMax x `max` findMax y,
+                findMax @Char (x `union` y) === findMax x `max` findMax y,
           testProperty "not member str => delete str . insert str == id" $
             markNonEmpty $ \tree str ->
-                not (str `member` tree) ==> delete str (insert str tree) === tree
+                not (str `member` tree) ==> delete @Int str (insert str tree) === tree
         ]
   where
     minJust (Just x) (Just y) = Just (x `min` y)
     minJust mx Nothing = mx
     minJust Nothing my = my
 
-    markNonEmpty :: Testable prop => (RadixTree Char -> prop) -> ArbitraryTree Char -> Property
     markNonEmpty prop (getTree -> tree) =
         classify (not (null tree)) "non-empty" (prop tree)
