@@ -12,10 +12,18 @@ import Data.List.Extra (nubSort)
 import Data.Maybe (Maybe (..))
 import Data.Ord (Ord (..))
 import GHC.Num ((-))
-import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Function (..))
-import Test.QuickCheck.Gen (Gen, chooseInt, sized, vectorOf)
 import Text.Show (Show)
+
+import Test.Tasty.QuickCheck (
+    Arbitrary (..),
+    CoArbitrary (..),
+    Function (..),
+    Gen,
+    chooseInt,
+    functionMap,
+    sized,
+    vectorOf,
+ )
 
 import MCSP.Data.RadixTree (RadixTree, construct, delete, findMax, insert)
 import MCSP.Data.String (String (..), Unbox)
@@ -23,7 +31,6 @@ import MCSP.QuickCheck.Modifiers.IsList (
     ViaList (..),
     arbitraryList,
     coarbitraryList,
-    functionMapList,
     shrinkList,
  )
 
@@ -63,6 +70,6 @@ instance (Unbox a, CoArbitrary a) => CoArbitrary (ArbitraryTree a) where
 
 instance (Unbox a, Ord a, Function a) => Function (ArbitraryTree a) where
     function =
-        functionMapList
+        functionMap
             (map ViaList . toList . getTree)
             (ArbitraryTree . construct . map getViaList)

@@ -8,11 +8,18 @@ import Data.Function (($))
 import Data.Functor ((<$>))
 import Data.List (map)
 import GHC.Enum (maxBound)
-import Test.QuickCheck (Property, property, (===))
-import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Fun, pattern Fn)
-import Test.QuickCheck.Gen (chooseWord64)
 import Text.Show (Show)
+
+import Test.Tasty.QuickCheck (
+    Arbitrary (..),
+    CoArbitrary (..),
+    Fun,
+    Property,
+    chooseBoundedIntegral,
+    property,
+    (===),
+    pattern Fn,
+ )
 
 import MCSP.System.Random (Random, Seed, generateWith, uniform)
 
@@ -42,6 +49,6 @@ instance Arbitrary a => Arbitrary (Randomized a) where
 
 instance CoArbitrary a => CoArbitrary (Randomized a) where
     coarbitrary (Generator (Fn f)) gen = do
-        s1 <- chooseWord64 (0, maxBound)
-        s2 <- chooseWord64 (0, maxBound)
+        s1 <- chooseBoundedIntegral (0, maxBound)
+        s2 <- chooseBoundedIntegral (0, maxBound)
         coarbitrary (f (s1, s2)) gen

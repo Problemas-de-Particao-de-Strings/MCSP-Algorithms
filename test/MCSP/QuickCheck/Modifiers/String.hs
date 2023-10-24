@@ -13,10 +13,15 @@ import Data.Ord (Ord (..))
 import GHC.Exts (fromList)
 import GHC.Num ((*), (+), (-))
 import GHC.Real (div)
-import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Function (..), functionMap)
-import Test.QuickCheck.Gen (scale)
 import Text.Show (Show)
+
+import Test.Tasty.QuickCheck (
+    Arbitrary (..),
+    CoArbitrary (..),
+    Function (..),
+    functionMap,
+    scale,
+ )
 
 import MCSP.Data.Pair (Pair, both)
 import MCSP.Data.String (String (..), Unbox, concat)

@@ -9,10 +9,16 @@ import Data.Function (($), (.))
 import Data.Int (Int)
 import Data.List (map, sortOn, zip, zipWith)
 import Data.Ord (Ord (..))
-import Test.QuickCheck.Arbitrary (Arbitrary (..), Arbitrary1 (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Function (..), functionMap)
-import Test.QuickCheck.Gen (shuffle)
 import Text.Show (Show)
+
+import Test.Tasty.QuickCheck (
+    Arbitrary (..),
+    Arbitrary1 (..),
+    CoArbitrary (..),
+    Function (..),
+    functionMap,
+    shuffle,
+ )
 
 import MCSP.Data.Pair (Pair, both, fst, snd)
 
