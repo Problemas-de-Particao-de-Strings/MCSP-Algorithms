@@ -8,7 +8,9 @@ import Data.Eq (Eq (..))
 import Data.Function ((.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
+import Data.List (map)
 import Data.Ord (Ord (..))
+import GHC.Exts (fromList)
 import GHC.Num ((*), (+), (-))
 import GHC.Real (div)
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
@@ -18,16 +20,18 @@ import Text.Show (Show)
 
 import MCSP.Data.Pair (Pair, both)
 import MCSP.Data.String (String (..), Unbox, concat)
-import MCSP.QuickCheck.Modifiers.Pair (ShuffledPair (getPair))
+import MCSP.QuickCheck.Modifiers.Pair (ShuffledPair, getPair)
 
 -- | A QuickCheck Modifier that generates a pair of balanced strings from common partitions.
 -- See `getBalancedStrings`.
-newtype BalancedStrings a = CommonPartitions {partitions :: ShuffledPair (String a)}
+newtype BalancedStrings a = CommonPartitions {partitions :: ShuffledPair [a]}
     deriving newtype (Eq, Ord, Show)
 
 -- | Extracts the permuted pair from a `BalancedStrings`.
 extractStrings :: Unbox a => BalancedStrings a -> Pair (String a)
-extractStrings CommonPartitions {..} = concat `both` getPair partitions
+extractStrings CommonPartitions {..} = (concat . toString) `both` getPair partitions
+  where
+    toString = map fromList
 
 {-# COMPLETE BalancedStrings #-}
 
@@ -61,13 +65,13 @@ squareRoot n = go (squareRoot (n `div` nextPow2) * lowerRoot)
             then r
             else go ((r + n `div` r) `div` 2)
 
-instance (Unbox a, Arbitrary a) => Arbitrary (BalancedStrings a) where
+instance Arbitrary a => Arbitrary (BalancedStrings a) where
     -- we need to resize the generator, because balanced string are generated in the with size n^2
     arbitrary = CommonPartitions <$> scale squareRoot arbitrary
     shrink (CommonPartitions partitions) = CommonPartitions <$> shrink partitions
 
 instance CoArbitrary a => CoArbitrary (BalancedStrings a) where
-    coarbitrary = coarbitrary . partitions
+    coarbitrary (getPair . partitions -> (s1, s2)) = coarbitrary s1 . coarbitrary s2
 
-instance (Unbox a, Function a) => Function (BalancedStrings a) where
+instance Function a => Function (BalancedStrings a) where
     function = functionMap partitions CommonPartitions

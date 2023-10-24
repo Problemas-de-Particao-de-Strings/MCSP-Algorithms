@@ -54,6 +54,7 @@ import MCSP.Data.String.Extra (
     stripSuffix,
     suffixes,
  )
+import MCSP.QuickCheck.Modifiers (getViaList)
 
 stringExtraTests :: TestTree
 stringExtraTests =
@@ -108,16 +109,16 @@ prefixOpTests =
         "prefix operations hold"
         [ testStr "take n str `isPrefixOf` str" $ withRandomIndex $ \str n ->
             take n str `isPrefixOf` str,
-          testStr "`isPrefixOf` == toList `isPrefixOf` toList" $ \x y ->
+          testStr "`isPrefixOf` == toList `isPrefixOf` toList" $ \x (getViaList -> y) ->
             x `isPrefixOf` y === toList x `List.isPrefixOf` toList y,
           testStr "stripPrefix (take n str) str == drop n str" $ withRandomIndex $ \str n ->
             stripPrefix (take n str) str === Just (drop n str),
-          testStr "stripPrefix == fromList (stripPrefix toList toList)" $ \x y ->
+          testStr "stripPrefix == fromList (stripPrefix toList toList)" $ \x (getViaList -> y) ->
             stripPrefix x y === (fromList <$> List.stripPrefix (toList x) (toList y)),
-          testStr "commonPrefix (c ++ x) (c ++ y) == c" $ \c x y ->
+          testStr "commonPrefix (c ++ x) (c ++ y) == c" $ \c (getViaList -> x) (getViaList -> y) ->
             take (length c) (commonPrefix (c ++ x) (c ++ y)) === c,
           testStr "splitCommonPrefix x y == (commonPrefix x y, stripPrefix x, stripPrefix y)" $
-            \x y ->
+            \x (getViaList -> y) ->
                 let c = commonPrefix x y
                  in splitCommonPrefix x y === (c, drop (length c) x, drop (length c) y)
         ]
@@ -128,11 +129,11 @@ suffixOpTests =
         "suffix operations hold"
         [ testStr "drop n str `isSuffixOf` str" $ withRandomIndex $ \str n ->
             drop n str `isSuffixOf` str,
-          testStr "`isSuffixOf` == toList `isSuffixOf` toList" $ \x y ->
+          testStr "`isSuffixOf` == toList `isSuffixOf` toList" $ \x (getViaList -> y) ->
             x `isSuffixOf` y === toList x `List.isSuffixOf` toList y,
           testStr "stripSuffix (drop n str) str == take n str" $ withRandomIndex $ \str n ->
             stripSuffix (drop n str) str === Just (take n str),
-          testStr "stripSuffix == fromList (stripSuffix toList toList)" $ \x y ->
+          testStr "stripSuffix == fromList (stripSuffix toList toList)" $ \x (getViaList -> y) ->
             stripSuffix x y === (fromList <$> List.stripSuffix (toList x) (toList y)),
           testStr "suffixes ++ [empty] == tails" $ \str ->
             suffixes str List.++ [""] === (fromList <$> tails (toList str))
@@ -142,14 +143,15 @@ infixOpTests :: TestTree
 infixOpTests =
     testGroup
         "infix operations hold"
-        [ testStr "c `isInfixOf` (x ++ c ++ y)" $ \c x y ->
+        [ testStr "c `isInfixOf` (x ++ c ++ y)" $ \c (getViaList -> x) (getViaList -> y) ->
             c `isInfixOf` (x ++ c ++ y),
-          testStr "`isInfixOf` == toList `isInfixOf` toList)" $ \x y ->
+          testStr "`isInfixOf` == toList `isInfixOf` toList)" $ \x (getViaList -> y) ->
             x `isInfixOf` y === toList x `List.isInfixOf` toList y,
-          testStr "stripInfix == fromList (stripInfix toList toList)" $ \x y ->
+          testStr "stripInfix == fromList (stripInfix toList toList)" $ \x (getViaList -> y) ->
             stripInfix x y === stripAsList x y,
-          testStr "stripInfix c (x ++ c ++ y) == List.stripInfix c (x ++ c ++ y)" $ \c x y ->
-            stripInfix c (x ++ c ++ y) === stripAsList c (x ++ c ++ y),
+          testStr "stripInfix c (x ++ c ++ y) == List.stripInfix c (x ++ c ++ y)" $
+            \c (getViaList -> x) (getViaList -> y) ->
+                stripInfix c (x ++ c ++ y) === stripAsList c (x ++ c ++ y),
           testStr "longestCommonSubstring `isInfixOf` str" $ withLCS $ \x y lcs ->
             lcs `isInfixOf` x .&&. lcs `isInfixOf` y,
           testStr "longestCommonSubstring is maximal" $ withLCS $ \x y lcs ->
@@ -160,7 +162,7 @@ infixOpTests =
   where
     stripAsList x y = both fromList <$> (List.stripInfix $: (toList `both` (x, y)))
 
-    withLCS prop x y =
+    withLCS prop x (getViaList -> y) =
         let lcs = fromMaybe "" (longestCommonSubstring x y)
          in classify (not (null lcs)) "has-common-substring" (prop x y lcs)
 

@@ -163,7 +163,6 @@ import Data.Either (Either)
 import Data.Eq (Eq (..))
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Function (id, (.))
-import Data.Functor (fmap)
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Maybe (Maybe (Just, Nothing))
@@ -176,8 +175,6 @@ import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
 import GHC.Num (Num, (-))
-import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Function (..), functionMap)
 import Text.Read (Read (readListPrec, readPrec), readListPrecDefault)
 import Text.Show (Show (showsPrec))
 
@@ -473,19 +470,6 @@ instance NFData (String a) where
 instance NFData1 String where
     liftRnf seq (String v) = liftRnf seq v
     {-# INLINE liftRnf #-}
-
--- ----------------------- --
--- Generation (QuickCheck) --
-
-instance (Unbox a, Arbitrary a) => Arbitrary (String a) where
-    arbitrary = fromList <$> arbitrary
-    shrink = fmap fromList . shrink . toList
-
-instance CoArbitrary a => CoArbitrary (String a) where
-    coarbitrary s@Unboxed = coarbitrary (toList s)
-
-instance (Unbox a, Function a) => Function (String a) where
-    function = functionMap toList fromList
 
 -- --------------------------------- --
 -- Generic Vector instance and types --

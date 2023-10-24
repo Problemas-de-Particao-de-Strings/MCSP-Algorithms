@@ -36,6 +36,7 @@ default-extensions:
   - RecordWildCards
   - TemplateHaskell
   - TypeFamilies
+  - UndecidableInstances
   - ViewPatterns
 
 library:

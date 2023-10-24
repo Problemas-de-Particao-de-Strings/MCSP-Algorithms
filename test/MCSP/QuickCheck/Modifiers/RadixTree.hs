@@ -13,12 +13,19 @@ import Data.Maybe (Maybe (..))
 import Data.Ord (Ord (..))
 import GHC.Num ((-))
 import Test.QuickCheck.Arbitrary (Arbitrary (..), CoArbitrary (..))
-import Test.QuickCheck.Function (Function (..), functionMap)
+import Test.QuickCheck.Function (Function (..))
 import Test.QuickCheck.Gen (Gen, chooseInt, sized, vectorOf)
 import Text.Show (Show)
 
 import MCSP.Data.RadixTree (RadixTree, construct, delete, findMax, insert)
 import MCSP.Data.String (String (..), Unbox)
+import MCSP.QuickCheck.Modifiers.IsList (
+    ViaList (..),
+    arbitraryList,
+    coarbitraryList,
+    functionMapList,
+    shrinkList,
+ )
 
 -- | A QuickCheck Modifier that generates `RadixTree` instances.
 newtype ArbitraryTree a = ArbitraryTree {getTree :: RadixTree a}
@@ -48,11 +55,14 @@ shrinkTree shrinkKey tree = case findMax tree of
     shrinkMax key subtree = map (`insert` subtree) (shrinkKey key)
 
 instance (Unbox a, Ord a, Arbitrary a) => Arbitrary (ArbitraryTree a) where
-    arbitrary = ArbitraryTree <$> arbitraryTree arbitrary
-    shrink (ArbitraryTree tree) = ArbitraryTree <$> shrinkTree shrink tree
+    arbitrary = ArbitraryTree <$> arbitraryTree arbitraryList
+    shrink (ArbitraryTree tree) = ArbitraryTree <$> shrinkTree shrinkList tree
 
-instance CoArbitrary a => CoArbitrary (ArbitraryTree a) where
-    coarbitrary (ArbitraryTree tree) gen = foldr coarbitrary gen tree
+instance (Unbox a, CoArbitrary a) => CoArbitrary (ArbitraryTree a) where
+    coarbitrary (ArbitraryTree tree) gen = foldr coarbitraryList gen tree
 
 instance (Unbox a, Ord a, Function a) => Function (ArbitraryTree a) where
-    function = functionMap (toList . getTree) (ArbitraryTree . construct)
+    function =
+        functionMapList
+            (map ViaList . toList . getTree)
+            (ArbitraryTree . construct . map getViaList)

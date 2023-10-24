@@ -7,7 +7,7 @@ import Data.Foldable (Foldable (..))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
-import Data.List.Extra (nubSort, snoc)
+import Data.List.Extra (map, nubSort, snoc)
 import Data.Maybe (Maybe (Just, Nothing))
 import Data.Ord (max, min)
 import Data.Semigroup (Max (..), Min (..))
@@ -26,7 +26,7 @@ import MCSP.Data.RadixTree (
     union,
  )
 import MCSP.Data.String (concat)
-import MCSP.QuickCheck.Modifiers (ArbitraryTree (getTree))
+import MCSP.QuickCheck.Modifiers (getTree, getViaList)
 
 radixTreeTests :: TestTree
 radixTreeTests =
@@ -58,7 +58,7 @@ radixTreeFoldsAreSorted =
             fold (construct @Int list) === concat (nubSort list)
         ]
   where
-    testFromList name prop = testProperty name $ \xs ->
+    testFromList name prop = testProperty name $ \(map getViaList -> xs) ->
         classify (length xs /= length (nubSort xs)) "deduplicated" (prop xs)
 
 treeStructureHolds :: TestTree
@@ -78,7 +78,7 @@ treeStructureHolds =
             markNonEmpty $ \x -> markNonEmpty $ \y ->
                 findMax @Char (x `union` y) === findMax x `max` findMax y,
           testProperty "not member str => delete str . insert str == id" $
-            markNonEmpty $ \tree str ->
+            markNonEmpty $ \tree (getViaList -> str) ->
                 not (str `member` tree) ==> delete @Int str (insert str tree) === tree
         ]
   where
