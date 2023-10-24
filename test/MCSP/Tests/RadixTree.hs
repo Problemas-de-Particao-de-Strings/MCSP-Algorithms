@@ -16,7 +16,6 @@ import Test.Tasty.QuickCheck (Property, Testable, classify, testProperty, (===),
 
 import MCSP.Data.RadixTree (
     RadixTree,
-    SameKeyVal (..),
     construct,
     delete,
     findMax,
@@ -26,9 +25,15 @@ import MCSP.Data.RadixTree (
     union,
  )
 import MCSP.Data.String (String, concat)
+import MCSP.QuickCheck.Modifiers (ArbitraryTree (getTree))
 
 radixTreeTests :: TestTree
-radixTreeTests = testGroup "RadixTree" [radixTreeFoldsAreSorted, treeStructureHolds]
+radixTreeTests =
+    testGroup
+        "RadixTree"
+        [ radixTreeFoldsAreSorted,
+          treeStructureHolds
+        ]
 
 radixTreeFoldsAreSorted :: TestTree
 radixTreeFoldsAreSorted =
@@ -81,6 +86,6 @@ treeStructureHolds =
     minJust mx Nothing = mx
     minJust Nothing my = my
 
-    markNonEmpty :: Testable prop => (RadixTree Char -> prop) -> SameKeyVal Char -> Property
-    markNonEmpty prop (SameKeyVal tree) =
+    markNonEmpty :: Testable prop => (RadixTree Char -> prop) -> ArbitraryTree Char -> Property
+    markNonEmpty prop (getTree -> tree) =
         classify (not (null tree)) "non-empty" (prop tree)
