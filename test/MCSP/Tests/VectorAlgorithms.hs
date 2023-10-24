@@ -1,23 +1,27 @@
 module MCSP.Tests.VectorAlgorithms (vectorAlgorithmsTests) where
 
 import Control.Applicative (liftA2, pure)
-import Data.Bool (Bool (..), not, (||))
+import Data.Bool (Bool (..), bool, not, (&&))
 import Data.Eq ((==))
 import Data.Function (($))
 import Data.Functor ((<$>))
 import Data.Int (Int)
+import Data.List (unwords)
 import Data.Ord (Ord (..))
 import Data.Tuple (fst, snd)
-import Data.Vector.Unboxed (Unbox, Vector, backpermute, imap, length, null, (!))
+import Data.Vector.Unboxed (Unbox, Vector, all, backpermute, drop, length, null, zipWith)
 import GHC.Float (Double, Float)
 import GHC.Num (Num (..))
-import Text.Show (Show)
+import GHC.Real (Fractional)
+import Text.Show (Show (..))
 
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.QuickCheck (
     Arbitrary,
+    Property,
     Testable,
     classify,
+    counterexample,
     testProperty,
     (===),
     (==>),
@@ -67,6 +71,12 @@ testVector ::
 testVector name prop = testProperty name $ \(getViaList -> vec) ->
     classify (not (null vec)) "non-null" (prop vec)
 
+-- | Like `===`, but considering floating point inacuracies.
+allCloseTo :: (Unbox a, Ord a, Show a, Fractional a) => Vector a -> Vector a -> Property
+x `allCloseTo` y =
+    let ok = length x == length y && all (<= 1e-5) (x .- y)
+     in counterexample (unwords [show x, bool "/=" "==" ok, show y]) ok
+
 elementWiseOpsTests :: TestTree
 elementWiseOpsTests =
     testGroup
@@ -81,7 +91,7 @@ elementWiseOpsTests =
             x .*. vec === replicate (length vec) x .* vec,
           testVector @Float "sum [v1, v2] == v2 .+ v1" $ \v1 (getViaList -> v2) ->
             classify (length v1 == length v2) "same-length" $
-                sum [v1, v2] === v2 .+ v1,
+                sum [v1, v2] `allCloseTo` (v2 .+ v1),
           testVector @Bool "choose False True == id" $ \vec ->
             choose False True vec === vec
         ]
@@ -91,7 +101,8 @@ sortingTests =
     testGroup
         "sorting vectors"
         [ testVector @Int "allIncreasing (sort vec)" $ \vec ->
-            imap (\i x -> i <= 0 || vec ! (i - 1) <= x) (sort vec) === replicate (length vec) True,
+            let sorted = sort vec
+             in zipWith (<=) sorted (drop1 sorted) === replicate (length vec - 1) True,
           testVector @Double "sort . sort == sort" $ \vec ->
             sort (sort vec) === sort vec,
           testVector @(Int, Float) "sortOn fst . sortOn snd == sort" $ \vec ->
@@ -101,6 +112,8 @@ sortingTests =
           testVector @Int "sortLike vec (map f vec) == sortOn f vec" $ \vec (Fn f) ->
             vec `sortLike` map @Int @Double f vec === sortOn f vec
         ]
+  where
+    drop1 = drop (1 :: Int)
 
 statisticsTests :: TestTree
 statisticsTests =
@@ -111,15 +124,15 @@ statisticsTests =
           testVector @Float "map signum normalized vec == map signum vec" $ \vec ->
             map signum (normalized vec) === map signum vec,
           testVector @Double "normalized . normalized == normalized" $ \vec ->
-            normalized (normalized vec) === normalized vec,
+            normalized (normalized vec) `allCloseTo` normalized vec,
           testVector @Float "normalized . (x .*.) == normalized" $ \vec x ->
-            x > 0 ==> normalized (x .*. vec) === normalized vec,
+            x > 0 ==> normalized (x .*. vec) `allCloseTo` normalized vec,
           testVector @Double "standardized . standardized == standardized" $ \vec ->
-            standardized (standardized vec) === standardized vec,
+            standardized (standardized vec) `allCloseTo` standardized vec,
           testVector @Float "standardized . (x .*.) == standardized" $ \vec x ->
-            x > 0 ==> standardized (x .*. vec) === standardized vec,
+            x > 0 ==> standardized (x .*. vec) `allCloseTo` standardized vec,
           testVector @Double "standardized . normalized == standardized" $ \vec ->
-            standardized (normalized vec) === standardized vec
+            standardized (normalized vec) `allCloseTo` standardized vec
         ]
 
 randomizedVectorsTests :: TestTree

@@ -14,6 +14,7 @@ import MCSP.Tests.DocTest (testDocs)
 import MCSP.Tests.MatchingGraph (matchingGraphTests)
 import MCSP.Tests.RadixTree (radixTreeTests)
 import MCSP.Tests.StringExtra (stringExtraTests)
+import MCSP.Tests.VectorAlgorithms (vectorAlgorithmsTests)
 
 main :: IO ()
 main =
@@ -24,6 +25,7 @@ main =
                 [ radixTreeTests,
                   stringExtraTests,
                   matchingGraphTests,
+                  vectorAlgorithmsTests,
                   testDocs "src"
                 ]
 
