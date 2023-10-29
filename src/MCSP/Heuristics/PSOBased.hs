@@ -1,4 +1,5 @@
 module MCSP.Heuristics.PSOBased (
+    mcspSwarm,
     pso,
     partitionWeights,
     edgeSizeWeights,
@@ -70,7 +71,7 @@ import MCSP.System.Random (Random, Seed, generateWith)
 defaultUpdater :: Updater Edge
 defaultUpdater =
     sumM
-        [ randomVelocity >>= weighted 1.2,
+        [ randomVelocity >>= weighted 5.0,
           weighted 0.005 localGuideDirection,
           weighted 0.005 globalGuideDirection
         ]
@@ -102,7 +103,7 @@ edgeSizeWeights es = do
 initialWeights :: Ord a => Pair (String a) -> Vector Edge -> Random (Vector Weight)
 initialWeights strs edges =
     choice
-        [ (1, uniformSN $ length edges),
+        [ (10, uniformSN $ length edges),
           (1, edgeSizeWeights edges),
           (1, partitionWeights (evalMeta $ combineS strs) edges),
           (1, partitionWeights (evalMeta $ greedy strs) edges)

@@ -13,9 +13,9 @@ import MCSP.TestLib.Sample (ShuffleMethod (..), SimpleEnum, StringParameters (..
 
 randomPair :: SimpleEnum a => Random (String a, String a)
 randomPair = do
-    r <- uniformR 5 10
-    s <- uniformR 5 30
-    n <- uniformR (2 * r + s) 80
+    r <- uniformR 3 10
+    s <- uniformR 5 20
+    n <- uniformR (2 * r + s) 120
     randomPairWith
         StringParameters
             { size = n,
