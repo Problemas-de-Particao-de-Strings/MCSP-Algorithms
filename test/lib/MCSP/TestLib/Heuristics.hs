@@ -10,7 +10,7 @@ module MCSP.TestLib.Heuristics (
     toCsvRow,
 ) where
 
-import Prelude hiding (String)
+import Prelude hiding (String, lookup)
 
 import Control.DeepSeq (NFData)
 import Data.IORef (newIORef, readIORef, writeIORef)
@@ -23,11 +23,11 @@ import Numeric.Extra (showDP)
 import Safe.Foldable (maximumBound)
 
 import MCSP.Data.MatchingGraph (edgeSet)
-import MCSP.Data.Meta (empty, (<::))
+import MCSP.Data.Meta (empty, lookup, (<::))
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
-import MCSP.Heuristics (Heuristic, UseSingletons (..), combine, greedy, pso)
+import MCSP.Heuristics (Heuristic, UseSingletons (..), combine, getFirstBestIter, greedy, pso)
 import MCSP.System.TimeIt (timeIt)
 import MCSP.TestLib.Heuristics.Safe (Debug, checkedDiv, checkedLen, runChecked)
 import MCSP.TestLib.Heuristics.TH (mkNamed)
@@ -64,6 +64,8 @@ data Measured = Measured
       maxRepeat :: Int,
       -- | Number of edges of the graph representation of the strings.
       edges :: Int,
+      -- | First PSO iteration with same result as the last iteration.
+      psoIter :: Maybe Int,
       -- | The partition found for the left string.
       left :: Text.String,
       -- | The partition found for the right string.
@@ -91,7 +93,7 @@ measure (name, heuristic) pair = do
         (solution, vars) <- runChecked heuristic strs
         writeIORef metaVars vars
         pure solution
-    _vars <- readIORef metaVars
+    vars <- readIORef metaVars
 
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions
@@ -101,6 +103,7 @@ measure (name, heuristic) pair = do
     repeats <- checkedLen "repeated" (repeated `both` pair)
     let maxRepeat = maximumBound 0 (occurrences $ fst pair)
     let edges = Vector.length (edgeSet pair)
+    let psoIter = getFirstBestIter <$> lookup vars
     let (left, right) = show `both` partitions
     pure
         Measured
@@ -113,6 +116,7 @@ measure (name, heuristic) pair = do
               repeats,
               maxRepeat,
               edges,
+              psoIter,
               left,
               right
             }
@@ -128,6 +132,7 @@ csvColumns =
       second (showColumn 2 show) $(mkNamed 'singles),
       second (showColumn 3 show) $(mkNamed 'maxRepeat),
       second (showColumn 3 show) $(mkNamed 'edges),
+      second (showColumn 3 (maybe "" show)) $(mkNamed 'psoIter),
       second (showColumn 8 id) $(mkNamed 'heuristic),
       second (showColumn 3 show) $(mkNamed 'blocks),
       second (showColumn 4 (showDP 2)) $(mkNamed 'score),
