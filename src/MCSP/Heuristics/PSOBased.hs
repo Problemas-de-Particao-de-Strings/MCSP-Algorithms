@@ -47,6 +47,7 @@ import MCSP.Data.MatchingGraph (
     solution,
     toPartitions,
  )
+import MCSP.Data.Meta (Meta, evalMeta)
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
@@ -92,8 +93,8 @@ initialWeights strs edges =
     choice
         [ (1, uniformSN $ length edges),
           (1, edgeSizeWeights edges),
-          (1, partitionWeights (combineS strs) edges),
-          (1, partitionWeights (greedy strs) edges)
+          (1, partitionWeights (evalMeta $ combineS strs) edges),
+          (1, partitionWeights (evalMeta $ greedy strs) edges)
         ]
 
 -- --------- --
@@ -128,8 +129,8 @@ psoWithParams strs = generateWith ?seed $ do
 -- Default Parameters --
 
 -- | PSO heuristic.
-pso :: Ord a => Pair (String a) -> Pair (Partition a)
-pso = psoWithParams
+pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
+pso = pure . psoWithParams
   where
     ?iterations = 10
     ?particles = 1000

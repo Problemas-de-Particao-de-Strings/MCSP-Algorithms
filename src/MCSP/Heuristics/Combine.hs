@@ -8,6 +8,7 @@ import Prelude hiding (String, (++))
 
 import Data.Set (Set)
 
+import MCSP.Data.Meta (Meta)
 import MCSP.Data.Pair (Pair, both, first, second)
 import MCSP.Data.String (String, (++))
 import MCSP.Data.String.Extra (Partition, chars, hasOneOf, singletons)
@@ -85,20 +86,21 @@ combineAll decision (x : xs, ys) =
 -- | MCSP combine heuristic.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
-combine :: Eq a => Pair (String a) -> Pair (Partition a)
-combine xy = converge (combineAll AlwaysCombine) (chars `both` xy)
+combine :: Eq a => Pair (String a) -> Meta (Pair (Partition a))
+combine xy = pure $ converge (combineAll AlwaysCombine) (chars `both` xy)
 
 -- | MSCP combine heuristic considering singleton analysis.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached,
 -- combining first pairs in which both blocks have singletons, then pairs in which either
 -- block has singletons and finally all other possible pairs.
-combineS :: Ord a => Pair (String a) -> Pair (Partition a)
-combineS (x, y)
-    | null singles = converge (combineAll AlwaysCombine) (chars `both` (x, y))
-    | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars `both` (x, y))
+combineS :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
+combineS (x, y) = pure solution
   where
     singles = singletons x
     combineSingletons =
         converge (combineAll $ EitherHasSingleton singles)
             . converge (combineAll $ BothHaveSingleton singles)
+    solution
+        | null singles = converge (combineAll AlwaysCombine) (chars `both` (x, y))
+        | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars `both` (x, y))

@@ -27,6 +27,7 @@ import Data.IntMap.Strict (
     union,
  )
 
+import MCSP.Data.Meta (Meta)
 import MCSP.Data.Pair (Pair, both, dupe, first, liftP, snd, transpose, uncurry)
 import MCSP.Data.String (String (..), length)
 import MCSP.Data.String.Extra (Partition, longestCommonSubstring, stripInfix)
@@ -143,7 +144,8 @@ indexedGreedy = go (dupe empty)
 -- Tries to solve the MCSP by repeatedly finding the longest common substring (LCS), breaking the
 -- strings with it, and inserting the LCS in the resulting partition, until no common substring is
 -- left.
-greedy :: Ord a => Pair (String a) -> Pair (Partition a)
-greedy = both sort . indexedGreedy . both (singleton 0)
+greedy :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
+greedy = pure . solve
   where
     sort = map snd . toAscList
+    solve = both sort . indexedGreedy . both (singleton 0)

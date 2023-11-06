@@ -26,6 +26,7 @@ import GHC.Real (Fractional, Integral, fromRational, toInteger)
 import System.IO (IO)
 import Text.Show (Show, show)
 
+import MCSP.Data.Meta (evalMeta)
 import MCSP.Data.Pair (Pair, both, liftP, zipM)
 import MCSP.Data.String (ShowString, String (..), concat)
 import MCSP.Data.String.Extra (Partition, alphabet, occurrences)
@@ -36,6 +37,7 @@ type Debug a = (Show a, ShowString a, Ord a)
 
 -- | Run a heuristic checking the inputs and output for correctnes.
 --
+-- >>> import MCSP.Data.Meta (evalMeta)
 -- >>> import MCSP.Heuristics (trivial)
 --
 -- >>> runChecked trivial ("abba", "abab")
@@ -46,7 +48,7 @@ type Debug a = (Show a, ShowString a, Ord a)
 runChecked :: Debug a => Heuristic a -> Pair (String a) -> IO (Pair (Partition a))
 runChecked heuristic pair = do
     checkBalanced pair
-    let partitions = heuristic pair
+    let partitions = evalMeta $ heuristic pair
     void $ zipM $ liftP checkPartition pair partitions
     checkCommonPartition partitions
     pure partitions

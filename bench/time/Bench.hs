@@ -7,6 +7,7 @@ import Criterion.Main (bench, bgroup, defaultMainWith, perRunEnv)
 import Criterion.Types (Benchmark, Config (..), Verbosity (Verbose))
 import Data.Word (Word8)
 
+import MCSP.Data.Meta (evalMeta)
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (cl95)
@@ -47,9 +48,10 @@ defaultMain benchmarks = do
 
 -- | Create a benchmark for a single heuristic, generating an input string pair for each run.
 benchHeuristic :: SimpleEnum a => StringParameters -> NamedHeuristic a -> Benchmark
-benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair (pure . heuristic)
+benchHeuristic params (name, heuristic) = bench name $ perRunEnv genPair runHeuristic
   where
     genPair = generate (randomPairWith params)
+    runHeuristic = pure . evalMeta . heuristic
 
 -- | Creates a benchmark group running each heuristic against the given parameters.
 benchWithParams :: StringParameters -> Benchmark

@@ -8,6 +8,9 @@ module MCSP.Heuristics (
     module MCSP.Heuristics.PSOBased,
 ) where
 
+import Control.Applicative (pure)
+
+import MCSP.Data.Meta (Meta)
 import MCSP.Data.Pair (Pair, both)
 import MCSP.Data.String (String (..))
 import MCSP.Data.String.Extra (Partition, chars)
@@ -16,14 +19,15 @@ import MCSP.Heuristics.Greedy (greedy)
 import MCSP.Heuristics.PSOBased (pso)
 
 -- | Heuristic for the MCSP problem.
-type Heuristic a = Pair (String a) -> Pair (Partition a)
+type Heuristic a = Pair (String a) -> Meta (Pair (Partition a))
 
 -- | The trivial solution for MCSP problem.
 --
 -- Just split each string into a partition of single characters.
 --
--- >>> trivial ("abba", "abab")
+-- >>> import MCSP.Data.Meta (evalMeta)
+-- >>> evalMeta (trivial ("abba", "abab"))
 -- ([a,b,b,a],[a,b,a,b])
 trivial :: Heuristic a
-trivial = both chars
+trivial strs = pure (chars `both` strs)
 {-# INLINE trivial #-}
