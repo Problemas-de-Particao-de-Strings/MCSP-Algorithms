@@ -15,20 +15,19 @@ import Prelude hiding (String)
 import Control.DeepSeq (NFData)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
-import Data.Ratio ((%))
 import Data.String qualified as Text
 import Data.Vector.Generic qualified as Vector (length)
 import GHC.Generics (Generic)
 import Numeric.Extra (showDP)
 import Safe.Foldable (maximumBound)
 
+import MCSP.Data.MatchingGraph (edgeSet)
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
-import MCSP.Heuristics (Debug, Heuristic, checkedIO, combine, combineS, greedy, pso)
+import MCSP.Heuristics (Heuristic, combine, combineS, greedy, pso)
 import MCSP.System.TimeIt (timeIt)
-
-import MCSP.Data.MatchingGraph (edgeSet)
+import MCSP.TestLib.Heuristics.Safe (Debug, checked, checkedDiv, checkedLen)
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
 -- | The heuristic with its defined name.
@@ -67,34 +66,6 @@ data Measured = Measured
 
 instance NFData Measured
 
--- | Returns the length of the foldables, if both have the same length, or throws an error.
---
--- >>> checkedLen @[] @Int "list" ([1..4], [2..5])
--- 4
---
--- >>> checkedLen @String @Char "string" ("", "abc")
--- user error (length mismatch for string: 0 != 3)
-checkedLen :: Text.String -> Foldable t => (t a, t a) -> IO Int
-checkedLen name (x, y)
-    | nx == ny = pure nx
-    | otherwise = fail $ "length mismatch for " ++ name ++ ": " ++ show nx ++ " != " ++ show ny
-  where
-    nx = length x
-    ny = length y
-
--- | Just the division of the two numbers, or `Nothing` if the divisor is zero.
---
--- >>> 1 `checkedDiv` 2
--- Just 0.5
---
--- >>> 2 `checkedDiv` 0
--- Nothing
-checkedDiv :: (Integral a, Fractional b) => a -> a -> Maybe b
-checkedDiv dividend divisor =
-    if divisor /= 0
-        then Just $ fromRational (toInteger dividend % toInteger divisor)
-        else Nothing
-
 -- | Run the heuristic and returns information about the solution.
 --
 -- >>> import MCSP.TestLib.Heuristics.TH (mkNamed)
@@ -109,7 +80,7 @@ checkedDiv dividend divisor =
 -- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, time = -1.0, singles = 4, repeats = 0, left = "[a,b,c,d]", right = "[c,d,a,b]"}
 measure :: Debug a => NamedHeuristic a -> Pair (String a) -> IO Measured
 measure (name, heuristic) pair = do
-    (timePs, partitions) <- timeIt (checkedIO heuristic) pair
+    (timePs, partitions) <- timeIt (checked heuristic) pair
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions
     let score = fromMaybe 1 $ (size - blocks) `checkedDiv` (size - 1)
