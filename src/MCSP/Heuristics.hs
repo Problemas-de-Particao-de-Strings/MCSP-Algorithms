@@ -16,7 +16,13 @@ import MCSP.Data.String (String (..))
 import MCSP.Data.String.Extra (Partition, chars)
 import MCSP.Heuristics.Combine (UseSingletons (..), combine)
 import MCSP.Heuristics.Greedy (greedy)
-import MCSP.Heuristics.PSOBased (PSOIterations (..), PSOParticles (..), PSOSeed (..), pso)
+import MCSP.Heuristics.PSOBased (
+    PSOFirstBestIter (..),
+    PSOIterations (..),
+    PSOParticles (..),
+    PSOSeed (..),
+    pso,
+ )
 
 -- | Heuristic for the MCSP problem.
 type Heuristic a = Pair (String a) -> Meta (Pair (Partition a))

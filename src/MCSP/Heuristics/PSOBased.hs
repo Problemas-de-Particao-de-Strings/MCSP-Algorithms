@@ -7,25 +7,28 @@ module MCSP.Heuristics.PSOBased (
     PSOIterations (..),
     PSOParticles (..),
     PSOSeed (..),
+    PSOFirstBestIter (..),
 ) where
 
 import Control.Applicative (pure)
 import Control.Monad ((>>=))
 import Data.Bool (Bool (..))
 import Data.Eq (Eq)
+import Data.Foldable1 (foldMap1')
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
-import Data.List (reverse)
-import Data.List.NonEmpty (NonEmpty, take)
-import Data.Ord (Ord)
+import Data.List qualified as List (take)
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Ord (Ord (..))
+import Data.Semigroup (Last (..), Min (..))
 import Data.Vector.Unboxed (Vector, length, map)
-import GHC.Err (error)
-import GHC.Num (negate)
+import GHC.Num (negate, (-))
 import GHC.Real (fromIntegral)
 import Text.Show (Show)
 
 import MCSP.Algorithms.PSO (
+    PSOGuide (..),
     Swarm (..),
     Updater,
     Weight,
@@ -55,7 +58,7 @@ import MCSP.Data.MatchingGraph (
     solution,
     toPartitions,
  )
-import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVarOrDefault, (<::))
+import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVarOrDefault, setVar, (<::))
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
@@ -121,12 +124,20 @@ mcspSwarm particles strs@(edgeSet -> edges) =
     ?initialWeights = initialWeights strs edges
 
 -- | PSO heuristic with implicit parameters.
-psoWithParams :: Ord a => Seed -> Int -> Int -> Pair (String a) -> Pair (Partition a)
+psoWithParams :: Ord a => Seed -> Int -> Int -> Pair (String a) -> (Pair (Partition a), Int)
 psoWithParams seed iterations particles strs = generateWith seed $ do
     swarms <- take iterations <$> mcspSwarm particles strs
-    case reverse swarms of
-        swarm : _ -> pure $ toPartitions strs $ solution $ sortedValues $ gGuide swarm
-        [] -> error "pso: mcspSwarm generated no swarms"
+    let (Min (_, firstBestIter), Last guide) = foldMap1' optimal swarms
+    let partitions = toPartitions strs $ solution $ sortedValues guide
+    pure (partitions, firstBestIter)
+  where
+    take n (x :| xs) = x :| List.take (n - 1) xs
+    optimal swarm =
+        -- get the global guide with maximum grade and minimum iteration
+        ( Min (-guideGrade (gGuide swarm), iteration swarm),
+          -- and get the last guide
+          Last (gGuide swarm)
+        )
 
 -- -------------------- --
 -- With Meta Parameters --
@@ -149,12 +160,22 @@ newtype PSOSeed = PSOSeed Seed
 
 instance MetaVariable PSOSeed
 
+-- | Output for the first iteration that reached the best solution in PSO.
+newtype PSOFirstBestIter = PSOFirstBestIter
+    { getFirstBestIter :: Int
+    }
+    deriving newtype (Eq, Ord, Show)
+
+instance MetaVariable PSOFirstBestIter
+
 -- | PSO heuristic.
 pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
 pso strs = do
     PSOIterations iterations <- getVarOrDefault (PSOIterations 10)
     PSOParticles particles <- getVarOrDefault (PSOParticles 1000)
     PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
-    pure $ psoWithParams seed iterations particles strs
+    let (partitions, firstBestIter) = psoWithParams seed iterations particles strs
+    setVar (PSOFirstBestIter firstBestIter)
+    pure partitions
   where
     defaultSeed = (0x7f166a5f52178da7, 0xe190ca41e26454c3)
