@@ -44,6 +44,7 @@ library:
   exposed-modules:
     - MCSP.Algorithms.Vector
     - MCSP.Data.MatchingGraph
+    - MCSP.Data.Meta
     - MCSP.Data.Pair
     - MCSP.Data.RadixTree
     - MCSP.Data.String
@@ -63,6 +64,7 @@ dependencies:
   - random-shuffle >= 0.0.4 && < 1
   - safe >= 0.3.19 && < 1
   - template-haskell >= 2.20 && < 3
+  - transformers >= 0.6.1 && < 1
   - vector >= 0.13.1 && < 1
   - vector-algorithms >= 0.9.0.1 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
