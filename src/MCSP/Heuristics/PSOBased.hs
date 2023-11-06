@@ -2,21 +2,28 @@ module MCSP.Heuristics.PSOBased (
     pso,
     partitionWeights,
     edgeSizeWeights,
+
+    -- * Meta Parameters
+    PSOIterations (..),
+    PSOParticles (..),
+    PSOSeed (..),
 ) where
 
 import Control.Applicative (pure)
 import Control.Monad ((>>=))
 import Data.Bool (Bool (..))
+import Data.Eq (Eq)
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List (reverse)
-import Data.List.NonEmpty (take)
+import Data.List.NonEmpty (NonEmpty, take)
 import Data.Ord (Ord)
 import Data.Vector.Unboxed (Vector, length, map)
 import GHC.Err (error)
 import GHC.Num (negate)
 import GHC.Real (fromIntegral)
+import Text.Show (Show)
 
 import MCSP.Algorithms.PSO (
     Swarm (..),
@@ -48,7 +55,7 @@ import MCSP.Data.MatchingGraph (
     solution,
     toPartitions,
  )
-import MCSP.Data.Meta (Meta, evalMeta, (<::))
+import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVarOrDefault, (<::))
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
@@ -104,37 +111,50 @@ initialWeights strs edges =
 -- Heuristic --
 -- --------- --
 
--- | Some meta-parameters for the PSO Heuristic.
-type PSOParams =
-    ( ?iterations :: Int,
-      ?particles :: Int,
-      ?seed :: Seed
-    )
-
 -- | Create an iterated PSO swarm for the MCSP problem.
-mcspSwarm :: (Ord a, PSOParams) => Pair (String a) -> Random [Swarm Edge]
-mcspSwarm strs@(edgeSet -> edges) =
-    take ?iterations <$> particleSwarmOptimization defaultUpdater ?initialWeights ?particles
+mcspSwarm :: Ord a => Int -> Pair (String a) -> Random (NonEmpty (Swarm Edge))
+mcspSwarm particles strs@(edgeSet -> edges) =
+    particleSwarmOptimization defaultUpdater ?initialWeights particles
   where
     ?eval = fromIntegral . mergeness . solution
     ?values = edges
     ?initialWeights = initialWeights strs edges
 
 -- | PSO heuristic with implicit parameters.
-psoWithParams :: (Ord a, PSOParams) => Pair (String a) -> Pair (Partition a)
-psoWithParams strs = generateWith ?seed $ do
-    swarms <- mcspSwarm strs
+psoWithParams :: Ord a => Seed -> Int -> Int -> Pair (String a) -> Pair (Partition a)
+psoWithParams seed iterations particles strs = generateWith seed $ do
+    swarms <- take iterations <$> mcspSwarm particles strs
     case reverse swarms of
         swarm : _ -> pure $ toPartitions strs $ solution $ sortedValues $ gGuide swarm
         [] -> error "pso: mcspSwarm generated no swarms"
 
--- ------------------ --
--- Default Parameters --
+-- -------------------- --
+-- With Meta Parameters --
+
+-- | The number of iterations to run the PSO algorithm.
+newtype PSOIterations = PSOIterations Int
+    deriving newtype (Eq, Ord, Show)
+
+instance MetaVariable PSOIterations
+
+-- | The number of particles used at each iteration of the PSO algorithm.
+newtype PSOParticles = PSOParticles Int
+    deriving newtype (Eq, Ord, Show)
+
+instance MetaVariable PSOParticles
+
+-- | Initial seed used for randomized operation in the PSO algorithm.
+newtype PSOSeed = PSOSeed Seed
+    deriving newtype (Eq, Ord, Show)
+
+instance MetaVariable PSOSeed
 
 -- | PSO heuristic.
 pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
-pso = pure . psoWithParams
+pso strs = do
+    PSOIterations iterations <- getVarOrDefault (PSOIterations 10)
+    PSOParticles particles <- getVarOrDefault (PSOParticles 1000)
+    PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
+    pure $ psoWithParams seed iterations particles strs
   where
-    ?iterations = 10
-    ?particles = 1000
-    ?seed = (0x7f166a5f52178da7, 0xe190ca41e26454c3)
+    defaultSeed = (0x7f166a5f52178da7, 0xe190ca41e26454c3)
