@@ -13,6 +13,7 @@ module MCSP.TestLib.Heuristics (
 import Prelude hiding (String)
 
 import Control.DeepSeq (NFData)
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.String qualified as Text
@@ -22,6 +23,7 @@ import Numeric.Extra (showDP)
 import Safe.Foldable (maximumBound)
 
 import MCSP.Data.MatchingGraph (edgeSet)
+import MCSP.Data.Meta (empty)
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
@@ -79,7 +81,12 @@ instance NFData Measured
 -- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, left = "[a,b,c,d]", right = "[c,d,a,b]"}
 measure :: Debug a => NamedHeuristic a -> Pair (String a) -> IO Measured
 measure (name, heuristic) pair = do
-    (timePs, partitions) <- timeIt (runChecked heuristic) pair
+    metaVars <- newIORef empty
+    (timePs, partitions) <- timeIt pair $ \strs -> do
+        (solution, vars) <- runChecked heuristic strs
+        writeIORef metaVars vars
+        pure solution
+    _vars <- readIORef metaVars
 
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions

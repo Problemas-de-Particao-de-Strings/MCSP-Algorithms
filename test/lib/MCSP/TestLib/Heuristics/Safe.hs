@@ -26,7 +26,7 @@ import GHC.Real (Fractional, Integral, fromRational, toInteger)
 import System.IO (IO)
 import Text.Show (Show, show)
 
-import MCSP.Data.Meta (evalMeta)
+import MCSP.Data.Meta (VariableMap, runMeta)
 import MCSP.Data.Pair (Pair, both, liftP, zipM)
 import MCSP.Data.String (ShowString, String (..), concat)
 import MCSP.Data.String.Extra (Partition, alphabet, occurrences)
@@ -41,17 +41,17 @@ type Debug a = (Show a, ShowString a, Ord a)
 -- >>> import MCSP.Heuristics (trivial)
 --
 -- >>> runChecked trivial ("abba", "abab")
--- ([a,b,b,a],[a,b,a,b])
+-- (([a,b,b,a],[a,b,a,b]),VariableMap [])
 --
 -- >>> runChecked trivial ("abba", "abad")
 -- user error (mismatch in input strings 'abba' and 'abad': fromList "ab" != fromList "abd")
-runChecked :: Debug a => Heuristic a -> Pair (String a) -> IO (Pair (Partition a))
+runChecked :: Debug a => Heuristic a -> Pair (String a) -> IO (Pair (Partition a), VariableMap)
 runChecked heuristic pair = do
     checkBalanced pair
-    let partitions = evalMeta $ heuristic pair
+    let (partitions, vars) = runMeta $ heuristic pair
     void $ zipM $ liftP checkPartition pair partitions
     checkCommonPartition partitions
-    pure partitions
+    pure (partitions, vars)
 
 -- | Check that the input strings are balanced.
 --

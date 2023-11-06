@@ -30,10 +30,10 @@ nfAppIO' reduce f v = go
 -- This might not be super precise, but should be ok for functions that take 100 ms or longer.
 --
 -- >>> import System.IO (print)
--- >>> timeIt print 12
--- (0.000025988000,())
-timeIt :: (NFData a, NFData b) => (a -> IO b) -> a -> IO (Pico, b)
-timeIt fun (force -> value) = do
+-- >>> timeIt 12 print
+-- (0.000025480000,())
+timeIt :: (NFData a, NFData b) => a -> (a -> IO b) -> IO (Pico, b)
+timeIt (force -> value) fun = do
     output <- newIORef Nothing
     start <- getCurrentTime
     nfAppIO' rnf (fun >=> writeIORef output . pure . force) value 1
