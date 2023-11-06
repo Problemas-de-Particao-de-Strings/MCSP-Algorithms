@@ -27,7 +27,7 @@ import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
 import MCSP.Heuristics (Heuristic, combine, combineS, greedy, pso)
 import MCSP.System.TimeIt (timeIt)
-import MCSP.TestLib.Heuristics.Safe (Debug, checked, checkedDiv, checkedLen)
+import MCSP.TestLib.Heuristics.Safe (Debug, checkedDiv, checkedLen, runChecked)
 import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
 
 -- | The heuristic with its defined name.
@@ -71,16 +71,16 @@ instance NFData Measured
 -- >>> import MCSP.TestLib.Heuristics.TH (mkNamed)
 -- >>> result <- measure $(mkNamed 'combine) ("abcd", "cdab")
 -- >>> result { time = -1 }
--- Measured {heuristic = "combine", size = 4, blocks = 2, score = 0.6666666666666666, time = -1.0, singles = 4, repeats = 0, left = "[ab,cd]", right = "[cd,ab]"}
+-- Measured {heuristic = "combine", size = 4, blocks = 2, score = 0.6666666666666666, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, left = "[ab,cd]", right = "[cd,ab]"}
 --
--- >>> import MCSP.Data.String.Extra (chars)
--- >>> trivial = both chars
+-- >>> import MCSP.Heuristics (trivial)
 -- >>> result <- measure $(mkNamed 'trivial) ("abcd", "cdab")
 -- >>> result { time = -1 }
--- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, time = -1.0, singles = 4, repeats = 0, left = "[a,b,c,d]", right = "[c,d,a,b]"}
+-- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, left = "[a,b,c,d]", right = "[c,d,a,b]"}
 measure :: Debug a => NamedHeuristic a -> Pair (String a) -> IO Measured
 measure (name, heuristic) pair = do
-    (timePs, partitions) <- timeIt (checked heuristic) pair
+    (timePs, partitions) <- timeIt (runChecked heuristic) pair
+
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions
     let score = fromMaybe 1 $ (size - blocks) `checkedDiv` (size - 1)

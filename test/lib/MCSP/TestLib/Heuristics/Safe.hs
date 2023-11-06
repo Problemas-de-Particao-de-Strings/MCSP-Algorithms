@@ -1,9 +1,8 @@
 -- | Correctness checking.
 module MCSP.TestLib.Heuristics.Safe (
     -- * Heuristic correctness
-    ErrorMessage,
     Debug,
-    checked,
+    runChecked,
 
     -- * Checked operations
     checkedLen,
@@ -13,10 +12,9 @@ module MCSP.TestLib.Heuristics.Safe (
 import Control.Applicative (pure, (<|>))
 import Control.Monad (fail, void, when)
 import Data.Bool (otherwise)
-import Data.Either (Either (..), either)
 import Data.Eq (Eq (..))
 import Data.Foldable (Foldable, length)
-import Data.Function (($), (.))
+import Data.Function (($))
 import Data.Int (Int)
 import Data.List (sort, (++))
 import Data.List.Extra ((!?))
@@ -33,43 +31,37 @@ import MCSP.Data.String (ShowString, String (..), concat)
 import MCSP.Data.String.Extra (Partition, alphabet, occurrences)
 import MCSP.Heuristics (Heuristic)
 
--- | Message describing the error found with the solution.
-type ErrorMessage = Text.String
-
 -- | Common constraints for debugging a heuristic.
 type Debug a = (Show a, ShowString a, Ord a)
 
 -- | Run a heuristic checking the inputs and output for correctnes.
 --
--- >>> checked trivial ("abba", "abab")
--- Right ([a,b,b,a],[a,b,a,b])
--- >>> checked trivial ("abba", "abad")
--- Left "mismatch in input strings 'abba' and 'abad': fromList \"ab\" != fromList \"abd\""
-checkedRun :: Debug a => Heuristic a -> Pair (String a) -> Either ErrorMessage (Pair (Partition a))
-checkedRun heuristic pair = do
+-- >>> import MCSP.Heuristics (trivial)
+--
+-- >>> runChecked trivial ("abba", "abab")
+-- ([a,b,b,a],[a,b,a,b])
+--
+-- >>> runChecked trivial ("abba", "abad")
+-- user error (mismatch in input strings 'abba' and 'abad': fromList "ab" != fromList "abd")
+runChecked :: Debug a => Heuristic a -> Pair (String a) -> IO (Pair (Partition a))
+runChecked heuristic pair = do
     checkBalanced pair
     let partitions = heuristic pair
     void $ zipM $ liftP checkPartition pair partitions
     checkCommonPartition partitions
     pure partitions
 
--- | Run a heuristic checking the inputs and output for correctnes.
---
--- Monadic version of `checked`.
-checked :: Debug a => Heuristic a -> Pair (String a) -> IO (Pair (Partition a))
-checked heuristic = either fail pure . checkedRun heuristic
-
 -- | Check that the input strings are balanced.
 --
 -- >>> checkBalanced ("abba", "abab")
--- Right ()
+-- <BLANKLINE>
 --
 -- >>> checkBalanced ("abba", "abad")
--- Left "mismatch in input strings 'abba' and 'abad': fromList \"ab\" != fromList \"abd\""
+-- user error (mismatch in input strings 'abba' and 'abad': fromList "ab" != fromList "abd")
 --
 -- >>> checkBalanced ("abba", "abbb")
--- Left "mismatch in input strings 'abba' and 'abbb': fromList [('a',2),('b',2)] != fromList [('a',1),('b',3)]"
-checkBalanced :: Debug a => Pair (String a) -> Either ErrorMessage ()
+-- user error (mismatch in input strings 'abba' and 'abbb': fromList [('a',2),('b',2)] != fromList [('a',1),('b',3)])
+checkBalanced :: Debug a => Pair (String a) -> IO ()
 checkBalanced (s1, s2) = do
     -- the strings must have the same alphabet
     when (alphabet s1 /= alphabet s2) $
@@ -83,14 +75,14 @@ checkBalanced (s1, s2) = do
 -- | Check that the partition is valid for the given string.
 --
 -- >>> checkPartition "abba" ["ab", "b", "a"]
--- Right ()
+-- <BLANKLINE>
 --
 -- >>> checkPartition "abba" ["ab", "a", "b"]
--- Left "mismatch in partition for 'abba': [ab,a,b] != abba"
+-- user error (mismatch in partition for 'abba': [ab,a,b] != abba)
 --
 -- >>> checkPartition "abba" ["ab", "bb"]
--- Left "mismatch in partition for 'abba': fromList [('a',1),('b',3)] != fromList [('a',2),('b',2)]"
-checkPartition :: Debug a => String a -> [String a] -> Either ErrorMessage ()
+-- user error (mismatch in partition for 'abba': fromList [('a',1),('b',3)] != fromList [('a',2),('b',2)])
+checkPartition :: Debug a => String a -> [String a] -> IO ()
 checkPartition str@Unboxed partition = do
     -- the partition must have the same occurence of characters
     when (occurrences (concat partition) /= occurrences str) $
@@ -107,17 +99,17 @@ checkPartition str@Unboxed partition = do
 -- strings is left to `checkPartition`.
 --
 -- >>> checkCommonPartition (["ab", "b", "a"], ["a", "b", "ab"])
--- Right ()
+-- <BLANKLINE>
 --
 -- >>> checkCommonPartition (["ab"], [])
--- Left "mismatch in common partitions 'ab' and '': fromList [('a',1),('b',1)] != fromList []"
+-- user error (mismatch in common partitions 'ab' and '': fromList [('a',1),('b',1)] != fromList [])
 --
 -- >>> checkCommonPartition (["ab", "a", "b"], ["aa", "bb"])
--- Left "mismatch in common partitions 'abab' and 'aabb': [a,ab,b] != [aa,bb]"
+-- user error (mismatch in common partitions 'abab' and 'aabb': [a,ab,b] != [aa,bb])
 --
 -- >>> checkCommonPartition (["ab", "b", "b"], ["a", "b", "ab"])
--- Left "mismatch in common partitions 'abbb' and 'abab': fromList [('a',1),('b',3)] != fromList [('a',2),('b',2)]"
-checkCommonPartition :: Debug a => Pair (Partition a) -> Either ErrorMessage ()
+-- user error (mismatch in common partitions 'abbb' and 'abab': fromList [('a',1),('b',3)] != fromList [('a',2),('b',2)])
+checkCommonPartition :: Debug a => Pair (Partition a) -> IO ()
 checkCommonPartition (p1, p2) = case p1 !? 0 <|> p2 !? 0 of
     -- this check only really makes sense for non-empty partitions
     Just Unboxed -> do
@@ -143,11 +135,13 @@ quoted value = "'" ++ show value ++ "'"
 -- should be the same.
 --
 -- >>> mismatchIn "someplace" "leftValue" "rightValue"
--- Left "mismatch in someplace: leftValue != rightValue"
-mismatchIn :: Text.String -> Text.String -> Text.String -> Either ErrorMessage never
-mismatchIn location x y = Left $ "mismatch in " ++ location ++ ": " ++ x ++ " != " ++ y
+-- user error (mismatch in someplace: leftValue != rightValue)
+mismatchIn :: Text.String -> Text.String -> Text.String -> IO never
+mismatchIn location x y = fail $ "mismatch in " ++ location ++ ": " ++ x ++ " != " ++ y
 
 -- | Returns the length of the foldables, if both have the same length, or throws an error.
+--
+-- >>> import Prelude (Char)
 --
 -- >>> checkedLen @[] @Int "list" ([1..4], [2..5])
 -- 4
