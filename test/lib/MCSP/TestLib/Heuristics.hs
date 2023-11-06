@@ -23,21 +23,26 @@ import Numeric.Extra (showDP)
 import Safe.Foldable (maximumBound)
 
 import MCSP.Data.MatchingGraph (edgeSet)
-import MCSP.Data.Meta (empty)
+import MCSP.Data.Meta (empty, (<::))
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
-import MCSP.Heuristics (Heuristic, combine, combineS, greedy, pso)
+import MCSP.Heuristics (Heuristic, UseSingletons (..), combine, greedy, pso)
 import MCSP.System.TimeIt (timeIt)
 import MCSP.TestLib.Heuristics.Safe (Debug, checkedDiv, checkedLen, runChecked)
-import MCSP.TestLib.Heuristics.TH (mkNamed, mkNamedList)
+import MCSP.TestLib.Heuristics.TH (mkNamed)
 
 -- | The heuristic with its defined name.
 type NamedHeuristic a = (Text.String, Heuristic a)
 
 -- | List of all heuristics implemented and their names.
 heuristics :: Ord a => [NamedHeuristic a]
-heuristics = $(mkNamedList ['combine, 'combineS, 'greedy, 'pso])
+heuristics =
+    [ ("combine", \s -> combine s <:: UseSingletons False),
+      ("combineS", \s -> combine s <:: UseSingletons True),
+      ("greedy", greedy),
+      ("pso", pso)
+    ]
 
 -- | A collection of information made on a single execution of a `Heuristic`.
 data Measured = Measured

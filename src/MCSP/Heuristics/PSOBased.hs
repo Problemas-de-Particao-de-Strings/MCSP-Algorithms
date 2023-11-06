@@ -6,6 +6,7 @@ module MCSP.Heuristics.PSOBased (
 
 import Control.Applicative (pure)
 import Control.Monad ((>>=))
+import Data.Bool (Bool (..))
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
@@ -47,11 +48,11 @@ import MCSP.Data.MatchingGraph (
     solution,
     toPartitions,
  )
-import MCSP.Data.Meta (Meta, evalMeta)
+import MCSP.Data.Meta (Meta, evalMeta, (<::))
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (Partition)
-import MCSP.Heuristics.Combine (combineS)
+import MCSP.Heuristics.Combine (UseSingletons (..), combine)
 import MCSP.Heuristics.Greedy (greedy)
 import MCSP.System.Random (Random, Seed, generateWith)
 
@@ -96,6 +97,8 @@ initialWeights strs edges =
           (1, partitionWeights (evalMeta $ combineS strs) edges),
           (1, partitionWeights (evalMeta $ greedy strs) edges)
         ]
+  where
+    combineS s = combine s <:: UseSingletons True
 
 -- --------- --
 -- Heuristic --
