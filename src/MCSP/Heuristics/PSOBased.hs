@@ -9,6 +9,7 @@ module MCSP.Heuristics.PSOBased (
     PSOParticles (..),
     PSOSeed (..),
     PSOFirstBestIter (..),
+    PSOPure (..),
 ) where
 
 import Control.Applicative (pure)
@@ -100,8 +101,9 @@ edgeSizeWeights es = do
     pure $ sortLike weights indices
 
 -- | Generates the initial weights for a particle.
-initialWeights :: Ord a => Pair (String a) -> Vector Edge -> Random (Vector Weight)
-initialWeights strs edges =
+initialWeights :: Ord a => Bool -> Pair (String a) -> Vector Edge -> Random (Vector Weight)
+initialWeights True _ edges = uniformSN $ length edges
+initialWeights False strs edges =
     choice
         [ (10, uniformSN $ length edges),
           (1, edgeSizeWeights edges),
@@ -116,18 +118,18 @@ initialWeights strs edges =
 -- --------- --
 
 -- | Create an iterated PSO swarm for the MCSP problem.
-mcspSwarm :: Ord a => Int -> Pair (String a) -> Random (NonEmpty (Swarm Edge))
-mcspSwarm particles strs@(edgeSet -> edges) =
+mcspSwarm :: Ord a => Int -> Bool -> Pair (String a) -> Random (NonEmpty (Swarm Edge))
+mcspSwarm particles usePure strs@(edgeSet -> edges) =
     particleSwarmOptimization defaultUpdater ?initialWeights particles
   where
     ?eval = fromIntegral . mergeness . solution
     ?values = edges
-    ?initialWeights = initialWeights strs edges
+    ?initialWeights = initialWeights usePure strs edges
 
 -- | PSO heuristic with implicit parameters.
-psoWithParams :: Ord a => Seed -> Int -> Int -> Pair (String a) -> (Pair (Partition a), Int)
-psoWithParams seed iterations particles strs = generateWith seed $ do
-    swarms <- take iterations <$> mcspSwarm particles strs
+psoWithParams :: Ord a => Seed -> Int -> Int -> Bool -> Pair (String a) -> (Pair (Partition a), Int)
+psoWithParams seed iterations particles usePure strs = generateWith seed $ do
+    swarms <- take iterations <$> mcspSwarm particles usePure strs
     let (Min (_, firstBestIter), Last guide) = foldMap1' optimal swarms
     let partitions = toPartitions strs $ solution $ sortedValues guide
     pure (partitions, firstBestIter)
@@ -169,13 +171,20 @@ newtype PSOFirstBestIter = PSOFirstBestIter
 
 instance MetaVariable PSOFirstBestIter
 
+-- | Run PSO only, without using other heuristics.
+newtype PSOPure = PSOPure Bool
+    deriving newtype (Eq, Ord, Show)
+
+instance MetaVariable PSOPure
+
 -- | PSO heuristic.
 pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
 pso strs = do
     PSOIterations iterations <- getVarOrDefault (PSOIterations 10)
     PSOParticles particles <- getVarOrDefault (PSOParticles 1000)
     PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
-    let (partitions, firstBestIter) = psoWithParams seed iterations particles strs
+    PSOPure usePure <- getVarOrDefault (PSOPure False)
+    let (partitions, firstBestIter) = psoWithParams seed iterations particles usePure strs
     setVar (PSOFirstBestIter firstBestIter)
     pure partitions
   where

@@ -27,7 +27,8 @@ import MCSP.Data.Meta (empty, lookup, (<::))
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
-import MCSP.Heuristics (Heuristic, UseSingletons (..), combine, getFirstBestIter, greedy, pso)
+import MCSP.Heuristics (Heuristic, UseSingletons (..), combine, greedy, pso)
+import MCSP.Heuristics.PSOBased (PSOPure (..), getFirstBestIter)
 import MCSP.System.TimeIt (timeIt)
 import MCSP.TestLib.Heuristics.Safe (Debug, checkedDiv, checkedLen, runChecked)
 import MCSP.TestLib.Heuristics.TH (mkNamed)
@@ -41,7 +42,8 @@ heuristics =
     [ ("combine", \s -> combine s <:: UseSingletons False),
       ("combineS", \s -> combine s <:: UseSingletons True),
       ("greedy", greedy),
-      ("pso", pso)
+      ("pso", pso),
+      ("psoPure", \s -> pso s <:: PSOPure True)
     ]
 
 -- | A collection of information made on a single execution of a `Heuristic`.
