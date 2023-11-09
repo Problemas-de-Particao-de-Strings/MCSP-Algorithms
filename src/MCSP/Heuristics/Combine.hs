@@ -2,15 +2,16 @@
 module MCSP.Heuristics.Combine (
     UseSingletons (..),
     combine,
+    combineP,
 ) where
 
-import Prelude hiding (String, (++))
+import Prelude hiding (String, concat, (++))
 
 import Data.Set (Set)
 
 import MCSP.Data.Meta (Meta, MetaVariable, getVarOrDefault)
 import MCSP.Data.Pair (Pair, both, first, second)
-import MCSP.Data.String (String, (++))
+import MCSP.Data.String (String (Unboxed), Unbox, concat, (++))
 import MCSP.Data.String.Extra (Partition, chars, hasOneOf, singletons)
 
 -- | Applies a function until the result converges.
@@ -86,20 +87,20 @@ combineAll decision (x : xs, ys) =
 -- | MCSP combine heuristic.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached.
-combineSimple :: Eq a => Pair (String a) -> Pair (Partition a)
-combineSimple xy = converge (combineAll AlwaysCombine) (chars `both` xy)
+combineSimple :: Eq a => Pair (Partition a) -> Pair (Partition a)
+combineSimple = converge (combineAll AlwaysCombine)
 
 -- | MSCP combine heuristic considering singleton analysis.
 --
 -- Applies combination of blocks from left to right until a maximal solution is reached,
 -- combining first pairs in which both blocks have singletons, then pairs in which either
 -- block has singletons and finally all other possible pairs.
-combineWithSingletons :: Ord a => Pair (String a) -> Pair (Partition a)
+combineWithSingletons :: (Unbox a, Ord a) => Pair (Partition a) -> Pair (Partition a)
 combineWithSingletons (x, y)
-    | null singles = converge (combineAll AlwaysCombine) (chars `both` (x, y))
-    | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (chars `both` (x, y))
+    | null singles = converge (combineAll AlwaysCombine) (x, y)
+    | otherwise = converge (combineAll AlwaysCombine) $ combineSingletons (x, y)
   where
-    singles = singletons x
+    singles = singletons (concat x)
     combineSingletons =
         converge (combineAll $ EitherHasSingleton singles)
             . converge (combineAll $ BothHaveSingleton singles)
@@ -114,9 +115,13 @@ instance MetaVariable UseSingletons
 --
 -- Applies singleton analysis depending on the value of `UseSingletons`.
 combine :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
-combine strs = do
+combine strs@(Unboxed, _) = combineP (chars `both` strs)
+
+-- | Lifted MSCP combine heuristic.
+combineP :: (Unbox a, Ord a) => Pair (Partition a) -> Meta (Pair (Partition a))
+combineP parts = do
     UseSingletons withSingletons <- getVarOrDefault (UseSingletons True)
     pure $
         if withSingletons
-            then combineWithSingletons strs
-            else combineSimple strs
+            then combineWithSingletons parts
+            else combineSimple parts
