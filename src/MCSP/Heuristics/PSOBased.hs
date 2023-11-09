@@ -10,17 +10,20 @@ module MCSP.Heuristics.PSOBased (
     PSOSeed (..),
     PSOFirstBestIter (..),
     PSOPure (..),
+    PSOCombine (..),
 ) where
 
 import Control.Applicative (pure)
 import Control.Monad ((>>=))
 import Data.Bool (Bool (..))
 import Data.Eq (Eq)
+import Data.Foldable qualified as Foldable (length)
 import Data.Foldable1 (foldMap1')
 import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List qualified as List (take)
+import Data.List.Extra (sumOn')
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Ord (Ord (..))
 import Data.Semigroup (Last (..), Min (..))
@@ -62,9 +65,9 @@ import MCSP.Data.MatchingGraph (
  )
 import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVarOrDefault, setVar, (<::))
 import MCSP.Data.Pair (Pair)
-import MCSP.Data.String (String)
+import MCSP.Data.String (String (Unboxed))
 import MCSP.Data.String.Extra (Partition)
-import MCSP.Heuristics.Combine (UseSingletons (..), combine)
+import MCSP.Heuristics.Combine (UseSingletons (..), combine, combineP)
 import MCSP.Heuristics.Greedy (greedy)
 import MCSP.System.Random (Random, Seed, generateWith)
 
@@ -113,23 +116,39 @@ initialWeights False strs edges =
   where
     combineS s = combine s <:: UseSingletons True
 
+combineEdges :: Ord a => Pair (String a) -> Vector Edge -> Pair (Partition a)
+combineEdges strs@(Unboxed, _) edges =
+    evalMeta $ combineP partitions <:: UseSingletons False
+  where
+    partitions = toPartitions strs $ solution edges
+
+mergenessOf :: Pair (Partition a) -> Int
+mergenessOf (x, y) = mness x `max` mness y
+  where
+    mness p = sumOn' Foldable.length p - Foldable.length p
+
+objective :: Ord a => Bool -> Pair (String a) -> Vector Edge -> Int
+objective True strs = mergenessOf . combineEdges strs
+objective False _ = mergeness . solution
+
 -- --------- --
 -- Heuristic --
 -- --------- --
 
 -- | Create an iterated PSO swarm for the MCSP problem.
-mcspSwarm :: Ord a => Int -> Bool -> Pair (String a) -> Random (NonEmpty (Swarm Edge))
-mcspSwarm particles usePure strs@(edgeSet -> edges) =
+mcspSwarm :: Ord a => Int -> Bool -> Bool -> Pair (String a) -> Random (NonEmpty (Swarm Edge))
+mcspSwarm particles usePure runCombine strs@(edgeSet -> edges) =
     particleSwarmOptimization defaultUpdater ?initialWeights particles
   where
-    ?eval = fromIntegral . mergeness . solution
+    ?eval = fromIntegral . objective runCombine strs
     ?values = edges
     ?initialWeights = initialWeights usePure strs edges
 
 -- | PSO heuristic with implicit parameters.
-psoWithParams :: Ord a => Seed -> Int -> Int -> Bool -> Pair (String a) -> (Pair (Partition a), Int)
-psoWithParams seed iterations particles usePure strs = generateWith seed $ do
-    swarms <- take iterations <$> mcspSwarm particles usePure strs
+psoWithParams ::
+    Ord a => Seed -> Int -> Int -> Bool -> Bool -> Pair (String a) -> (Pair (Partition a), Int)
+psoWithParams seed iterations particles usePure runCombine strs = generateWith seed $ do
+    swarms <- take iterations <$> mcspSwarm particles usePure runCombine strs
     let (Min (_, firstBestIter), Last guide) = foldMap1' optimal swarms
     let partitions = toPartitions strs $ solution $ sortedValues guide
     pure (partitions, firstBestIter)
@@ -177,6 +196,11 @@ newtype PSOPure = PSOPure Bool
 
 instance MetaVariable PSOPure
 
+newtype PSOCombine = PSOCombine Bool
+    deriving newtype (Eq, Ord, Show)
+
+instance MetaVariable PSOCombine
+
 -- | PSO heuristic.
 pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
 pso strs = do
@@ -184,7 +208,8 @@ pso strs = do
     PSOParticles particles <- getVarOrDefault (PSOParticles 1000)
     PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
     PSOPure usePure <- getVarOrDefault (PSOPure False)
-    let (partitions, firstBestIter) = psoWithParams seed iterations particles usePure strs
+    PSOCombine runCombine <- getVarOrDefault (PSOCombine False)
+    let (partitions, firstBestIter) = psoWithParams seed iterations particles usePure runCombine strs
     setVar (PSOFirstBestIter firstBestIter)
     pure partitions
   where
