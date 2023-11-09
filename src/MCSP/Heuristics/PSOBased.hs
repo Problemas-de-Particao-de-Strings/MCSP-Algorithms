@@ -16,7 +16,7 @@ module MCSP.Heuristics.PSOBased (
 import Control.Applicative (pure)
 import Control.Monad ((>>=))
 import Data.Bool (Bool (..))
-import Data.Eq (Eq)
+import Data.Eq (Eq (..))
 import Data.Foldable qualified as Foldable (length)
 import Data.Foldable1 (foldMap1')
 import Data.Function (($), (.))
@@ -71,98 +71,8 @@ import MCSP.Heuristics.Combine (UseSingletons (..), combine, combineP)
 import MCSP.Heuristics.Greedy (greedy)
 import MCSP.System.Random (Random, Seed, generateWith)
 
--- | Default updater consider local best, global best and random components.
-defaultUpdater :: Updater Edge
-defaultUpdater =
-    sumM
-        [ randomVelocity >>= weighted 5.0,
-          weighted 0.005 localGuideDirection,
-          weighted 0.005 globalGuideDirection
-        ]
-
--- | Produce random weights for an edge set such that a given
--- partition would be the result of creating a solution using those weights.
---
--- >>> let ps = (["a", "ba", "b"], ["a", "b", "ba"])
--- >>> let es = [((0,0),2),((1,2),2),((2,0),2)]
--- >>> compatibleEdges ps es
--- [False,True,False]
---
--- >>> generateWith (1,2) $ partitionWeights ps es
--- [0.6502342,-0.8818351,7.536712e-2]
-partitionWeights :: Pair (Partition a) -> Vector Edge -> Random (Vector Weight)
-partitionWeights p es = weightedN 1 $ choose 1 (-1) (compatibleEdges p es)
-
--- | Produce random weights for an edge set sorted in such a way
--- that longer edges are prioritized.
--- >>> generateWith (1,2) $ edgeSizeWeights [((0,0),4),((1,2),1),((2,0),10)]
--- [0.30046844,0.7636702,-0.84926575]
-edgeSizeWeights :: Vector Edge -> Random (Vector Weight)
-edgeSizeWeights es = do
-    weights <- sort <$> uniformSN (length es)
-    let indices = argSort $ map (negate . blockLen) es
-    pure $ sortLike weights indices
-
--- | Generates the initial weights for a particle.
-initialWeights :: Ord a => Bool -> Pair (String a) -> Vector Edge -> Random (Vector Weight)
-initialWeights True _ edges = uniformSN $ length edges
-initialWeights False strs edges =
-    choice
-        [ (10, uniformSN $ length edges),
-          (1, edgeSizeWeights edges),
-          (1, partitionWeights (evalMeta $ combineS strs) edges),
-          (1, partitionWeights (evalMeta $ greedy strs) edges)
-        ]
-  where
-    combineS s = combine s <:: UseSingletons True
-
-combineEdges :: Ord a => Pair (String a) -> Vector Edge -> Pair (Partition a)
-combineEdges strs@(Unboxed, _) edges =
-    evalMeta $ combineP partitions <:: UseSingletons False
-  where
-    partitions = toPartitions strs $ solution edges
-
-mergenessOf :: Pair (Partition a) -> Int
-mergenessOf (x, y) = mness x `max` mness y
-  where
-    mness p = sumOn' Foldable.length p - Foldable.length p
-
-objective :: Ord a => Bool -> Pair (String a) -> Vector Edge -> Int
-objective True strs = mergenessOf . combineEdges strs
-objective False _ = mergeness . solution
-
--- --------- --
--- Heuristic --
--- --------- --
-
--- | Create an iterated PSO swarm for the MCSP problem.
-mcspSwarm :: Ord a => Int -> Bool -> Bool -> Pair (String a) -> Random (NonEmpty (Swarm Edge))
-mcspSwarm particles usePure runCombine strs@(edgeSet -> edges) =
-    particleSwarmOptimization defaultUpdater ?initialWeights particles
-  where
-    ?eval = fromIntegral . objective runCombine strs
-    ?values = edges
-    ?initialWeights = initialWeights usePure strs edges
-
--- | PSO heuristic with implicit parameters.
-psoWithParams ::
-    Ord a => Seed -> Int -> Int -> Bool -> Bool -> Pair (String a) -> (Pair (Partition a), Int)
-psoWithParams seed iterations particles usePure runCombine strs = generateWith seed $ do
-    swarms <- take iterations <$> mcspSwarm particles usePure runCombine strs
-    let (Min (_, firstBestIter), Last guide) = foldMap1' optimal swarms
-    let partitions = toPartitions strs $ solution $ sortedValues guide
-    pure (partitions, firstBestIter)
-  where
-    take n (x :| xs) = x :| List.take (n - 1) xs
-    optimal swarm =
-        -- get the global guide with maximum grade and minimum iteration
-        ( Min (-guideGrade (gGuide swarm), iteration swarm),
-          -- and get the last guide
-          Last (gGuide swarm)
-        )
-
--- -------------------- --
--- With Meta Parameters --
+-- --------------- --
+-- Meta Parameters --
 
 -- | The number of iterations to run the PSO algorithm.
 newtype PSOIterations = PSOIterations Int
@@ -196,20 +106,124 @@ newtype PSOPure = PSOPure Bool
 
 instance MetaVariable PSOPure
 
+-- | Run combine after on the partitions represented by the edge list.
 newtype PSOCombine = PSOCombine Bool
     deriving newtype (Eq, Ord, Show)
 
 instance MetaVariable PSOCombine
 
+-- -------------------- --
+-- Edge List Operations --
+-- -------------------- --
+
+-- | Default updater consider local best, global best and random components.
+defaultUpdater :: Updater Edge
+defaultUpdater =
+    sumM
+        [ randomVelocity >>= weighted 2.0,
+          weighted 0.1 localGuideDirection,
+          weighted 0.1 globalGuideDirection
+        ]
+
+-- | Produce random weights for an edge set such that a given
+-- partition would be the result of creating a solution using those weights.
+--
+-- >>> let ps = (["a", "ba", "b"], ["a", "b", "ba"])
+-- >>> let es = [((0,0),2),((1,2),2),((2,0),2)]
+-- >>> compatibleEdges ps es
+-- [False,True,False]
+--
+-- >>> generateWith (1,2) $ partitionWeights ps es
+-- [0.6502342,-0.8818351,7.536712e-2]
+partitionWeights :: Pair (Partition a) -> Vector Edge -> Random (Vector Weight)
+partitionWeights p es = weightedN 1 $ choose 1 (-1) (compatibleEdges p es)
+
+-- | Produce random weights for an edge set sorted in such a way
+-- that longer edges are prioritized.
+-- >>> generateWith (1,2) $ edgeSizeWeights [((0,0),4),((1,2),1),((2,0),10)]
+-- [0.30046844,0.7636702,-0.84926575]
+edgeSizeWeights :: Vector Edge -> Random (Vector Weight)
+edgeSizeWeights es = do
+    weights <- sort <$> uniformSN (length es)
+    let indices = argSort $ map (negate . blockLen) es
+    pure $ sortLike weights indices
+
+-- | Generates the initial weights for a particle.
+initialWeights :: Ord a => PSOPure -> Pair (String a) -> Vector Edge -> Random (Vector Weight)
+initialWeights (PSOPure True) _ edges = uniformSN $ length edges
+initialWeights (PSOPure False) strs edges =
+    choice
+        [ (1, uniformSN $ length edges),
+          (3, edgeSizeWeights edges),
+          (3, partitionWeights (evalMeta $ combineS strs) edges),
+          (3, partitionWeights (evalMeta $ greedy strs) edges)
+        ]
+  where
+    combineS s = combine s <:: UseSingletons True
+
+-- | Resolve the partitions of an edge list and run combine on that.
+combineEdges :: Ord a => Pair (String a) -> Vector Edge -> Pair (Partition a)
+combineEdges strs@(Unboxed, _) edges =
+    evalMeta $ combineP partitions <:: UseSingletons True
+  where
+    partitions = toPartitions strs $ solution edges
+
+-- | Calculate the mergeness of a given partition.
+mergenessOf :: Pair (Partition a) -> Int
+mergenessOf (x, y) = mness x `min` mness y
+  where
+    mness p = sumOn' Foldable.length p - Foldable.length p
+
+-- | The grading function for PSO.
+objective :: Ord a => PSOCombine -> Pair (String a) -> Vector Edge -> Int
+objective (PSOCombine True) strs = mergenessOf . combineEdges strs
+objective (PSOCombine False) _ = mergeness . solution
+
+-- --------- --
+-- Heuristic --
+-- --------- --
+
+-- | Create an iterated PSO swarm for the MCSP problem.
+mcspSwarm :: Ord a => Pair (String a) -> Meta (Random (NonEmpty (Swarm Edge)))
+mcspSwarm strs@(edgeSet -> edges) = do
+    PSOIterations iterations <- getVarOrDefault (PSOIterations 100)
+    PSOParticles particles <- getVarOrDefault (PSOParticles 200)
+    usePure <- getVarOrDefault (PSOPure False)
+    runCombine <-
+        if usePure == PSOPure False
+            then getVarOrDefault (PSOCombine False)
+            else pure (PSOCombine False)
+
+    let ?eval = fromIntegral . objective runCombine strs
+    let ?values = edges
+    let initial = initialWeights usePure strs edges
+    pure $
+        take iterations
+            <$> particleSwarmOptimization defaultUpdater initial particles
+  where
+    take n (x :| xs) = x :| List.take (n - 1) xs
+
+-- | Extract information about the PSO execution.
+evalPso :: Pair (String a) -> NonEmpty (Swarm Edge) -> (Pair (Partition a), Int)
+evalPso strs swarms = (partitions, firstBestIter)
+  where
+    partitions = toPartitions strs $ solution $ sortedValues guide
+    optimal swarm =
+        -- get the global guide with maximum grade and minimum iteration
+        ( Min (-guideGrade (gGuide swarm), iteration swarm),
+          -- and get the last guide
+          Last (gGuide swarm)
+        )
+    (Min (_, firstBestIter), Last guide) = foldMap1' optimal swarms
+
 -- | PSO heuristic.
 pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
 pso strs = do
-    PSOIterations iterations <- getVarOrDefault (PSOIterations 10)
-    PSOParticles particles <- getVarOrDefault (PSOParticles 1000)
     PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
-    PSOPure usePure <- getVarOrDefault (PSOPure False)
-    PSOCombine runCombine <- getVarOrDefault (PSOCombine False)
-    let (partitions, firstBestIter) = psoWithParams seed iterations particles usePure runCombine strs
+
+    swarms <- generateWith seed <$> mcspSwarm strs
+    let (partitions, firstBestIter) = evalPso strs swarms
+
     setVar (PSOFirstBestIter firstBestIter)
     pure partitions
   where
