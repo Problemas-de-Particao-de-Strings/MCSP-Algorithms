@@ -30,7 +30,6 @@ import Data.Ord (Ord (..))
 import Data.Semigroup (Last (..), Min (..))
 import Data.Vector.Unboxed (Vector, length, map)
 import GHC.Num (negate, (-))
-import GHC.Real (fromIntegral)
 import Text.Show (Show)
 
 import MCSP.Algorithms.PSO (
@@ -195,7 +194,7 @@ mcspSwarm strs@(edgeSet -> edges) = do
             then getVarOrDefault (PSOCombine False)
             else pure (PSOCombine False)
 
-    let ?eval = fromIntegral . objective runCombine strs
+    let ?eval = objective runCombine strs
     let ?values = edges
     let initial = initialWeights usePure strs edges
     pure $

@@ -28,7 +28,6 @@ import Data.Ord (Ord (..))
 import Data.Vector.Unboxed (Unbox, Vector, length)
 import GHC.Err (error)
 import GHC.Exts (fromListN, toList)
-import GHC.Float (Double)
 import GHC.Num ((+))
 import GHC.Stack (HasCallStack)
 import Numeric (showFFloat)
@@ -42,7 +41,7 @@ import MCSP.System.Random (Random, iterateR)
 -- -------------------------------------------------------------
 
 -- | Represents an evaluation of how good a solution is.
-type Grade = Double
+type Grade = Int
 
 -- | Element of a vector used to sort values of a permutation problem.
 type Weight = Default
