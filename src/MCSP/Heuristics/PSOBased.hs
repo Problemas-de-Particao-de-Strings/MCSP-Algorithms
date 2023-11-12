@@ -25,6 +25,7 @@ import Data.Int (Int)
 import Data.List qualified as List (take)
 import Data.List.Extra (sumOn')
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (fromMaybe)
 import Data.Ord (Ord (..))
 import Data.Semigroup (Last (..), Min (..))
 import Data.Vector.Unboxed (Vector, length, map)
@@ -63,7 +64,7 @@ import MCSP.Data.MatchingGraph (
     solution,
     toPartitions,
  )
-import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVarOrDefault, setVar, (<::))
+import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVar, getVarOrDefault, setVar, (<::))
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String (Unboxed))
 import MCSP.Data.String.Extra (Partition)
@@ -204,10 +205,15 @@ mcspSwarm strs@(edgeSet -> edges) = do
     take n (x :| xs) = x :| List.take (n - 1) xs
 
 -- | Extract information about the PSO execution.
-evalPso :: Pair (String a) -> NonEmpty (Swarm Edge) -> (Pair (Partition a), Int)
-evalPso strs swarms = (partitions, firstBestIter)
+evalPso :: Ord a => Pair (String a) -> NonEmpty (Swarm Edge) -> Meta (Pair (Partition a), Int)
+evalPso strs swarms = do
+    runCombine <- fromMaybe (PSOCombine False) <$> getVar
+    let partitions =
+            if runCombine == PSOCombine True
+                then combineEdges strs $ sortedValues guide
+                else toPartitions strs $ solution $ sortedValues guide
+    pure (partitions, firstBestIter)
   where
-    partitions = toPartitions strs $ solution $ sortedValues guide
     optimal swarm =
         -- get the global guide with maximum grade and minimum iteration
         ( Min (-guideGrade (gGuide swarm), iteration swarm),
@@ -222,7 +228,7 @@ pso strs = do
     PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
 
     swarms <- generateWith seed <$> mcspSwarm strs
-    let (partitions, firstBestIter) = evalPso strs swarms
+    (partitions, firstBestIter) <- evalPso strs swarms
 
     setVar (PSOFirstBestIter firstBestIter)
     pure partitions
