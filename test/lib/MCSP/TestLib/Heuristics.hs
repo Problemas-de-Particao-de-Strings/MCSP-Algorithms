@@ -71,7 +71,9 @@ data Measured = Measured
       -- | The partition found for the left string.
       left :: Text.String,
       -- | The partition found for the right string.
-      right :: Text.String
+      right :: Text.String,
+      -- | The input strings.
+      pair :: Text.String
     }
     deriving stock (Show, Eq, Generic)
 
@@ -120,7 +122,8 @@ measure (name, heuristic) pair = do
               edges,
               psoIter,
               left,
-              right
+              right,
+              pair = show pair
             }
 
 -- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
@@ -140,7 +143,8 @@ csvColumns =
       second (showColumn 4 (showDP 2)) $(mkNamed 'score),
       second (showColumn 8 (showDP 3)) $(mkNamed 'time),
       second (showColumn 0 show) $(mkNamed 'left),
-      second (showColumn 0 show) $(mkNamed 'right)
+      second (showColumn 0 show) $(mkNamed 'right),
+      second (showColumn 0 show) $(mkNamed 'pair)
     ]
 
 -- Compose a function that show a value with one that extracts that value from a measurement.
