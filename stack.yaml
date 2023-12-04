@@ -17,7 +17,7 @@
 # resolver: https://example.com/snapshots/2018-01-01.yaml
 #
 # See https://github.com/commercialhaskell/stackage-snapshots/tree/master/nightly
-resolver: nightly-2023-11-10
+resolver: nightly-2023-12-12
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,7 +41,6 @@ packages:
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
 extra-deps:
-  - doctest-0.22.2
   - tasty-1.5
   - tasty-quickcheck-0.10.3
 
