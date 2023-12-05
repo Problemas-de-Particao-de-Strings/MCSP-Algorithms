@@ -25,6 +25,7 @@ description: |
 # Using modern Haskell features
 language: GHC2021
 default-extensions:
+  - ApplicativeDo
   - DerivingStrategies
   - DerivingVia
   - ImplicitParams
@@ -98,6 +99,7 @@ internal-libraries:
       - MCSP.TestLib.Heuristics.TH
       - MCSP.TestLib.Random
       - MCSP.TestLib.Sample
+      - MCSP.Text.CSV.Parser
     dependencies:
       - mcsp-algorithms
       - directory >= 1.3.8.1 && < 2
