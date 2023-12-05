@@ -32,8 +32,10 @@ type SimpleEnum a = (Enum a, Bounded a, Unbox a, Eq a)
 --
 -- >>> import MCSP.System.Random (generateWith)
 -- >>> import Data.Word (Word8)
+--
 -- >>> generateWith (1,2) $ randomReplicated @Word8 5 1 8
 -- 2 2 5 5 5
+--
 -- >>> generateWith (1,2) $ randomReplicated @Word8 10 1 6
 -- 1 1 4 4 1 5 5 3 3 4
 randomReplicated :: SimpleEnum a => Int -> a -> a -> Random (String a)

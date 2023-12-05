@@ -216,6 +216,7 @@ data String a
 -- >>> emptyLike s = asTypeOf empty s
 -- >>> :t emptyLike
 -- emptyLike :: Unbox a => String a -> String a
+--
 -- >>> emptyLike' s@Unboxed = asTypeOf empty s
 -- >>> :t emptyLike'
 -- emptyLike' :: String a -> String a
@@ -560,6 +561,7 @@ s@Unboxed ! i = s Generic.! i
 --
 -- >>> "abc" !? 1
 -- Just 'b'
+--
 -- >>> "abc" !? 3
 -- Nothing
 (!?) :: String a -> Int -> Maybe a
@@ -591,8 +593,10 @@ unsafeIndex s@Unboxed = Generic.unsafeIndex s
 --
 -- >>> single ""
 -- Nothing
+--
 -- >>> single "x"
 -- Just 'x'
+--
 -- >>> single "xy"
 -- Nothing
 single :: String a -> Maybe a
@@ -688,6 +692,7 @@ tail s@Unboxed = Generic.tail s
 --
 -- >>> take 2 "hello"
 -- he
+--
 -- >>> take 10 "hello"
 -- hello
 take :: Int -> String a -> String a
@@ -700,6 +705,7 @@ take n s@Unboxed = Generic.take n s
 --
 -- >>> drop 2 "hello"
 -- llo
+--
 -- >>> drop 10 "hello"
 -- <BLANKLINE>
 drop :: Int -> String a -> String a
@@ -907,6 +913,7 @@ l@Unboxed ++ r = l Generic.++ r
 --
 -- >>> concat ["abc", "123", "def"]
 -- abc123def
+--
 -- >>> concat @Char []
 -- <BLANKLINE>
 concat :: Unbox a => [String a] -> String a

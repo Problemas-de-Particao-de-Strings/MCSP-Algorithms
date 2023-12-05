@@ -128,6 +128,7 @@ uniformE = uniformRE minBound maxBound
 --
 -- >>> generateWith (1,3) $ uniformRE @Int 0 10
 -- 5
+--
 -- >>> generateWith (1,3) $ uniformRE 'a' 'z'
 -- 'n'
 uniformRE :: Enum a => a -> a -> Random a

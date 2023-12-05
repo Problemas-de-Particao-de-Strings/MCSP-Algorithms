@@ -136,8 +136,10 @@ ignorePrec r = readPrec_to_P r minPrec
 -- >>> import Data.Eq ((==))
 -- >>> match (satisfy (== 'A')) ""
 -- Nothing
+--
 -- >>> match (satisfy (== 'A')) "A"
 -- Just 'A'
+--
 -- >>> match (satisfy (== 'A')) "AA"
 -- Nothing
 match :: ReadP a -> String -> Maybe a
@@ -150,6 +152,7 @@ match r s = firstJust fullMatch $ readP_to_S r s
 --
 -- >>> readP_to_S getInLine "A"
 -- [('A',"")]
+--
 -- >>> readP_to_S getInLine "\n"
 -- []
 getInLine :: ReadP Char
@@ -159,8 +162,10 @@ getInLine = satisfy (/= '\n')
 --
 -- >>> readP_to_S skipInLine "   "
 -- [((),"")]
+--
 -- >>> readP_to_S (skipInLine *> getInLine) "  A"
 -- [('A',"")]
+--
 -- >>> readP_to_S skipInLine "  \n"
 -- [((),"\n")]
 skipInLine :: ReadP ()
@@ -172,6 +177,7 @@ skipInLine = readOr () (satisfy inLineSpace *> skipInLine)
 --
 -- >>> readP_to_S (readOr 'X' getInLine) "A"
 -- [('A',"")]
+--
 -- >>> readP_to_S (readOr 'X' getInLine) "\n"
 -- [('X',"\n")]
 readOr :: a -> ReadP a -> ReadP a
@@ -183,6 +189,7 @@ readOr x readItem = readItem <++ pure x
 --
 -- >>> readP_to_S (fromJustP $ Just 12) "text"
 -- [(12,"text")]
+--
 -- >>> readP_to_S (fromJustP Nothing) "text"
 -- []
 fromJustP :: Maybe a -> ReadP a

@@ -94,6 +94,7 @@ repeated str = foldrWithKey' insertRepeated mempty (occurrences str)
 -- >>> import Data.Set (fromList)
 -- >>> hasOneOf "abca" (fromList "bdf")
 -- True
+--
 -- >>> import Data.Set (fromList)
 -- >>> hasOneOf "xxx" (fromList "bdf")
 -- False
@@ -110,6 +111,7 @@ hasOneOf str ls = any (`member` ls) str
 --
 -- >>> longestCommonSubstring "ABABC" "ABCBA"
 -- Just ABC
+--
 -- >>> longestCommonSubstring "13" "1400"
 -- Just 1
 longestCommonSubstring :: Ord a => String a -> String a -> Maybe (String a)

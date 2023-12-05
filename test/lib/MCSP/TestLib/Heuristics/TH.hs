@@ -26,6 +26,7 @@ import Language.Haskell.TH (ExpQ, Name, Q, listE, nameBase, nameModule, varE)
 -- >>> import Data.Set (Set)
 -- >>> uniqueBase [''Map, ''Set]
 -- fromList ["Map","Set"]
+--
 -- >>> import Data.Map.Strict (Map)
 -- >>> uniqueBase [''Data.Map.Map, ''Data.Map.Strict.Map]
 -- fromList []
@@ -44,6 +45,7 @@ uniqueBase = keysSet . filter not . repeated . map nameBase
 -- >>> names = uniqueBase [''Data.Map.Lazy.Map, ''Data.Map.Strict.Map, ''Data.Set.Set]
 -- >>> runQ (getUnambiguous names ''Data.Map.Lazy.Map)
 -- "Data.Map.Internal.Map"
+--
 -- >>> runQ (getUnambiguous names ''Data.Set.Set)
 -- "Set"
 getUnambiguous :: Set Text.String -> Name -> Q Text.String

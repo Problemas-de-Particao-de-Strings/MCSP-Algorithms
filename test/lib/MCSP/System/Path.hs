@@ -33,12 +33,16 @@ packageRoot = $$mkPackageRoot
 --
 -- >>> directory "path/to/file"
 -- "path/to"
+--
 -- >>> directory (directory "path/to/file")
 -- "path"
+--
 -- >>> directory "path"
 -- "."
+--
 -- >>> directory ""
 -- "."
+--
 -- >>> directory "/"
 -- "/"
 directory :: FilePath -> FilePath
@@ -55,6 +59,7 @@ createDirectory = createDirectoryIfMissing True
 --
 -- >>> expandFiles "app"
 -- ["app/Main.hs","app/hie.yaml"]
+--
 -- >>> expandFiles "app/Main.hs"
 -- ["app/Main.hs"]
 expandFiles :: FilePath -> IO [FilePath]

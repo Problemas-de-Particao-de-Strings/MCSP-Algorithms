@@ -72,6 +72,7 @@ pattern p ::| xs <- (\(x : y : rest) -> ((x, y), rest) -> (p, xs))
 -- >>> import Data.List.NonEmpty (nonEmpty)
 -- >>> bothM nonEmpty ([], [1])
 -- Nothing
+--
 -- >>> bothM nonEmpty ([1], [2])
 -- Just (1 :| [],2 :| [])
 bothM :: Applicative m => (a -> m b) -> Pair a -> m (Pair b)
@@ -83,8 +84,10 @@ bothM f (x, y) = liftA2 (,) (f x) (f y)
 -- >>> import Data.Maybe (Maybe (..))
 -- >>> zipM (Just 1, Nothing)
 -- Nothing
+--
 -- >>> zipM (Just 1, Just 2)
 -- Just (1,2)
+--
 -- >>> import Data.Int (Int)
 -- >>> zipM @[] ([1, 2, 3], [4, 5])
 -- [(1,4),(1,5),(2,4),(2,5),(3,4),(3,5)]

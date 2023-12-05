@@ -160,6 +160,7 @@ construct = foldl' (flip $ uncurry insert) empty
 -- >>> import Prelude (Int)
 -- >>> lookup "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 1
+--
 -- >>> lookup "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Nothing
 --
@@ -177,6 +178,7 @@ lookup k@(Head h) t = do
 --
 -- >>> lookupMinWithKey (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just (abb,5)
+--
 -- >>> lookupMinWithKey @Char @Int empty
 -- Nothing
 lookupMinWithKey :: Unbox a => RadixTreeMap a v -> Maybe (String a, v)
@@ -191,6 +193,7 @@ lookupMinWithKey (Tree Nothing es) = do
 --
 -- >>> lookupMaxWithKey (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just (def,3)
+--
 -- >>> lookupMaxWithKey @Char @Int empty
 -- Nothing
 lookupMaxWithKey :: Unbox a => RadixTreeMap a v -> Maybe (String a, v)
@@ -205,6 +208,7 @@ lookupMaxWithKey (Tree _ es) = do
 --
 -- >>> lookupMin @Char @Int (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 5
+--
 -- >>> lookupMin @Char @Int empty
 -- Nothing
 lookupMin :: RadixTreeMap a v -> Maybe v
@@ -218,6 +222,7 @@ lookupMin (Tree Nothing es) = do
 --
 -- >>> lookupMax @Char @Int (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- Just 3
+--
 -- >>> lookupMax @Char @Int empty
 -- Nothing
 lookupMax :: RadixTreeMap a v -> Maybe v
@@ -231,6 +236,7 @@ lookupMax (Tree _ es) = do
 --
 -- >>> member "abc" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- True
+--
 -- >>> member "xyz" (construct [("abc", 1), ("def", 3), ("abb", 5)])
 -- False
 member :: Ord a => String a -> RadixTreeMap a v -> Bool

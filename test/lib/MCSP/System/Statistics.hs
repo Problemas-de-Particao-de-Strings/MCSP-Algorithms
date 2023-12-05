@@ -41,6 +41,7 @@ import Statistics.Types (
 -- >>> import Statistics.Distribution.Normal (standard)
 -- >>> absolute (distCI (mkCL 0.6827) standard)
 -- 2.0000434266459983
+--
 -- >>> absolute (sampleCI cl90 [10, 15, 20])
 -- 7.753914357844494
 absolute :: Estimate ConfInt Double -> Double
@@ -53,6 +54,7 @@ absolute estimate =
 -- >>> import Statistics.Distribution.Normal (standard)
 -- >>> confidenceInterval (distCI (mkCL 0.6827) standard)
 -- (-1.0000217133229992,1.0000217133229992)
+--
 -- >>> confidenceInterval (distCI cl95 standard)
 -- (-1.9599639845400545,1.9599639845400545)
 distCI :: (Mean d, ContDistr d) => CL Double -> d -> Estimate ConfInt Double

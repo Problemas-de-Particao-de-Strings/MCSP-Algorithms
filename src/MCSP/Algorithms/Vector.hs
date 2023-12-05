@@ -81,6 +81,7 @@ type Default = Float
 --
 -- >>> withSameLength (zipWith (+)) [1, 2, 3] [4, 5, 6]
 -- [5.0,7.0,9.0]
+--
 -- >>> withSameLength (zipWith (+)) [1, 2, 3] [4, 5]
 -- *** Exception: length mismatch: 3 != 2
 withSameLength :: (Unbox a, Unbox b) => (Vector a -> Vector b -> c) -> Vector a -> Vector b -> c
@@ -98,6 +99,7 @@ withSameLength f v1 v2 =
 --
 -- >>> zeros 3
 -- [0.0,0.0,0.0]
+--
 -- >>> zeros 0
 -- []
 zeros :: (Unbox a, Num a) => Int -> Vector a

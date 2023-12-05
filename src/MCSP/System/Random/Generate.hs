@@ -150,8 +150,10 @@ readSeedP = do
 --
 -- >>> readSeed "0 1"
 -- (0,1)
+--
 -- >>> readSeed (showSeed (5, 10))
 -- (5,10)
+--
 -- >>> readSeed "75f9fea579c63117 8a3a15e4c0a7029f"
 -- (8501105758304612631,9960297598112170655)
 readSeed :: Text.String -> Seed

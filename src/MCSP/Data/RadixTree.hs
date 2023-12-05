@@ -57,6 +57,7 @@ construct = Map.construct . map dupe
 --
 -- >>> member "ab" (construct ["abc", "def", "abb"])
 -- False
+--
 -- >>> member "abc" (construct ["abc", "def", "abb"])
 -- True
 member :: Ord a => String a -> RadixTree a -> Bool
@@ -67,6 +68,7 @@ member = Map.member
 --
 -- >>> findMin (construct ["abc", "def", "abb"])
 -- Just abb
+--
 -- >>> import Prelude (Char)
 -- >>> findMin @Char empty
 -- Nothing
@@ -78,6 +80,7 @@ findMin = Map.lookupMin
 --
 -- >>> findMax (construct ["abc", "def", "abb"])
 -- Just def
+--
 -- >>> import Prelude (Char)
 -- >>> findMax @Char empty
 -- Nothing
@@ -92,6 +95,7 @@ findMax = Map.lookupMax
 --
 -- >>> insert "xyz" (construct ["abc"])
 -- Tree [abc :~> Tree (abc) [],xyz :~> Tree (xyz) []]
+--
 -- >>> insert "xyz" (construct ["abc", "xyz"])
 -- Tree [abc :~> Tree (abc) [],xyz :~> Tree (xyz) []]
 insert :: Ord a => String a -> RadixTree a -> RadixTree a
@@ -102,10 +106,13 @@ insert s = Map.insert s s
 --
 -- >>> construct ["abc"] `union` construct ["def"]
 -- Tree [abc :~> Tree (abc) [],def :~> Tree (def) []]
+--
 -- >>> construct ["abc"] `union` construct []
 -- Tree [abc :~> Tree (abc) []]
+--
 -- >>> construct [] `union` construct ["abc"]
 -- Tree [abc :~> Tree (abc) []]
+--
 -- >>> construct ["abc"] `union` construct ["abc"]
 -- Tree [abc :~> Tree (abc) []]
 union :: Ord a => RadixTree a -> RadixTree a -> RadixTree a
@@ -116,6 +123,7 @@ union = Map.union
 --
 -- >>> delete "abc" (construct ["abc", "def"])
 -- Tree [def :~> Tree (def) []]
+--
 -- >>> delete "abc" (construct ["def"])
 -- Tree [def :~> Tree (def) []]
 delete :: Ord a => String a -> RadixTree a -> RadixTree a

@@ -52,8 +52,10 @@ pattern BalancedStrings {getBalancedStrings} <- (extractStrings -> getBalancedSt
 --
 -- >>> squareRoot 10
 -- 3
+--
 -- >>> squareRoot 15
 -- 3
+--
 -- >>> squareRoot 16
 -- 4
 squareRoot :: Int -> Int

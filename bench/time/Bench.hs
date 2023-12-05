@@ -18,8 +18,9 @@ import MCSP.TestLib.Sample (SimpleEnum, StringParameters, benchParams, randomPai
 --
 -- >>> import Data.Maybe (fromJust)
 -- >>> lastN n = reverse . take n . reverse
--- >>> lastN 74 <$> fromJust <$> reportFile <$> getDefaultConfig
--- "MCSP-Algorithms/bench/output/time-2023-09-06T00:20:21.292946511-03:00.html"
+--
+-- >>> lastN 81 <$> fromJust <$> reportFile <$> getDefaultConfig
+-- "MCSP-Algorithms/bench/output/2023-12-04T23:43:36.317641557-03:00-time-report.html"
 getDefaultConfig :: IO Config
 getDefaultConfig = do
     let outputDir = packageRoot </> "bench" </> "output"

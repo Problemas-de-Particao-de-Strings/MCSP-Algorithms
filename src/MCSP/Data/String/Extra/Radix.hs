@@ -38,8 +38,10 @@ import MCSP.Data.String (String (..), drop, length, splitAt, take, unsafeIndex, 
 --
 -- >>> stripPrefix "foo" "foobar"
 -- Just bar
+--
 -- >>> stripPrefix "foo" "foo"
 -- Just
+--
 -- >>> stripPrefix "foo" "barfoo"
 -- Nothing
 stripPrefix :: Eq a => String a -> String a -> Maybe (String a)
@@ -54,6 +56,7 @@ stripPrefix p str
 --
 -- >>> "Hello" `isPrefixOf` "Hello World!"
 -- True
+--
 -- >>> "Hello" `isPrefixOf` "Wello Horld!"
 -- False
 isPrefixOf :: Eq a => String a -> String a -> Bool
@@ -77,8 +80,10 @@ commonPrefixLength lhs rhs = fromMaybe n (find @[] notMatching indices)
 --
 -- >>> commonPrefix "abc" "abd"
 -- ab
+--
 -- >>> commonPrefix "xyz" "xyz"
 -- xyz
+--
 -- >>> commonPrefix "def" "ghi"
 -- <BLANKLINE>
 commonPrefix :: Eq a => String a -> String a -> String a
@@ -93,8 +98,10 @@ commonPrefix lhs rhs = fst3 (splitCommonPrefix lhs rhs)
 --
 -- >>> splitCommonPrefix "abc" "abd"
 -- (ab,c,d)
+--
 -- >>> splitCommonPrefix "xyz" "xyz"
 -- (xyz,,)
+--
 -- >>> splitCommonPrefix "def" "ghi"
 -- (,def,ghi)
 splitCommonPrefix :: Eq a => String a -> String a -> (String a, String a, String a)
@@ -121,12 +128,16 @@ splitCommonPrefix lhs rhs =
 --
 -- >>> stripInfix "el" "Hello"
 -- Just (H,lo)
+--
 -- >>> stripInfix "World!" "Hello"
 -- Nothing
+--
 -- >>> stripInfix "si" "mississipi"
 -- Just (mis,ssipi)
+--
 -- >>> stripInfix "chat" "hat"
 -- Nothing
+--
 -- >>> stripInfix "word" "word"
 -- Just (,)
 stripInfix :: Eq a => String a -> String a -> Maybe (String a, String a)
@@ -149,6 +160,7 @@ stripInfix needle haystack = firstJust (matchingNeedle . split) [0 .. n]
 --
 -- >>> isInfixOf "Haskell" "I really like Haskell."
 -- True
+--
 -- >>> isInfixOf "Ial" "I really like Haskell."
 -- False
 isInfixOf :: Eq a => String a -> String a -> Bool
@@ -165,8 +177,10 @@ r `isInfixOf` str = isJust (stripInfix r str)
 --
 -- >>> stripSuffix "bar" "foobar"
 -- Just foo
+--
 -- >>> stripSuffix "" "baz"
 -- Just baz
+--
 -- >>> stripSuffix "foo" "quux"
 -- Nothing
 stripSuffix :: Eq a => String a -> String a -> Maybe (String a)
@@ -181,6 +195,7 @@ stripSuffix s str
 --
 -- >>> "ld!" `isSuffixOf` "Hello World!"
 -- True
+--
 -- >>> "World" `isSuffixOf` "Hello World!"
 -- False
 isSuffixOf :: Eq a => String a -> String a -> Bool

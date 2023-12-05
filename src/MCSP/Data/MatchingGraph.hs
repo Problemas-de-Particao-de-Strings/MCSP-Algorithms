@@ -158,8 +158,10 @@ type MatchedSet = IntervalSet Index
 -- >>> let edge = Edge {start=(0,2), blockLen=5}
 -- >>> blockInterval 0 5 `overlaps` mempty
 -- False
+--
 -- >>> blockInterval 0 5 `overlaps` IntervalSet.singleton (blockInterval 5 10)
 -- False
+--
 -- >>> blockInterval 0 5 `overlaps` IntervalSet.singleton (blockInterval 4 5)
 -- True
 overlaps :: Block -> MatchedSet -> Bool
@@ -172,6 +174,7 @@ interval `overlaps` set = not $ IntervalSet.null (IntervalSet.singleton interval
 -- >>> let edge = Edge {start=(0,2), blockLen=5}
 -- >>> nonOverlappingBlock edge mempty
 -- Just (Finite 0 <=..< Finite 5,Finite 2 <=..< Finite 7)
+--
 -- >>> nonOverlappingBlock edge (IntervalSet.singleton `both` (toBlocks edge))
 -- Nothing
 nonOverlappingBlock :: Edge -> Pair MatchedSet -> Maybe (Pair Block)
@@ -239,6 +242,7 @@ resolve = Vector.foldl' addEdge empty
 --
 -- >>> nextSolution (resolve [Edge {start=(0,2), blockLen=5}])
 -- Just (Info {partition = (fromList [],fromList []), matchedSet = (fromList [],fromList []), unused = []})
+--
 -- >>> nextSolution empty
 -- Nothing
 nextSolution :: MatchingInfo -> Maybe MatchingInfo
@@ -265,6 +269,7 @@ toSolution Info {..} = toSolutionVector `both` partition
 --
 -- >>> solution $ edgeSet ("abab", "abba")
 -- ([(0,2)],[(0,2)])
+--
 -- >>> solution $ edgeSet ("abab", "abab")
 -- ([(2,2),(0,2)],[(2,2),(0,2)])
 solution :: Vector Edge -> Solution
@@ -277,6 +282,7 @@ solution = toSolution . resolve
 --
 -- >>> solutions $ edgeSet ("abab", "abba")
 -- ([(0,2)],[(0,2)]) :| [([(1,2)],[(2,2)]),([(2,2)],[(0,2)]),([],[])]
+--
 -- >>> solutions $ edgeSet ("abab", "abab")
 -- ([(2,2),(0,2)],[(2,2),(0,2)]) :| [([(0,3)],[(0,3)]),([(0,4)],[(0,4)]),([(2,2),(0,2)],[(2,2),(0,2)]),([(1,2)],[(1,2)]),([(1,3)],[(1,3)]),([],[])]
 solutions :: Vector Edge -> NonEmpty Solution
@@ -292,6 +298,7 @@ solutions edges = unfoldr (toSolution &&& nextSolution) (resolve edges)
 --
 -- >>> mergeness mempty
 -- 0
+--
 -- >>> mergeness (solution $ edgeSet ("abab", "abba"))
 -- 1
 mergeness :: Solution -> Length
@@ -304,6 +311,7 @@ mergeness sol = min $: blocks `both` sol
 --
 -- >>> blockCount "abab" mempty
 -- 4
+--
 -- >>> blockCount "abab" (solution $ edgeSet ("abab", "abba"))
 -- 3
 blockCount :: String a -> Solution -> Length
@@ -313,12 +321,16 @@ blockCount str sol = length str - mergeness sol
 --
 -- >>> toPartition "abcd" [(1, 2)]
 -- [a,bc,d]
+--
 -- >>> toPartition "abcd" [(2, 2)]
 -- [a,b,cd]
+--
 -- >>> toPartition "abcd" [(0, 2)]
 -- [ab,c,d]
+--
 -- >>> toPartition "abcd" [(0, 4)]
 -- [abcd]
+--
 -- >>> toPartition "abcd" []
 -- [a,b,c,d]
 toPartition :: String a -> Vector (Index, Length) -> Partition a
@@ -331,8 +343,10 @@ toPartition s = concatChars 0 . Vector.foldl' insertBlock (length s, [])
 --
 -- >>> toPartitions ("abab", "abba") mempty
 -- ([a,b,a,b],[a,b,b,a])
+--
 -- >>> toPartitions ("abab", "abba") (solution $ edgeSet ("abab", "abba"))
 -- ([ab,a,b],[ab,b,a])
+--
 -- >>> toPartitions ("abba", "abab") (solution $ edgeSet ("abba", "abab"))
 -- ([ab,b,a],[ab,a,b])
 toPartitions :: Pair (String a) -> Solution -> Pair (Partition a)

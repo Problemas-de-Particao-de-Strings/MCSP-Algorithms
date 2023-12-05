@@ -65,8 +65,7 @@ empty = VariableMap Map.empty
 -- VariableMap [Int]
 insert :: MetaVariable v => v -> VariableMap -> VariableMap
 insert val (VariableMap vars) =
-    VariableMap $
-        Map.insert (typeOf val) (toDyn val) vars
+    VariableMap $ Map.insert (typeOf val) (toDyn val) vars
 {-# INLINEABLE insert #-}
 
 -- | Insert a meta-variable into the map.
@@ -90,7 +89,6 @@ vars <: val = insert val vars
 -- >>> import Prelude (Int)
 -- >>> instance MetaVariable Int
 --
--- >>>
 -- >>> lookup @Int empty
 -- Nothing
 --
