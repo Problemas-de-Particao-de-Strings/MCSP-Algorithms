@@ -10,7 +10,8 @@ import Control.Applicative (Applicative (..))
 import Control.Monad (Monad (..))
 import Control.Monad.ST (ST)
 import Control.Monad.ST.Unsafe (unsafeInterleaveST)
-import Data.Function (const, ($))
+import Control.Monad.Trans.Reader (ReaderT (..), mapReaderT, runReaderT)
+import Data.Function (($), (.))
 import Data.Functor (Functor (..), (<$>))
 import Data.Monoid (Monoid (..))
 import Data.Semigroup (Semigroup (..))
@@ -22,43 +23,30 @@ import System.Random.PCG.Class (Generator)
 -- ------------ --
 
 -- | A monad capable of producing random values of @a@.
-newtype Random a = Random (forall g s. Generator g (ST s) => g -> ST s a)
+newtype Random a = Random (forall g s. Generator g (ST s) => ReaderT g (ST s) a)
 
 instance Functor Random where
-    fmap f (Random gena) = Random $ \rng -> do
-        a <- gena rng
-        pure (f a)
+    fmap f (Random gen) = Random (fmap f gen)
     {-# INLINE fmap #-}
     x <$ _ = pure x
     {-# INLINE (<$) #-}
 
 instance Applicative Random where
-    pure x = Random (const (pure x))
+    pure x = Random (pure x)
     {-# INLINE pure #-}
-    liftA2 f (Random gena) (Random genb) = Random $ \rng -> do
-        a <- gena rng
-        b <- genb rng
-        pure (f a b)
+    liftA2 f (Random genA) (Random genB) = Random (liftA2 f genA genB)
     {-# INLINE liftA2 #-}
-    Random genf <*> Random gena = Random $ \rng -> do
-        f <- genf rng
-        a <- gena rng
-        pure (f a)
+    Random genF <*> Random genA = Random (genF <*> genA)
     {-# INLINE (<*>) #-}
-    Random gena *> Random genb = Random $ \rng -> do
-        _ <- gena rng
-        genb rng
+    Random genA *> Random genB = Random (genA *> genB)
     {-# INLINE (*>) #-}
-    Random gena <* Random genb = Random $ \rng -> do
-        a <- gena rng
-        _ <- genb rng
-        pure a
+    Random genA <* Random genB = Random (genA <* genB)
     {-# INLINE (<*) #-}
 
 instance Monad Random where
-    Random gena >>= f = Random $ \rng -> do
-        a <- gena rng
-        evalRandom (f a) rng
+    Random genA >>= f = Random (genA >>= getRandom . f)
+      where
+        getRandom (Random gen) = gen
     {-# INLINE (>>=) #-}
 
 instance Semigroup a => Semigroup (Random a) where
@@ -81,12 +69,12 @@ instance Monoid a => Monoid (Random a) where
 
 -- | Evaluate a random computation with the given initial generator and return the final value.
 evalRandom :: Generator g (ST s) => Random a -> g -> ST s a
-evalRandom (Random gen) = gen
+evalRandom (Random gen) = runReaderT gen
 {-# INLINE evalRandom #-}
 
 -- | Turn a standard RNG function into a `Random` monad.
 liftRandom :: (forall g m. Generator g m => g -> m a) -> Random a
-liftRandom gen = Random $ \rng -> gen rng
+liftRandom gen = Random $ ReaderT gen
 {-# INLINE liftRandom #-}
 
 -- | Allows a `Random` monad to be evaluated lazily.
@@ -94,8 +82,8 @@ liftRandom gen = Random $ \rng -> gen rng
 -- This function should be applied with care, otherwise a strict `Random` monad could still force
 -- early evaluation of this lazy version.
 lazyRandom :: Random a -> Random a
-lazyRandom (Random gen) = Random $ \rng ->
+lazyRandom (Random gen) =
     -- SAFETY: unsafeInterleaveST break the order of ST operations, which shouldn't matter for
     -- random operations (except of changing the output value)
-    unsafeInterleaveST (gen rng)
+    Random $ mapReaderT unsafeInterleaveST gen
 {-# INLINE lazyRandom #-}
