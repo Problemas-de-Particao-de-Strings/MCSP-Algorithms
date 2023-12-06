@@ -99,6 +99,7 @@ internal-libraries:
       - MCSP.TestLib.Heuristics.TH
       - MCSP.TestLib.Random
       - MCSP.TestLib.Sample
+      - MCSP.Text.CSV
       - MCSP.Text.CSV.Parser
       - MCSP.Text.CSV.Writer
     dependencies:
