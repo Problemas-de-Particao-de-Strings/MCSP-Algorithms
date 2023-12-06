@@ -3,13 +3,15 @@ module Main (main) where
 import Prelude hiding (String)
 
 import Control.Monad (forM_, replicateM_)
+import Data.Data (Proxy (..))
 import Data.Word (Word8)
 import System.IO (hFlush, stdout)
 
 import MCSP.Data.String (String)
 import MCSP.System.Random (Random, generate, uniformR)
-import MCSP.TestLib.Heuristics (csvHeader, heuristics, measure, toCsvRow)
+import MCSP.TestLib.Heuristics (Measured, heuristics, measure)
 import MCSP.TestLib.Sample (ShuffleMethod (..), SimpleEnum, StringParameters (..), randomPairWith)
+import MCSP.Text.CSV (headers, row)
 
 randomPair :: SimpleEnum a => Random (String a, String a)
 randomPair = do
@@ -26,11 +28,11 @@ randomPair = do
 
 main :: IO ()
 main = do
-    putLn csvHeader
+    putLn $ headers (Proxy @Measured)
     replicateM_ 10_000 $ do
         pair <- generate randomPair
         forM_ heuristics $ \heuristc -> do
             result <- measure @Word8 heuristc pair
-            putLn $ toCsvRow result
+            putLn $ row result
   where
     putLn line = putStrLn line >> hFlush stdout

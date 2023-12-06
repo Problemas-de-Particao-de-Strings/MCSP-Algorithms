@@ -4,6 +4,7 @@ module Main (main) where
 import Prelude
 
 import Control.Monad (forM_)
+import Data.Data (Proxy (..))
 import Data.Time.Clock.System (SystemTime (..), getSystemTime)
 import Data.Vector qualified as V (Vector)
 import Data.Vector.Generic qualified as G
@@ -21,18 +22,9 @@ import MCSP.Data.Pair (both, ($:))
 import MCSP.System.Path (createDirectory, getCurrentTimestamp, packageRoot, (<.>), (</>))
 import MCSP.System.Random (generate)
 import MCSP.System.Statistics (absolute, cl99, confidenceInterval, sampleCI)
-import MCSP.TestLib.Heuristics (
-    Debug,
-    Measured,
-    NamedHeuristic,
-    blocks,
-    csvHeader,
-    heuristics,
-    measure,
-    score,
-    toCsvRow,
- )
+import MCSP.TestLib.Heuristics (Debug, Measured, NamedHeuristic, blocks, heuristics, measure, score)
 import MCSP.TestLib.Sample (SimpleEnum, StringParameters, benchParams, randomPairWith, repr)
+import MCSP.Text.CSV (headers, row)
 
 -- ---------------- --
 -- Benchmark Limits --
@@ -197,13 +189,14 @@ measuring params heuristic = generate (randomPairWith params) >>= measure heuris
 
 -- | Writes the measured information in CSV format and returns it unchanged.
 writeCsv :: PutStrLn -> Measured -> IO Measured
-writeCsv writeLn result = writeLn (toCsvRow result) >> pure result
+writeCsv writeLn result = writeLn (row result) >> pure result
 
 -- | Run a matrix of benchmarks for each parameter set and heuristic, writing output and results to
 -- the with the input writers.
 report :: PutStrLn -> PutStrLn -> IO ()
-report printLn putRow = putRow csvHeader >> forM_ benchParams (forM_ heuristics . run)
+report printLn putRow = putRow csvHeaders >> forM_ benchParams (forM_ heuristics . run)
   where
+    csvHeaders = headers (Proxy @Measured)
     run params heuristic = do
         printLn $ "benchmarking " ++ repr params ++ "/" ++ fst heuristic
         -- run benchmark and analyse results

@@ -96,7 +96,6 @@ internal-libraries:
       - MCSP.System.TimeIt
       - MCSP.TestLib.Heuristics
       - MCSP.TestLib.Heuristics.Safe
-      - MCSP.TestLib.Heuristics.TH
       - MCSP.TestLib.Random
       - MCSP.TestLib.Sample
       - MCSP.Text.CSV

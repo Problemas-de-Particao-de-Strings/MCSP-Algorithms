@@ -1,19 +1,19 @@
 -- | Tools for testing heuristics.
 module MCSP.TestLib.Heuristics (
+    -- * Standard Heuristics
     Debug,
     Heuristic,
     NamedHeuristic,
     heuristics,
+
+    -- * Measuring Heuristic input and output
     Measured (..),
     measure,
-    csvHeader,
-    toCsvRow,
 ) where
 
 import Prelude hiding (String, lookup)
 
 import Control.DeepSeq (NFData (..))
-import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.String qualified as Text
 import Data.Vector.Generic qualified as Vector (length)
@@ -23,14 +23,15 @@ import Safe.Foldable (maximumBound)
 
 import MCSP.Data.MatchingGraph (edgeSet)
 import MCSP.Data.Meta (lookup, (<::))
-import MCSP.Data.Pair (Pair, both, second)
+import MCSP.Data.Pair (Pair, both)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
 import MCSP.Heuristics (Heuristic, UseSingletons (..), combine, greedy, pso)
 import MCSP.Heuristics.PSOBased (PSOCombine (..), PSOPure (..), getFirstBestIter)
 import MCSP.System.TimeIt (timeIt)
 import MCSP.TestLib.Heuristics.Safe (Debug, checkedDiv, checkedLen, runChecked)
-import MCSP.TestLib.Heuristics.TH (mkNamed)
+import MCSP.Text.CSV (CSVData (..), mkColumn, readColumn, readColumnWith, strColumn)
+import MCSP.Text.ReadP (eof, readP, (<++))
 
 -- | The heuristic with its defined name.
 type NamedHeuristic a = (Text.String, Heuristic a)
@@ -129,51 +130,36 @@ measure (name, heuristic) pair = do
               pair = show pair
             }
 
--- | A list of pairs @(columnName, showColumn)@ used to construct the CSV for `Measured`.
---
--- >>> map fst csvColumns
--- ["size","repeats","singles","heuristic","blocks","score","time","left","right"]
-csvColumns :: [(Text.String, Measured -> Text.String)]
-csvColumns =
-    [ second (showColumn 3 show) $(mkNamed 'size),
-      second (showColumn 2 show) $(mkNamed 'repeats),
-      second (showColumn 2 show) $(mkNamed 'singles),
-      second (showColumn 3 show) $(mkNamed 'maxRepeat),
-      second (showColumn 3 show) $(mkNamed 'edges),
-      second (showColumn 3 (maybe "" show)) $(mkNamed 'psoIter),
-      second (showColumn 8 id) $(mkNamed 'heuristic),
-      second (showColumn 3 show) $(mkNamed 'blocks),
-      second (showColumn 4 (showDP 2)) $(mkNamed 'score),
-      second (showColumn 8 (showDP 3)) $(mkNamed 'time),
-      second (showColumn 0 show) $(mkNamed 'left),
-      second (showColumn 0 show) $(mkNamed 'right),
-      second (showColumn 0 show) $(mkNamed 'pair)
-    ]
-
--- Compose a function that show a value with one that extracts that value from a measurement.
---
--- Also has a parameter for padding the resulting text if it is too short.
---
--- >>> showColumn 10 show id 12
--- "        12"
-showColumn :: Int -> (b -> Text.String) -> (a -> b) -> (a -> Text.String)
-showColumn minWidth showIt = ((padLeft . showIt) .)
-  where
-    padLeft str = replicate (minWidth - length str) ' ' ++ str
-
--- | The CSV header for the columns of `Measured`.
---
--- >>> csvHeader
--- "size,repeats,singles,heuristic,blocks,score,time,left,right"
-csvHeader :: Text.String
-csvHeader = intercalate "," (map fst csvColumns)
-
--- | The CSV row representing the values of a `Measured`.
---
--- >>> result <- measure $(mkNamed 'combine) ("abcd", "cdab")
--- >>> toCsvRow result
--- "  4, 0, 4, combine,  2,0.67,   0.000,\"[ab,cd]\",\"[cd,ab]\""
-toCsvRow :: Measured -> Text.String
-toCsvRow measured = intercalate "," (map getValue csvColumns)
-  where
-    getValue (_, showIt) = showIt measured
+instance CSVData Measured where
+    writer =
+        $$(mkColumn [||size||] 3 [||show||])
+            <> $$(mkColumn [||repeats||] 2 [||show||])
+            <> $$(mkColumn [||singles||] 2 [||show||])
+            <> $$(mkColumn [||maxRepeat||] 3 [||show||])
+            <> $$(mkColumn [||edges||] 3 [||show||])
+            <> $$(mkColumn [||psoIter||] 3 [||maybe "" show||])
+            <> $$(mkColumn [||heuristic||] 8 [||id||])
+            <> $$(mkColumn [||blocks||] 3 [||show||])
+            <> $$(mkColumn [||score||] 4 [||showDP 2||])
+            <> $$(mkColumn [||time||] 8 [||showDP 3||])
+            <> $$(mkColumn [||left||] 0 [||id||])
+            <> $$(mkColumn [||right||] 0 [||id||])
+            <> $$(mkColumn [||pair||] 0 [||id||])
+    parser = do
+        heuristic <- strColumn "heuristic"
+        blocks <- readColumn "blocks"
+        size <- readColumn "size"
+        score <- readColumn "score"
+        time <- readColumn "time"
+        singles <- readColumn "singles"
+        repeats <- readColumn "repeats"
+        maxRepeat <- readColumn "maxRepeat"
+        edges <- readColumn "edges"
+        psoIter <- readColumnWith "psoIter" (readNothing <++ readJust)
+        left <- strColumn "left"
+        right <- strColumn "right"
+        pair <- strColumn "pair"
+        pure Measured {..}
+      where
+        readNothing = eof >> pure Nothing
+        readJust = Just <$> readP
