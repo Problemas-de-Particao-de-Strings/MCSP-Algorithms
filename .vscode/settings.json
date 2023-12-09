@@ -25,6 +25,7 @@
     ],
     "haskell.hlint.logLevel": "info",
     "haskell.hlint.run": "onType",
+    "haskell.plugin.eval.config.exception": true,
     "haskell.toolchain": {
         "cabal": "latest",
         "fourmolu": "latest",
