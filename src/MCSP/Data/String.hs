@@ -156,7 +156,7 @@ import Control.Arrow ((&&&))
 import Control.DeepSeq (NFData (..), NFData1 (..))
 import Control.Monad (Monad)
 import Control.Monad.ST (ST)
-import Data.Bool (Bool (False, True), otherwise, (&&))
+import Data.Bool (Bool (..), otherwise, (&&))
 import Data.Char (Char)
 import Data.Data (Typeable)
 import Data.Either (Either)
@@ -164,8 +164,8 @@ import Data.Eq (Eq (..))
 import Data.Foldable qualified as Foldable (Foldable (..))
 import Data.Function (id, (.))
 import Data.Int (Int)
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.Maybe (Maybe (Just, Nothing))
+import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (Maybe (..))
 import Data.Monoid (Monoid (..))
 import Data.Ord (Ord (..), Ordering)
 import Data.Semigroup (Semigroup (..))
@@ -175,8 +175,8 @@ import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
 import GHC.Num (Num, (-))
-import Text.Read (Read (readListPrec, readPrec), readListPrecDefault)
-import Text.Show (Show (showsPrec))
+import Text.Read (Read (..), readListPrecDefault)
+import Text.Show (Show (..))
 
 import Data.Vector.Generic qualified as Generic
 import Data.Vector.Generic.Mutable qualified as Mutable
@@ -956,7 +956,7 @@ s@Unboxed // idx = s Generic.// idx
 -- >>> update "test" [2,0,2] "xyz"
 -- yezt
 update :: String a -> [Int] -> String a -> String a
-update s@Unboxed idx = Generic.update_ s (fromList idx)
+update s@Unboxed idx = Generic.update_ s (Generic.fromList idx)
 {-# INLINE update #-}
 
 -- ------------- --
@@ -978,7 +978,7 @@ accum f s@Unboxed = Generic.accum f s
 -- >>> accumulate @Int (+) [5,9,2] [2,1,0,1] [4,6,3,7]
 -- 8 22 6
 accumulate :: (a -> b -> a) -> String a -> [Int] -> String b -> String a
-accumulate f s@Unboxed idx v@Unboxed = Generic.accumulate_ f s (fromList idx) v
+accumulate f s@Unboxed idx v@Unboxed = Generic.accumulate_ f s (Generic.fromList idx) v
 {-# INLINE accumulate #-}
 
 -- ------------ --

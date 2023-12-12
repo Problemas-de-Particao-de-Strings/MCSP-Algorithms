@@ -27,7 +27,7 @@ import Data.Ord (Ord)
 
 import MCSP.Data.Pair (dupe)
 import MCSP.Data.RadixTree.Map qualified as Map
-import MCSP.Data.String (String (..))
+import MCSP.Data.String (String)
 
 -- | A set of `String`s represented by a [radix tree](https://en.wikipedia.org/wiki/Radix_tree).
 --

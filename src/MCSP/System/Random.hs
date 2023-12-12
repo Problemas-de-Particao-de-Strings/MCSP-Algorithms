@@ -38,7 +38,7 @@ import Data.Foldable (length, sum)
 import Data.Function (($), (.))
 import Data.Int (Int)
 import Data.List (map)
-import Data.List.NonEmpty (NonEmpty ((:|)), head, nonEmpty, (<|))
+import Data.List.NonEmpty (NonEmpty (..), head, nonEmpty, (<|))
 import Data.List.NonEmpty.Extra ((!?))
 import Data.Maybe (Maybe (..), fromMaybe)
 import Data.Tuple (fst, snd)
@@ -157,10 +157,11 @@ choice values = do
 -- ([390451572],["hi","hello"])
 tabulate :: NonEmpty (Double, a) -> (Unboxed.Vector Word32, Vector a)
 tabulate (toList -> values) =
-    ( Vector.init (fromList (map (toW32 . fst) values)),
-      fromList (map snd values)
+    ( Vector.init (vectorOf (toW32 . fst) values),
+      vectorOf snd values
     )
   where
+    vectorOf f = fromList . map f
     maxWeight = sum (map fst values)
     maxW32 = fromIntegral @Word32 maxBound
     toW32 x = truncate (x * maxW32 / maxWeight)

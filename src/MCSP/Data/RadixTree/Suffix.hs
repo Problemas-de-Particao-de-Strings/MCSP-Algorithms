@@ -17,7 +17,7 @@ import Safe.Foldable (maximumMay)
 import Text.Show (Show)
 
 import MCSP.Data.RadixTree.Map qualified as Map
-import MCSP.Data.String (String (..), length)
+import MCSP.Data.String (String, length)
 import MCSP.Data.String.Extra.Radix (stripSuffix, suffixes)
 
 -- --------------- --

@@ -7,7 +7,7 @@ module MCSP.QuickCheck.Modifiers (
 ) where
 
 import MCSP.QuickCheck.Modifiers.IsList (ViaList (..))
-import MCSP.QuickCheck.Modifiers.Pair (ShuffledPair (ShuffledPair, getPair))
+import MCSP.QuickCheck.Modifiers.Pair (ShuffledPair (..))
 import MCSP.QuickCheck.Modifiers.RadixTree (ArbitraryTree (..))
-import MCSP.QuickCheck.Modifiers.Random (Randomized (Randomized, getRandom), (=~=))
-import MCSP.QuickCheck.Modifiers.String (BalancedStrings (BalancedStrings, getBalancedStrings))
+import MCSP.QuickCheck.Modifiers.Random (Randomized (..), (=~=))
+import MCSP.QuickCheck.Modifiers.String (BalancedStrings (..))

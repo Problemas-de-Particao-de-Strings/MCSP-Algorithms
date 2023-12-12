@@ -33,7 +33,7 @@ import Data.IntervalSet qualified as IntervalSet (null, singleton)
 import Data.List (concatMap, map, replicate, takeWhile, (++))
 import Data.List.NonEmpty (NonEmpty (..), unfoldr)
 import Data.Maybe (Maybe (..))
-import Data.Monoid (Monoid (..), mappend, mempty)
+import Data.Monoid (mappend, mempty)
 import Data.Ord (Ord (..))
 import Data.Vector.Generic qualified as Vector (foldl', fromList, fromListN, length, map, snoc)
 import Data.Vector.Unboxed (Vector, (!))
@@ -42,7 +42,7 @@ import GHC.Real (toInteger)
 import Text.Show (Show)
 
 import MCSP.Data.Pair (Pair, both, cartesian, left, liftP, right, ($:), (&&&))
-import MCSP.Data.String (String (..), slice, unsafeSlice)
+import MCSP.Data.String (String, slice, unsafeSlice)
 import MCSP.Data.String.Extra (Partition, chars)
 
 -- --------------------- --

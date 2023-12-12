@@ -22,8 +22,8 @@ module MCSP.Data.Meta (
     runMeta,
 ) where
 
-import Control.Applicative (Applicative (..))
-import Control.Monad (Monad (..))
+import Control.Applicative (Applicative)
+import Control.Monad (Monad, (>>), (>>=))
 import Control.Monad.Trans.State.Strict (State, evalState, gets, modify, runState, state)
 import Data.Dynamic (Dynamic, fromDynamic, toDyn)
 import Data.Function (($), (.))

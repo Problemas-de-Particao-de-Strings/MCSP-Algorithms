@@ -49,7 +49,7 @@ import Data.Function (id, on, ($), (.))
 import Data.Functor ((<$>))
 import Data.Int (Int)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Ord (Ord (..), Ordering (..))
+import Data.Ord (Ord (..), Ordering)
 import Data.Vector.Algorithms.Merge qualified as Vector (sort, sortBy)
 import Data.Vector.Generic qualified as Vector (maximumOn, sum)
 import Data.Vector.Unboxed (
@@ -182,6 +182,7 @@ sort = modify Vector.sort
 
 -- | Sorts a vector using a custom comparison.
 --
+-- >>> import Data.Ord (Ordering (..))
 -- >>> sortBy (\x y -> if x * x < y * y then LT else GT) [-3, -1, 2]
 -- [-1.0,2.0,-3.0]
 sortBy :: Unbox a => (a -> a -> Ordering) -> Vector a -> Vector a

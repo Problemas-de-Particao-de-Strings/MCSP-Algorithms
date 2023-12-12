@@ -11,7 +11,7 @@ import Data.Set (Set)
 
 import MCSP.Data.Meta (Meta, MetaVariable, getVarOrDefault)
 import MCSP.Data.Pair (Pair, both, first, second)
-import MCSP.Data.String (String (Unboxed), Unbox, concat, (++))
+import MCSP.Data.String (String (..), Unbox, concat, (++))
 import MCSP.Data.String.Extra (Partition, chars, hasOneOf, singletons)
 
 -- | Applies a function until the result converges.

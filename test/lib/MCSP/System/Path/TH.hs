@@ -16,7 +16,7 @@ import System.Directory (makeAbsolute)
 import System.IO (FilePath)
 
 import Language.Haskell.TH (CodeQ, bindCode, litE, loc_filename, location, stringL)
-import Language.Haskell.TH.Syntax (Lift (liftTyped))
+import Language.Haskell.TH.Syntax (liftTyped)
 
 -- | Path to the file that evaluates this template.
 --
