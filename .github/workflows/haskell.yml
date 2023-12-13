@@ -224,7 +224,7 @@ jobs:
     name: Benchmarks
     needs: build
     runs-on: ubuntu-latest
-    if: "! github.event.pull_request.draft"
+    if: github.ref == 'refs/heads/main'
 
     env:
       BENCHMARKS_ARTIFACT: benchmarks
