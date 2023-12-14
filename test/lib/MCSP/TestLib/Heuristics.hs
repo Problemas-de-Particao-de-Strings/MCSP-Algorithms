@@ -12,8 +12,7 @@ module MCSP.TestLib.Heuristics (
 
 import Prelude hiding (String, lookup)
 
-import Control.DeepSeq (NFData)
-import Data.IORef (newIORef, readIORef, writeIORef)
+import Control.DeepSeq (NFData (..))
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.String qualified as Text
@@ -23,7 +22,7 @@ import Numeric.Extra (showDP)
 import Safe.Foldable (maximumBound)
 
 import MCSP.Data.MatchingGraph (edgeSet)
-import MCSP.Data.Meta (empty, lookup, (<::))
+import MCSP.Data.Meta (lookup, (<::))
 import MCSP.Data.Pair (Pair, both, second)
 import MCSP.Data.String (String)
 import MCSP.Data.String.Extra (occurrences, repeated, singletons)
@@ -80,25 +79,28 @@ data Measured = Measured
 
 instance NFData Measured
 
+-- | A special type that "implements" `NFData`, but doesn't force any kind of evaluation.
+newtype Lazy a = Lazy a
+
+instance NFData (Lazy a) where
+    rnf _ = ()
+
 -- | Run the heuristic and returns information about the solution.
 --
 -- >>> import MCSP.TestLib.Heuristics.TH (mkNamed)
 -- >>> result <- measure $(mkNamed 'combine) ("abcd", "cdab")
 -- >>> result { time = -1 }
--- Measured {heuristic = "combine", size = 4, blocks = 2, score = 0.6666666666666666, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, left = "[ab,cd]", right = "[cd,ab]"}
+-- Measured {heuristic = "combine", size = 4, blocks = 2, score = 0.6666666666666666, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, psoIter = Nothing, left = "[ab,cd]", right = "[cd,ab]", pair = "(abcd,cdab)"}
 --
 -- >>> import MCSP.Heuristics (trivial)
 -- >>> result <- measure $(mkNamed 'trivial) ("abcd", "cdab")
 -- >>> result { time = -1 }
--- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, left = "[a,b,c,d]", right = "[c,d,a,b]"}
+-- Measured {heuristic = "trivial", size = 4, blocks = 4, score = 0.0, time = -1.0, singles = 4, repeats = 0, maxRepeat = 1, edges = 2, psoIter = Nothing, left = "[a,b,c,d]", right = "[c,d,a,b]", pair = "(abcd,cdab)"}
 measure :: Debug a => NamedHeuristic a -> Pair (String a) -> IO Measured
 measure (name, heuristic) pair = do
-    metaVars <- newIORef empty
-    (timePs, partitions) <- timeIt pair $ \strs -> do
+    (timePs, (partitions, Lazy vars)) <- timeIt pair $ \strs -> do
         (solution, vars) <- runChecked heuristic strs
-        writeIORef metaVars vars
-        pure solution
-    vars <- readIORef metaVars
+        pure (solution, Lazy vars)
 
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions
