@@ -9,7 +9,7 @@ import Prelude hiding (String, concat, (++))
 
 import Data.Set (Set)
 
-import MCSP.Data.Meta (Meta, MetaVariable, getVarOrDefault)
+import MCSP.Data.Meta (Meta, MetaInputVariable (..), getOrDefine)
 import MCSP.Data.Pair (Pair, both, first, second)
 import MCSP.Data.String (String (..), Unbox, concat, (++))
 import MCSP.Data.String.Extra (Partition, chars, hasOneOf, singletons)
@@ -109,7 +109,8 @@ combineWithSingletons (x, y)
 newtype UseSingletons = UseSingletons Bool
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable UseSingletons
+instance MetaInputVariable UseSingletons where
+    getVar = getOrDefine (UseSingletons True)
 
 -- | MSCP combine heuristic.
 --
@@ -120,7 +121,7 @@ combine strs@(Unboxed, _) = combineP (chars `both` strs)
 -- | Lifted MSCP combine heuristic.
 combineP :: (Unbox a, Ord a) => Pair (Partition a) -> Meta (Pair (Partition a))
 combineP parts = do
-    UseSingletons withSingletons <- getVarOrDefault (UseSingletons True)
+    UseSingletons withSingletons <- getVar
     pure $
         if withSingletons
             then combineWithSingletons parts

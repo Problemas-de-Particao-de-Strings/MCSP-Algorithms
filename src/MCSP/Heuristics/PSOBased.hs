@@ -25,7 +25,6 @@ import Data.Int (Int)
 import Data.List qualified as List (take)
 import Data.List.Extra (sumOn')
 import Data.List.NonEmpty (NonEmpty (..))
-import Data.Maybe (fromMaybe)
 import Data.Ord (Ord (..))
 import Data.Semigroup (Last (..), Min (..))
 import Data.Vector.Unboxed (Vector, length, map)
@@ -63,7 +62,16 @@ import MCSP.Data.MatchingGraph (
     solution,
     toPartitions,
  )
-import MCSP.Data.Meta (Meta, MetaVariable, evalMeta, getVar, getVarOrDefault, setVar, (<::))
+import MCSP.Data.Meta (
+    Meta,
+    MetaInputVariable (..),
+    MetaOutputVariable (..),
+    evalMeta,
+    getOrDefine,
+    getVar,
+    setVar,
+    (<::),
+ )
 import MCSP.Data.Pair (Pair)
 import MCSP.Data.String (String (Unboxed))
 import MCSP.Data.String.Extra (Partition)
@@ -78,19 +86,24 @@ import MCSP.System.Random (Random, Seed, generateWith)
 newtype PSOIterations = PSOIterations Int
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable PSOIterations
+instance MetaInputVariable PSOIterations where
+    getVar = getOrDefine (PSOIterations 100)
 
 -- | The number of particles used at each iteration of the PSO algorithm.
 newtype PSOParticles = PSOParticles Int
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable PSOParticles
+instance MetaInputVariable PSOParticles where
+    getVar = getOrDefine (PSOParticles 200)
 
 -- | Initial seed used for randomized operation in the PSO algorithm.
 newtype PSOSeed = PSOSeed Seed
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable PSOSeed
+instance MetaInputVariable PSOSeed where
+    getVar = getOrDefine (PSOSeed defaultSeed)
+      where
+        defaultSeed = (0x7f166a5f52178da7, 0xe190ca41e26454c3)
 
 -- | Output for the first iteration that reached the best solution in PSO.
 newtype PSOFirstBestIter = PSOFirstBestIter
@@ -98,19 +111,25 @@ newtype PSOFirstBestIter = PSOFirstBestIter
     }
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable PSOFirstBestIter
+instance MetaOutputVariable PSOFirstBestIter
 
 -- | Run PSO only, without using other heuristics.
 newtype PSOPure = PSOPure Bool
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable PSOPure
+instance MetaInputVariable PSOPure where
+    getVar = getOrDefine (PSOPure False)
 
 -- | Run combine after on the partitions represented by the edge list.
 newtype PSOCombine = PSOCombine Bool
     deriving newtype (Eq, Ord, Show)
 
-instance MetaVariable PSOCombine
+instance MetaInputVariable PSOCombine where
+    getVar = do
+        PSOPure usePure <- getVar
+        if usePure
+            then pure (PSOCombine False)
+            else getOrDefine (PSOCombine False)
 
 -- -------------------- --
 -- Edge List Operations --
@@ -186,13 +205,10 @@ objective (PSOCombine False) _ = mergeness . solution
 -- | Create an iterated PSO swarm for the MCSP problem.
 mcspSwarm :: Ord a => Pair (String a) -> Meta (Random (NonEmpty (Swarm Edge)))
 mcspSwarm strs@(edgeSet -> edges) = do
-    PSOIterations iterations <- getVarOrDefault (PSOIterations 100)
-    PSOParticles particles <- getVarOrDefault (PSOParticles 200)
-    usePure <- getVarOrDefault (PSOPure False)
-    runCombine <-
-        if usePure == PSOPure False
-            then getVarOrDefault (PSOCombine False)
-            else pure (PSOCombine False)
+    PSOIterations iterations <- getVar
+    PSOParticles particles <- getVar
+    usePure <- getVar
+    runCombine <- getVar
 
     let ?eval = objective runCombine strs
     let ?values = edges
@@ -206,9 +222,9 @@ mcspSwarm strs@(edgeSet -> edges) = do
 -- | Extract information about the PSO execution.
 evalPso :: Ord a => Pair (String a) -> NonEmpty (Swarm Edge) -> Meta (Pair (Partition a), Int)
 evalPso strs swarms = do
-    runCombine <- fromMaybe (PSOCombine False) <$> getVar
+    PSOCombine runCombine <- getVar
     let partitions =
-            if runCombine == PSOCombine True
+            if runCombine
                 then combineEdges strs $ sortedValues guide
                 else toPartitions strs $ solution $ sortedValues guide
     pure (partitions, firstBestIter)
@@ -224,12 +240,10 @@ evalPso strs swarms = do
 -- | PSO heuristic.
 pso :: Ord a => Pair (String a) -> Meta (Pair (Partition a))
 pso strs = do
-    PSOSeed seed <- getVarOrDefault (PSOSeed defaultSeed)
+    PSOSeed seed <- getVar
 
     swarms <- generateWith seed <$> mcspSwarm strs
     (partitions, firstBestIter) <- evalPso strs swarms
 
     setVar (PSOFirstBestIter firstBestIter)
     pure partitions
-  where
-    defaultSeed = (0x7f166a5f52178da7, 0xe190ca41e26454c3)
