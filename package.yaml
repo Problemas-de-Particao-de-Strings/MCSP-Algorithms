@@ -103,6 +103,7 @@ executables:
     dependencies:
       - mcsp-algorithms
       - mcsp-test-lib
+      - optparse-applicative >= 0.18.1.0 && < 1
     ghc-options: &binary-ghc-options
       - -threaded
       - -feager-blackholing
