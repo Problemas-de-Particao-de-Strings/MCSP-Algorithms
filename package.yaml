@@ -72,19 +72,6 @@ dependencies:
   - vector-algorithms >= 0.9.0.1 && < 1
   - vector-th-unbox >= 0.2.2 && < 1
 
-executables:
-  playground:
-    main: Main.hs
-    source-dirs: app
-    dependencies:
-      - mcsp-algorithms
-      - mcsp-test-lib
-    ghc-options: &binary-ghc-options
-      - -threaded
-      - -feager-blackholing
-      - -rtsopts
-      - -with-rtsopts=-N
-
 internal-libraries:
   mcsp-test-lib:
     source-dirs: test/lib
@@ -108,6 +95,19 @@ internal-libraries:
       - process >= 1.6.17 && < 2
       - statistics >= 0.16.2.1 && < 1
       - time >= 1.12.2 && < 2
+
+executables:
+  gen-db:
+    main: Main.hs
+    source-dirs: app/gen-db
+    dependencies:
+      - mcsp-algorithms
+      - mcsp-test-lib
+    ghc-options: &binary-ghc-options
+      - -threaded
+      - -feager-blackholing
+      - -rtsopts
+      - -with-rtsopts=-N
 
 tests:
   spec:
