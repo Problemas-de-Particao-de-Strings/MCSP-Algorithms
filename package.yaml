@@ -109,6 +109,14 @@ executables:
       - -feager-blackholing
       - -rtsopts
       - -with-rtsopts=-N
+  run-db:
+    main: Main.hs
+    source-dirs: app/run-db
+    dependencies:
+      - mcsp-algorithms
+      - mcsp-test-lib
+      - optparse-applicative >= 0.18.1.0 && < 1
+    ghc-options: *binary-ghc-options
 
 tests:
   spec:
