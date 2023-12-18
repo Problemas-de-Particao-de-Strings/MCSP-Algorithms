@@ -2,11 +2,13 @@ module Main (main) where
 
 import Control.Applicative (pure, (<$>), (<**>))
 import Control.Monad (forM_, replicateM, when, (>>), (>>=))
+import Data.Bool (Bool)
 import Data.Either (Either (..))
+import Data.Either.Extra (mapLeft)
 import Data.Foldable (length)
-import Data.Function (($), (.))
-import Data.List (map, sortOn)
-import Data.List.Extra (splitOn, trim)
+import Data.Function (id, ($), (.))
+import Data.List (map, sortOn, (++))
+import Data.List.Extra qualified as List (splitOn, trim)
 import Data.Maybe (Maybe (..), fromMaybe, maybe)
 import Data.Monoid ((<>))
 import Data.Ord (Ord (..))
@@ -33,6 +35,7 @@ import Options.Applicative (
     short,
     showDefault,
     showDefaultWith,
+    switch,
     value,
  )
 import System.IO (IO, hFlush, putStrLn, stdout)
@@ -42,8 +45,9 @@ import Text.Show (Show (..))
 
 import MCSP.Data.Pair (first, ($:))
 import MCSP.Data.String (String, replicate)
-import MCSP.System.Random (Random, generate, uniformR)
+import MCSP.System.Random (Random, Seed, generate, generateWith, readSeedP, uniformR)
 import MCSP.TestLib.Sample (ShuffleMethod (..), StringParameters (..), randomPairWith)
+import MCSP.Text.ReadP (readEitherP)
 
 type Parser a = Text.String -> Either Text.String a
 
@@ -55,7 +59,7 @@ type LRange a = (Maybe a, a)
 
 -- | Read a range "x <= y" or an unbounded range "<= y".
 readLRange :: Ord a => Parser a -> Parser (LRange a)
-readLRange read str = case map trim $ splitOn "<=" str of
+readLRange read str = case map List.trim $ List.splitOn "<=" str of
     -- single value "x", represents the range "x <= x"
     [strVal]
         | Right val <- read strVal ->
@@ -97,11 +101,17 @@ readWord8 str = do
   where
     maxValue = fromIntegral (maxBound @Word8)
 
+readSeed :: Parser Seed
+readSeed = mapLeft ("invalid seed: " ++) . readEitherP readSeedP
+
 data Arguments = Arguments
     { count :: Word,
       replicated :: Range Word8,
       singletons :: Range Word8,
-      strSize :: LRange Word8
+      strSize :: LRange Word8,
+      seed :: Maybe Seed,
+      intergenic :: Bool,
+      unsorted :: Bool
     }
     deriving stock (Show, Read)
 
@@ -110,7 +120,7 @@ args =
     info (options <**> helper) $
         fullDesc
             <> header "gen-db - generate string pairs for the MCSP problem"
-            <> progDesc "Generate multiple pairs with custom parameters"
+            <> progDesc "Generate multiple pairs with custom parameters."
   where
     options = do
         count <-
@@ -145,6 +155,20 @@ args =
                     <> metavar "\"INT <= INT\""
                     <> value (Nothing, 80)
                     <> showDefaultWith showLRange
+        seed <-
+            option (Just <$> eitherReader readSeed) $
+                help "Seed used to generate strings"
+                    <> long "seed"
+                    <> metavar "\"HEX HEX\""
+                    <> value Nothing
+        intergenic <-
+            switch $
+                help "Generate intergenic regions (for the FPT algorithm)"
+                    <> long "intergenic"
+        unsorted <-
+            switch $
+                help "Print strings as they are generated, instead of sorting by size"
+                    <> long "unsorted"
         pure Arguments {..}
 
 randomPair :: Arguments -> Random (String Word8, String Word8)
@@ -164,16 +188,23 @@ randomPair Arguments {..} = do
 
 run :: Arguments -> IO ()
 run arguments@Arguments {..} = do
-    strs <- sortOn strSizeOf <$> replicateM (fromIntegral count) (generate $ randomPair arguments)
+    strs <- sort <$> gen pairs
     forM_ strs $ \(s1, s2) -> do
         let n = length s1 `max` length s2
         putLn $ show s1
-        putLn $ show $ replicate @Word8 (n + 1) 0
+        when intergenic $
+            putLn (show $ replicate @Word8 (n + 1) 0)
         putLn $ show s2
-        putLn $ show $ replicate @Word8 (n + 3) 0
+        when intergenic $
+            putLn (show $ replicate @Word8 (n + 3) 0)
   where
-    strSizeOf (s1, s2) = length s1 + length s2
     putLn line = putStrLn line >> hFlush stdout
+    strSizeOf (s1, s2) = length s1 + length s2
+    sort = if unsorted then id else sortOn strSizeOf
+    pairs = replicateM (fromIntegral count) $ randomPair arguments
+    gen = case seed of
+        Just s -> pure . generateWith s
+        Nothing -> generate
 
 main :: IO ()
 main = execParser args >>= run
