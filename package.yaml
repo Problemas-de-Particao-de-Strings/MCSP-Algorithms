@@ -53,6 +53,7 @@ library:
     - MCSP.Heuristics
     - MCSP.Heuristics.PSOBased
     - MCSP.System.Random
+    - MCSP.Text.ReadP
 
 dependencies:
   - base >= 4.18.1 && < 5
