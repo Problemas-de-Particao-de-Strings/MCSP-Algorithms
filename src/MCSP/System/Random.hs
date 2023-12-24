@@ -10,7 +10,9 @@ module MCSP.System.Random (
 
     -- * Evaluation
     Seed,
+    readSeedP,
     readSeed,
+    showSeedS,
     showSeed,
     generateFastWith,
     generateWith,
@@ -63,7 +65,9 @@ import MCSP.System.Random.Generate (
     generateWith,
     randomSeed,
     readSeed,
+    readSeedP,
     showSeed,
+    showSeedS,
  )
 import MCSP.System.Random.Monad (
     Random,

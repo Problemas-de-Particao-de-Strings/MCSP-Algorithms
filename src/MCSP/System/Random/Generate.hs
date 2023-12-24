@@ -11,7 +11,9 @@ module MCSP.System.Random.Generate (
     -- * Standard Seed
     Seed,
     randomSeed,
+    showSeedS,
     showSeed,
+    readSeedP,
     readSeed,
 ) where
 
@@ -20,19 +22,21 @@ import Control.Exception.Extra (errorWithoutStackTrace)
 import Control.Monad ((>>=))
 import Control.Monad.ST (runST)
 import Data.Bits (complement, xor)
-import Data.Function ((.))
+import Data.Either (either)
+import Data.Function (id, (.))
 import Data.String qualified as Text (String)
 import Data.Word (Word64, bitReverse64)
-import Numeric (readHex, showHex)
+import Numeric (showHex)
 import System.IO (IO)
 import System.Random.PCG.Class (sysRandom)
 import System.Random.PCG.Fast.Pure qualified (initialize)
 import System.Random.PCG.Pure qualified (initialize)
-import Text.ParserCombinators.ReadP (ReadP, readP_to_S, readS_to_P, skipSpaces)
+import Text.Read.Lex (readHexP)
 import Text.Show (ShowS, showChar)
 
 import MCSP.Data.Pair (Pair, dupe, zipM)
 import MCSP.System.Random.Monad (Random, evalRandom)
+import MCSP.Text.ReadP (ReadP, readEitherP, trim)
 
 -- ----------------- --
 -- Random Generation --
@@ -138,9 +142,8 @@ showSeed s = showSeedS s ""
 -- | Parser combinator for reading seeds.
 readSeedP :: ReadP Seed
 readSeedP = do
-    l <- readS_to_P readHex
-    skipSpaces
-    r <- readS_to_P readHex
+    l <- trim readHexP
+    r <- trim readHexP
     pure (l, r)
 {-# INLINE readSeedP #-}
 
@@ -154,10 +157,7 @@ readSeedP = do
 -- >>> readSeed (showSeed (5, 10))
 -- (5,10)
 --
--- >>> readSeed "75f9fea579c63117 8a3a15e4c0a7029f"
+-- >>> readSeed " 75f9fea579c63117 8a3a15e4c0a7029f "
 -- (8501105758304612631,9960297598112170655)
 readSeed :: Text.String -> Seed
-readSeed str = case readP_to_S readSeedP str of
-    [(seed, "")] -> seed
-    [] -> errorWithoutStackTrace "readSeed: no parse"
-    _ -> errorWithoutStackTrace "readSeed: ambiguous parse"
+readSeed = either errorWithoutStackTrace id . readEitherP readSeedP
