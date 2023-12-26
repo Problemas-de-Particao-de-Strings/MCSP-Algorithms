@@ -2,296 +2,192 @@
 
 -- | Textual conversion for strings.
 module MCSP.Data.String.Text (
+    -- * Specializable `Show`.
     ShowString (..),
+    showChars,
+    showCharsWith,
+    showWords,
+    showWordsWith,
+
+    -- * Specializable `Read`.
     ReadString (..),
-    readCharsPrec,
+    readChars,
+    readCharsWith,
+    readWords,
+    readWordsWith,
 ) where
 
-import Control.Applicative (pure, (*>))
-import Control.Monad ((>>=))
-import Control.Monad.Extra (concatForM)
-import Data.Bool (not, (&&))
-import Data.Char (Char, isSpace)
-import Data.Eq ((/=))
-import Data.Function (id, ($), (.))
-import Data.Int (Int, Int16, Int32, Int64, Int8)
-import Data.List.Extra (firstJust, snoc)
-import Data.Maybe (Maybe (Just, Nothing), maybe)
+import Control.Monad (Functor (fmap), mapM, (>>=))
+import Data.Char (Char)
+import Data.Foldable (Foldable, foldr, toList)
+import Data.Function (flip, id, ($), (.))
+import Data.List (intersperse, singleton)
+import Data.Maybe (Maybe (..))
 import Data.String (String)
-import Data.Vector.Generic (Vector, foldr', uncons)
-import Data.Word (Word, Word16, Word32, Word64, Word8)
-import GHC.Integer (Integer)
-import Language.Haskell.TH (conT, withDecsDoc)
-import Text.ParserCombinators.ReadP (ReadP, gather, pfail, readP_to_S, satisfy, (<++))
-import Text.ParserCombinators.ReadPrec (ReadPrec, lift, minPrec, readPrec_to_P)
-import Text.Read (Read (readPrec))
-import Text.Show (Show, ShowS, showChar, shows)
+import Text.ParserCombinators.ReadP (ReadP)
+import Text.Read (Read (..))
+import Text.Show (Show (..), ShowS, showChar, shows)
+
+import MCSP.Text.ReadP (maybeP, readMaybeP, readP, word, words)
 
 -- ---------------------- --
 -- Textual Output classes --
 -- ---------------------- --
 
--- | Specializable `Strings.Data.String.String` to text conversion.
+-- | Shows characters of a string separated by spaces.
 --
--- Used for showing a string of the given character @a@.
-class ShowString a where
-    {-# MINIMAL showStr #-}
-
-    -- | Shows characters of a `Strings.Data.String.String`.
-    --
-    -- `Show` @(String a)@ uses this specialized implementation.
-    showStr :: Vector v a => v a -> ShowS
-
--- | Shows all characters without quoting or separation.
+-- >>> import Data.Int
+-- >>> import Numeric
 --
--- >>> import Data.Vector (fromList)
--- >>> showMany shows (fromList @Int [1, 2, 12]) ""
--- "1212"
-showMany :: Vector v a => (a -> ShowS) -> v a -> ShowS
-showMany showItem str text = foldr' showItem text str
-
--- | The default, shows all characters without separators (@ACGT@).
-instance {-# OVERLAPPABLE #-} Show a => ShowString a where
-    showStr = showMany shows
-
--- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes
--- (@abcd@).
-instance ShowString Char where
-    showStr = showMany showChar
-
--- | Shows characters of a string separated by @sep@.
---
--- >>> import Data.Vector (fromList)
--- >>> import Text.Show (showString)
--- >>> showSeparated (showString ", ") shows (fromList @Int [1, 2, 12]) ""
--- "1, 2, 12"
-showSeparated :: Vector v a => ShowS -> (a -> ShowS) -> v a -> ShowS
-showSeparated showSep showItem = maybe showEmpty showWithSep . uncons
-  where
-    showEmpty = id
-    showWithSep (ch, str) = showItem ch . showMany showItemThenSep str
-    showItemThenSep ch = showSep . showItem ch
+-- >>> showWordsWith @[] @Int showHex [1, 2, 12] ""
+-- "1 2 c"
+showWordsWith :: Foldable t => (a -> ShowS) -> t a -> ShowS
+showWordsWith showItem =
+    foldr (.) id
+        . intersperse (showChar ' ')
+        . fmap showItem
+        . toList
 
 -- | Shows characters of a string separated by spaces.
 --
 -- This implementation uses the default converter for @Show a@.
 --
--- >>> import Data.Vector (fromList)
--- >>> showSpaced (fromList @Int [1, 2, 12]) ""
+-- >>> import Data.Int
+--
+-- >>> showWords @[] @Int [1, 2, 12] ""
 -- "1 2 12"
-showSpaced :: (Vector v a, Show a) => v a -> ShowS
-showSpaced = showSeparated (showChar ' ') shows
+showWords :: (Foldable f, Show a) => f a -> ShowS
+showWords = showWordsWith shows
 
--- Implementation of string as space-separated values for multiple integer types.
-concatForM
-    [ ''Integer,
-      ''Int,
-      ''Int8,
-      ''Int16,
-      ''Int32,
-      ''Int64,
-      ''Word,
-      ''Word8,
-      ''Word16,
-      ''Word32,
-      ''Word64
-    ]
-    ( \name ->
-        withDecsDoc
-            "`Strings.Data.String.String` represented by a sequence of space separated integers (@1 2 3@)."
-            [d|
-                instance ShowString $(conT name) where
-                    showStr = showSpaced
-                |]
-    )
+-- | Shows all elements without quoting or separation.
+--
+-- >>> import Data.Int
+-- >>> import Data.List
+-- >>> import Numeric
+-- >>> data DNA = A | C | G | T deriving (Show, Read)
+--
+-- >>> showCharsWith (\n -> head $ showHex n "") [1, 2, 12] ""
+-- "12c"
+--
+-- >>> showCharsWith @[] @DNA (head . show) [A, C, C, A] ""
+-- "ACCA"
+showCharsWith :: Foldable f => (a -> Char) -> f a -> ShowS
+showCharsWith showItem = flip $ foldr (showChar . showItem)
+
+-- | Shows all elements without quoting or separation.
+--
+-- This implementation uses the default converter for @Show a@.
+--
+-- >>> import Data.Int
+-- >>> import Data.List
+-- >>> data DNA = A | C | G | T deriving (Show, Read)
+--
+-- >>> showChars @[] @Int [1, 2, 12, 3, 56] ""
+-- "12\65533\&3\65533"
+--
+-- >>> showChars @[] @DNA [A, C, C, A] ""
+-- "ACCA"
+showChars :: (Foldable f, Show a) => f a -> ShowS
+showChars = showCharsWith (toChar . show)
+  where
+    toChar [ch] = ch
+    toChar _ = '�'
+
+-- | Specializable `MCSP.Data.String.String` to text conversion.
+--
+-- Used for showing a string of the given character @a@.
+class ShowString a where
+    {-# MINIMAL showStr #-}
+
+    -- | Shows characters of a `MCSP.Data.String.String`.
+    --
+    -- `Show` @(String a)@ uses this specialized implementation.
+    showStr :: Foldable f => f a -> ShowS
+
+instance {-# OVERLAPPABLE #-} Show a => ShowString a where
+    showStr = showWords
+
+-- | `MCSP.Data.String.String` `Char` represented by unseparated characters without quotes
+-- (@abcd@).
+instance ShowString Char where
+    showStr = showCharsWith id
 
 -- --------------------- --
 -- Textual Input classes --
 -- --------------------- --
 
+-- | Reads characters of a string separated by spaces.
+--
+-- >>> import Data.Int
+-- >>> import MCSP.Text.ReadP
+-- >>> import Text.Read.Lex
+--
+-- >>> readP_to_S (readWordsWith @Int $ readMaybeP readHexP) "1 2 c"
+-- [([],"1 2 c"),([1],"2 c"),([1,2],"c"),([1,2,12],"")]
+--
+-- >>> readP_to_S (readWordsWith $ readMaybeP word) " a  xy  b "
+-- [([],"a  xy  b "),(["a"],"xy  b "),(["a","xy"],"b "),(["a","xy","b"],"")]
+readWordsWith :: (String -> Maybe a) -> ReadP [a]
+readWordsWith parse = words >>= mapM (maybeP . parse)
+
+-- | Reads characters of a string separated by spaces.
+--
+-- This implementation uses the default converter for @Read a@.
+--
+-- >>> import Data.Int
+-- >>> import MCSP.Text.ReadP
+--
+-- >>> readP_to_S (readWords @Int) "1 2 12"
+-- [([],"1 2 12"),([1],"2 12"),([1,2],"12"),([1,2,12],"")]
+readWords :: Read a => ReadP [a]
+readWords = readWordsWith (readMaybeP readP)
+
+-- | Reads all elements without quoting or separation.
+--
+-- >>> import Data.Int
+-- >>> import MCSP.Text.ReadP
+-- >>> import Text.Read.Lex
+-- >>> data DNA = A | C | G | T deriving (Show, Read)
+--
+-- >>> readP_to_S (readCharsWith @Int (\ch -> readMaybeP readHexP [ch])) "12c"
+-- [([1,2,12],"")]
+--
+-- >>> readP_to_S (readCharsWith @DNA (\ch -> readMaybeP readP [ch])) "TTGA"
+-- [([T,T,G,A],"")]
+readCharsWith :: (Char -> Maybe a) -> ReadP [a]
+readCharsWith parse = word >>= mapM (maybeP . parse)
+
+-- | Reads all elements without quoting or separation.
+--
+-- This implementation uses the default converter for @Read a@.
+--
+-- >>> import Data.Int
+-- >>> import MCSP.Text.ReadP
+-- >>> data DNA = A | C | G | T deriving (Show, Read)
+--
+-- >>> readP_to_S (readChars @Int) "1212"
+-- [([1,2,1,2],"")]
+--
+-- >>> readP_to_S (readChars @DNA) "TTGA"
+-- [([T,T,G,A],"")]
+readChars :: Read a => ReadP [a]
+readChars = readCharsWith (readMaybeP readP . singleton)
+
 -- | Specializable text to `Strings.Data.String.String` conversion.
 --
 -- Used for reading a string of the given character @a@.
 class ReadString a where
-    {-# MINIMAL readChars #-}
+    {-# MINIMAL readStr #-}
 
     -- | Read characters of a `Strings.Data.String.String`.
     --
     -- `Read` @(String a)@ uses this specialized implementation.
-    readChars :: ReadP [a]
+    readStr :: ReadP [a]
 
--- | Same a `readChars`, but lifted to the `ReadPrec` monad.
-readCharsPrec :: ReadString a => ReadPrec [a]
-readCharsPrec = lift readChars
-{-# INLINE readCharsPrec #-}
-
--- | Unlift a `ReadP` from `ReadPrec` by giving it a default precedence.
-ignorePrec :: ReadPrec a -> ReadP a
-ignorePrec r = readPrec_to_P r minPrec
-
--- | Runs a parser againts the given text, returning the first solution it finds.
---
--- Returns `Nothing` if some text is left after the match.
---
--- >>> import Data.Eq ((==))
--- >>> match (satisfy (== 'A')) ""
--- Nothing
---
--- >>> match (satisfy (== 'A')) "A"
--- Just 'A'
---
--- >>> match (satisfy (== 'A')) "AA"
--- Nothing
-match :: ReadP a -> String -> Maybe a
-match r s = firstJust fullMatch $ readP_to_S r s
-  where
-    fullMatch (item, "") = Just item
-    fullMatch _ = Nothing
-
--- | Get a single character, if it is not the end of line.
---
--- >>> readP_to_S getInLine "A"
--- [('A',"")]
---
--- >>> readP_to_S getInLine "\n"
--- []
-getInLine :: ReadP Char
-getInLine = satisfy (/= '\n')
-
--- | Skip whitespace, but not the end of line.
---
--- >>> readP_to_S skipInLine "   "
--- [((),"")]
---
--- >>> readP_to_S (skipInLine *> getInLine) "  A"
--- [('A',"")]
---
--- >>> readP_to_S skipInLine "  \n"
--- [((),"\n")]
-skipInLine :: ReadP ()
-skipInLine = readOr () (satisfy inLineSpace *> skipInLine)
-  where
-    inLineSpace c = isSpace c && c /= '\n'
-
--- | Tries to read an item, returning a default value in case of failure.
---
--- >>> readP_to_S (readOr 'X' getInLine) "A"
--- [('A',"")]
---
--- >>> readP_to_S (readOr 'X' getInLine) "\n"
--- [('X',"\n")]
-readOr :: a -> ReadP a -> ReadP a
-readOr x readItem = readItem <++ pure x
-
--- | Lifts the value from a `Maybe` inside the `ReadP` monad.
---
--- No text is consumed, but the parser will fail in case of `Nothing`.
---
--- >>> readP_to_S (fromJustP $ Just 12) "text"
--- [(12,"text")]
---
--- >>> readP_to_S (fromJustP Nothing) "text"
--- []
-fromJustP :: Maybe a -> ReadP a
-fromJustP = maybe pfail pure
-
--- | Creates a partial parser that consumes the minimum amount of text possible.
---
--- Parsers usually try to match on a full token at once. For Strings, partially matching on
--- characters is more useful. This parser will return a match even if it is part of a larger token.
---
--- >>> readP_to_S (readPartialMinimal @Int $ ignorePrec readPrec) "1234 5"
--- [(1,"234 5")]
-readPartialMinimal :: ReadP a -> ReadP a
-readPartialMinimal readItem = readUntilFirstMatch ""
-  where
-    readUntilFirstMatch acc = fromJustP (match readItem acc) <++ continueMatchSearch acc
-    continueMatchSearch acc = getInLine >>= readUntilFirstMatch . snoc acc
-
--- | Creates a partial parser that tries to increase a match as much as possible.
---
--- Parsers usually try to match on a full token at once. For Strings, partially matching on
--- characters is more useful. This parser receives an initial match and the text it consumed and
--- tries to make another match consuming more text.
---
--- >>> readP_to_S (readPartialFrom @Int (ignorePrec readPrec) ("1", 1)) "234 5"
--- [(1234," 5")]
-readPartialFrom :: ReadP a -> (String, a) -> ReadP a
-readPartialFrom readItem (buffer, currentMatch) = readOr currentMatch $ do
-    ch <- getInLine
-    let text = snoc buffer ch
-    nextMatch <- fromJustP (match readItem text)
-    readPartialFrom readItem (text, nextMatch)
-
--- | Creates a partial parser that consumes the maximum amount of text possible.
---
--- Parsers usually try to match on a full token at once. For Strings, partially matching on
--- characters is more useful. This parser changes its input parser to be character-based.
---
--- Note that this parser may be very inefficient if the input parser is not simple enough. It sould
--- only be used for simple types the can be represented with a small number of characters
--- (like Enums).
---
---
--- >>> readP_to_S (readPartial @Int $ ignorePrec readPrec) "1234 5"
--- [(1234," 5")]
-readPartial :: ReadP a -> ReadP a
-readPartial readItem = gather (readPartialMinimal readItem) >>= readPartialFrom readItem
-
--- | Reads a list of unquoted and unseparated items.
---
--- >>> readP_to_S (readMany @Int $ ignorePrec readPrec) "1234 5"
--- [([1234,5],"")]
-readMany :: ReadP a -> ReadP [a]
-readMany readItem = readOr [] $ do
-    value <- readItem
-    rest <- readMany readItem
-    pure (value : rest)
-
--- | The default, reads all characters without separators (@ACGT@).
 instance {-# OVERLAPPABLE #-} Read a => ReadString a where
-    readChars = do
-        skipInLine
-        let readItem = ignorePrec readPrec
-        readMany $ readPartial readItem
+    readStr = readWords
 
--- | Reads a non-space character.
-readNonSpace :: ReadP Char
-readNonSpace = satisfy (not . isSpace)
-
--- | `Strings.Data.String.String` `Char` represented by unseparated characters without quotes
+-- | `MCSP.Data.String.String` `Char` represented by unseparated characters without quotes
 -- (@abcd@).
 instance ReadString Char where
-    readChars = do
-        skipInLine
-        readMany readNonSpace
-
--- | Reads characters split as tokens, using the default parser for `Read a`.
---
--- >>> readP_to_S (readTokensInLine @Int) "1234 5"
--- [([1234,5],"")]
-readTokensInLine :: Read a => ReadP [a]
-readTokensInLine = readMany (skipInLine *> ignorePrec readPrec)
-
--- Implementation of string as space-separated values for multiple integer types.
-concatForM
-    [ ''Integer,
-      ''Int,
-      ''Int8,
-      ''Int16,
-      ''Int32,
-      ''Int64,
-      ''Word,
-      ''Word8,
-      ''Word16,
-      ''Word32,
-      ''Word64
-    ]
-    ( \name ->
-        withDecsDoc
-            "`Strings.Data.String.String` represented by a sequence of space separated integers (@1 2 3@)."
-            [d|
-                instance ReadString $(conT name) where
-                    readChars = readTokensInLine
-                |]
-    )
+    readStr = readCharsWith Just

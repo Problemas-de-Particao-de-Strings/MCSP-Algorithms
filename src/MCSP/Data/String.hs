@@ -5,8 +5,7 @@ module MCSP.Data.String (
     Unbox,
 
     -- ** Text IO
-    ShowString (..),
-    ReadString (..),
+    module MCSP.Data.String.Text,
 
     -- * Accessors
 
@@ -175,14 +174,15 @@ import Data.Word (Word8)
 import GHC.Base (undefined, ($!))
 import GHC.IsList (IsList (..))
 import GHC.Num (Num, (-))
-import Text.Read (Read (..), readListPrecDefault)
+import Text.ParserCombinators.ReadPrec (lift)
+import Text.Read (Read (..))
 import Text.Show (Show (..))
 
 import Data.Vector.Generic qualified as Generic
 import Data.Vector.Generic.Mutable qualified as Mutable
 import Data.Vector.Unboxed (MVector, Unbox, Vector)
 
-import MCSP.Data.String.Text (ReadString (..), ShowString (..), readCharsPrec)
+import MCSP.Data.String.Text
 
 -- --------------- --
 -- Data definition --
@@ -446,17 +446,15 @@ instance ShowString a => Show (String a) where
     {-# SPECIALIZE instance Show (String Char) #-}
     {-# SPECIALIZE instance Show (String Int) #-}
     {-# SPECIALIZE instance Show (String Word8) #-}
-    showsPrec _ s@Unboxed = showStr s
+    showsPrec _ = showStr
     {-# INLINE showsPrec #-}
 
-instance (ReadString a, Unbox a) => Read (String a) where
+instance (Unbox a, ReadString a) => Read (String a) where
     {-# SPECIALIZE instance Read (String Char) #-}
     {-# SPECIALIZE instance Read (String Int) #-}
     {-# SPECIALIZE instance Read (String Word8) #-}
-    readPrec = fromList <$> readCharsPrec
+    readPrec = lift (fromList <$> readStr)
     {-# INLINE readPrec #-}
-    readListPrec = readListPrecDefault
-    {-# INLINE readListPrec #-}
 
 -- -------------------- --
 -- Evaluation (DeepSeq) --
@@ -1022,7 +1020,7 @@ modify f s@Unboxed = Generic.modify (f . mContents) s
 -- | /O(n)/ Pair each character in a string with its index.
 --
 -- >>> indexed "greedy"
--- (0,'g')(1,'r')(2,'e')(3,'e')(4,'d')(5,'y')
+-- (0,'g') (1,'r') (2,'e') (3,'e') (4,'d') (5,'y')
 indexed :: String a -> String (Int, a)
 indexed s@Unboxed = Generic.indexed s
 {-# INLINE indexed #-}
