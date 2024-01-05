@@ -6,6 +6,7 @@ import Control.Monad (fail, forM_, mapM, (>=>), (>>), (>>=))
 import Data.Bool (Bool (..), not, otherwise)
 import Data.Data (Proxy (..))
 import Data.Either (Either (..))
+import Data.Either.Extra (mapLeft)
 import Data.Eq (Eq (..))
 import Data.Foldable (elem, null, toList)
 import Data.Function (const, id, ($), (.))
@@ -19,6 +20,7 @@ import Data.Word (Word8)
 import Options.Applicative (
     ParserInfo,
     argument,
+    auto,
     eitherReader,
     execParser,
     fullDesc,
@@ -31,6 +33,7 @@ import Options.Applicative (
     option,
     progDesc,
     short,
+    showDefault,
     showDefaultWith,
     str,
     switch,
@@ -55,10 +58,14 @@ import Text.Printf (printf)
 import Text.Read (Read (..))
 import Text.Show (Show (..))
 
-import MCSP.Data.Pair (fst, (&&&))
+import MCSP.Data.Meta (evalMeta, getVar, (<::))
+import MCSP.Data.Pair (fst, second, (&&&))
 import MCSP.Data.String (String)
+import MCSP.Heuristics (PSOIterations (..), PSOParticles (..), PSOSeed (..))
+import MCSP.System.Random (readSeedP, showSeed)
 import MCSP.TestLib.Heuristics (Measured, heuristic, heuristics, measure, pair)
 import MCSP.Text.CSV (headers, parseFile, row)
+import MCSP.Text.ReadP (readEitherP)
 
 data TextInOut = StdInOut | File FilePath
     deriving stock (Show, Read, Eq)
@@ -82,7 +89,10 @@ data Arguments = Arguments
       output :: TextInOut,
       continue :: Bool,
       intergenic :: Bool,
-      exclude :: [Text.String]
+      exclude :: [Text.String],
+      psoIterations :: PSOIterations,
+      psoParticles :: PSOParticles,
+      psoSeed :: PSOSeed
     }
     deriving stock (Show)
 
@@ -93,6 +103,7 @@ args =
             <> header "run-db - execute heuristics for the MCSP problem against a database"
             <> progDesc "Execute selected heuristics against a database of string pairs."
   where
+    readSeed = mapLeft ("invalid seed: " ++) . readEitherP readSeedP
     options = do
         input <-
             argument (eitherReader textInOut) $
@@ -123,6 +134,27 @@ args =
                     <> long "exclude"
                     <> short 'x'
                     <> metavar "HEURISTIC"
+        psoIterations <-
+            option (PSOIterations <$> auto) $
+                help "Number of iterations to run the PSO heuristic"
+                    <> long "pso-iterations"
+                    <> metavar "N"
+                    <> value (evalMeta getVar)
+                    <> showDefault
+        psoParticles <-
+            option (PSOParticles <$> auto) $
+                help "Number of particles used in each iteration of the PSO heuristic"
+                    <> long "pso-particles"
+                    <> metavar "N"
+                    <> value (evalMeta getVar)
+                    <> showDefault
+        psoSeed <-
+            option (PSOSeed <$> eitherReader readSeed) $
+                help "Initial seed for the PSO heuristic"
+                    <> long "pso-seed"
+                    <> metavar "\"HEX HEX\""
+                    <> value (evalMeta getVar)
+                    <> showDefaultWith (\(PSOSeed s) -> showSeed s)
         pure Arguments {..}
 
 readDB :: Handle -> IO [String Word8]
@@ -167,13 +199,19 @@ run Arguments {..} = do
     withTextInOut output WriteMode $ \out -> do
         putLn out $ headers $ Proxy @Measured
         forM_ strs $ \pair ->
-            forM_ selectedHeuristics $ \heuristic -> do
+            forM_ selectedHeuristics $ \(second setVars -> heuristic) -> do
                 result <-
                     maybe (measure heuristic pair) pure $
                         lookup (fst heuristic, show pair) previous
                 putLn out $ row result
   where
     selectedHeuristics = filter (not . (`elem` exclude) . fst) heuristics
+
+    setVars heuristic strs =
+        heuristic strs
+            <:: psoIterations
+            <:: psoParticles
+            <:: psoSeed
 
 main :: IO ()
 main = execParser args >>= run
