@@ -1,17 +1,18 @@
 module Main (main) where
 
-import Control.Applicative (pure, (<$>), (<**>))
+import Control.Applicative (many, pure, (<$>), (<**>))
 import Control.Exception (IOException, catch, displayException)
 import Control.Monad (fail, forM_, mapM, (>=>), (>>), (>>=))
-import Data.Bool (Bool (..), not, otherwise, (||))
+import Data.Bool (Bool (..), not, otherwise)
 import Data.Data (Proxy (..))
 import Data.Either (Either (..))
 import Data.Eq (Eq (..))
-import Data.Foldable (null, toList)
-import Data.Function (const, flip, id, ($), (.))
+import Data.Foldable (elem, null, toList)
+import Data.Function (const, id, ($), (.))
 import Data.List (dropWhileEnd, filter, lines, map, (++))
 import Data.List.Extra (trim)
 import Data.Map.Strict (Map, empty, fromList, lookup)
+import Data.Maybe (maybe)
 import Data.Monoid ((<>))
 import Data.String qualified as Text (String)
 import Data.Word (Word8)
@@ -31,6 +32,7 @@ import Options.Applicative (
     progDesc,
     short,
     showDefaultWith,
+    str,
     switch,
     value,
  )
@@ -53,7 +55,6 @@ import Text.Printf (printf)
 import Text.Read (Read (..))
 import Text.Show (Show (..))
 
-import Data.Maybe (maybe)
 import MCSP.Data.Pair (fst, (&&&))
 import MCSP.Data.String (String)
 import MCSP.TestLib.Heuristics (Measured, heuristic, heuristics, measure, pair)
@@ -80,7 +81,8 @@ data Arguments = Arguments
     { input :: TextInOut,
       output :: TextInOut,
       continue :: Bool,
-      intergenic :: Bool
+      intergenic :: Bool,
+      exclude :: [Text.String]
     }
     deriving stock (Show)
 
@@ -115,6 +117,12 @@ args =
             switch $
                 help "Assume input has intergenic regions (for the FPT algorithm)"
                     <> long "intergenic"
+        exclude <-
+            many . option str $
+                help "Don't run the specified heuristic"
+                    <> long "exclude"
+                    <> short 'x'
+                    <> metavar "HEURISTIC"
         pure Arguments {..}
 
 readDB :: Handle -> IO [String Word8]
@@ -165,9 +173,7 @@ run Arguments {..} = do
                         lookup (fst heuristic, show pair) previous
                 putLn out $ row result
   where
-    runPsoCombine = True
-    selectedHeuristics = flip filter heuristics $ \heuristic ->
-        fst heuristic /= "psoComb" || not runPsoCombine
+    selectedHeuristics = filter (not . (`elem` exclude) . fst) heuristics
 
 main :: IO ()
 main = execParser args >>= run
