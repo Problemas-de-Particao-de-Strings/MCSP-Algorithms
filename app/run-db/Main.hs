@@ -2,7 +2,7 @@ module Main (main) where
 
 import Control.Applicative (many, pure, (<$>), (<**>))
 import Control.Exception (IOException, catch, displayException)
-import Control.Monad (fail, forM_, mapM, (>=>), (>>), (>>=))
+import Control.Monad (fail, forM, forM_, mapM, (>=>), (>>), (>>=))
 import Data.Bool (Bool (..), not, otherwise)
 import Data.Data (Proxy (..))
 import Data.Either (Either (..))
@@ -10,7 +10,7 @@ import Data.Either.Extra (mapLeft)
 import Data.Eq (Eq (..))
 import Data.Foldable (elem, null, toList)
 import Data.Function (const, id, ($), (.))
-import Data.List (dropWhileEnd, filter, lines, map, (++))
+import Data.List (dropWhileEnd, filter, length, lines, map, words, (++))
 import Data.List.Extra (trim)
 import Data.Map.Strict (Map, empty, fromList, lookup)
 import Data.Maybe (maybe)
@@ -19,6 +19,7 @@ import Data.String qualified as Text (String)
 import Data.Word (Word8)
 import Options.Applicative (
     ParserInfo,
+    ReadM,
     argument,
     auto,
     eitherReader,
@@ -33,7 +34,6 @@ import Options.Applicative (
     option,
     progDesc,
     short,
-    showDefault,
     showDefaultWith,
     str,
     switch,
@@ -61,11 +61,42 @@ import Text.Show (Show (..))
 import MCSP.Data.Meta (evalMeta, getVar, (<::))
 import MCSP.Data.Pair (fst, second, (&&&))
 import MCSP.Data.String (String)
-import MCSP.Heuristics (PSOIterations (..), PSOParticles (..), PSOSeed (..))
-import MCSP.System.Random (readSeedP, showSeed)
+import MCSP.Heuristics (
+    PSOInitialDistribution (..),
+    PSOIterations (..),
+    PSOParticles (..),
+    PSOSeed (..),
+    PSOUpdaterWeigths (..),
+ )
+import MCSP.System.Random (Seed, readSeedP, showSeed)
 import MCSP.TestLib.Heuristics (Measured, heuristic, heuristics, measure, pair)
 import MCSP.Text.CSV (headers, parseFile, row)
-import MCSP.Text.ReadP (readEitherP)
+import MCSP.Text.ReadP (readEitherP, readP)
+
+readSeed :: ReadM Seed
+readSeed = eitherReader $ mapLeft (printf "invalid seed: %s") . readEitherP readSeedP
+
+readValueList :: Read a => ReadM [a]
+readValueList = do
+    text <- str
+    forM (words text) $ \word ->
+        case readEitherP readP word of
+            Right val -> pure val
+            Left error -> fail $ printf "invalid value %s: %s" (show word) error
+
+readUpdaterWeights :: ReadM PSOUpdaterWeigths
+readUpdaterWeights = do
+    values <- readValueList
+    case values of
+        [kE, kL, kG] -> pure (PSOUpdaterWeigths {..})
+        _ -> fail $ printf "wrong number of weights: expected 3, got %d" (length values)
+
+readInitialDistribution :: ReadM PSOInitialDistribution
+readInitialDistribution = do
+    values <- readValueList
+    case values of
+        [d1, d2, d3, d4] -> pure (PSOInitialDistribution d1 d2 d3 d4)
+        _ -> fail $ printf "wrong number of weights: expected 4, got %d" (length values)
 
 data TextInOut = StdInOut | File FilePath
     deriving stock (Show, Read, Eq)
@@ -92,7 +123,9 @@ data Arguments = Arguments
       exclude :: [Text.String],
       psoIterations :: PSOIterations,
       psoParticles :: PSOParticles,
-      psoSeed :: PSOSeed
+      psoSeed :: PSOSeed,
+      psoUpdater :: PSOUpdaterWeigths,
+      psoInitial :: PSOInitialDistribution
     }
     deriving stock (Show)
 
@@ -103,7 +136,6 @@ args =
             <> header "run-db - execute heuristics for the MCSP problem against a database"
             <> progDesc "Execute selected heuristics against a database of string pairs."
   where
-    readSeed = mapLeft ("invalid seed: " ++) . readEitherP readSeedP
     options = do
         input <-
             argument (eitherReader textInOut) $
@@ -138,23 +170,40 @@ args =
             option (PSOIterations <$> auto) $
                 help "Number of iterations to run the PSO heuristic"
                     <> long "pso-iterations"
-                    <> metavar "N"
+                    <> metavar "N_ITER"
                     <> value (evalMeta getVar)
-                    <> showDefault
+                    <> showDefaultWith (\(PSOIterations i) -> show i)
         psoParticles <-
             option (PSOParticles <$> auto) $
                 help "Number of particles used in each iteration of the PSO heuristic"
                     <> long "pso-particles"
-                    <> metavar "N"
+                    <> metavar "N_PART"
                     <> value (evalMeta getVar)
-                    <> showDefault
+                    <> showDefaultWith (\(PSOParticles n) -> show n)
         psoSeed <-
-            option (PSOSeed <$> eitherReader readSeed) $
+            option (PSOSeed <$> readSeed) $
                 help "Initial seed for the PSO heuristic"
                     <> long "pso-seed"
                     <> metavar "\"HEX HEX\""
                     <> value (evalMeta getVar)
                     <> showDefaultWith (\(PSOSeed s) -> showSeed s)
+        psoUpdater <-
+            option readUpdaterWeights $
+                help "Weights used for the default particle updater in PSO"
+                    <> long "pso-updater-weights"
+                    <> metavar "\"kE kL kG\""
+                    <> value (evalMeta getVar)
+                    <> showDefaultWith (\PSOUpdaterWeigths {..} -> printf "%f %f %f" kE kL kG)
+        psoInitial <-
+            option readInitialDistribution $
+                help "Distribution weights used to generate the initial particles for PSO"
+                    <> long "pso-initial-dist"
+                    <> metavar "\"D1 D2 D3 D4\""
+                    <> value (evalMeta getVar)
+                    <> showDefaultWith
+                        ( \(PSOInitialDistribution d1 d2 d3 d4) ->
+                            printf "%f %f %f %f" d1 d2 d3 d4
+                        )
         pure Arguments {..}
 
 readDB :: Handle -> IO [String Word8]
@@ -212,6 +261,8 @@ run Arguments {..} = do
             <:: psoIterations
             <:: psoParticles
             <:: psoSeed
+            <:: psoUpdater
+            <:: psoInitial
 
 main :: IO ()
 main = execParser args >>= run

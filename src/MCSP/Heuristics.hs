@@ -17,10 +17,14 @@ import MCSP.Data.String.Extra (Partition, chars)
 import MCSP.Heuristics.Combine (UseSingletons (..), combine)
 import MCSP.Heuristics.Greedy (greedy)
 import MCSP.Heuristics.PSOBased (
+    PSOCombine (..),
     PSOFirstBestIter (..),
+    PSOInitialDistribution (..),
     PSOIterations (..),
     PSOParticles (..),
+    PSOPure (..),
     PSOSeed (..),
+    PSOUpdaterWeigths (..),
     pso,
  )
 

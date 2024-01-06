@@ -11,6 +11,8 @@ module MCSP.Heuristics.PSOBased (
     PSOFirstBestIter (..),
     PSOPure (..),
     PSOCombine (..),
+    PSOUpdaterWeigths (..),
+    PSOInitialDistribution (..),
 ) where
 
 import Control.Applicative (pure)
@@ -28,6 +30,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Ord (Ord (..))
 import Data.Semigroup (Last (..), Min (..))
 import Data.Vector.Unboxed (Vector, length, map)
+import GHC.Float (Double)
 import GHC.Num (negate, (-))
 import Text.Show (Show)
 
@@ -131,17 +134,35 @@ instance MetaInputVariable PSOCombine where
             then pure (PSOCombine False)
             else getOrDefine (PSOCombine False)
 
+-- | Weights used for the default particle updater in PSO.
+data PSOUpdaterWeigths = PSOUpdaterWeigths {kE :: Weight, kL :: Weight, kG :: Weight}
+    deriving stock (Eq, Ord, Show)
+
+instance MetaInputVariable PSOUpdaterWeigths where
+    getVar = getOrDefine $ PSOUpdaterWeigths {kE = 2.0, kL = 0.1, kG = 0.1}
+
+-- | Distribution weights used to generate the initial particles for PSO.
+data PSOInitialDistribution = PSOInitialDistribution Double Double Double Double
+    deriving stock (Eq, Ord, Show)
+
+instance MetaInputVariable PSOInitialDistribution where
+    getVar = do
+        PSOPure usePure <- getVar
+        if usePure
+            then pure (PSOInitialDistribution 0 0 0 0)
+            else getOrDefine (PSOInitialDistribution 1 3 3 3)
+
 -- -------------------- --
 -- Edge List Operations --
 -- -------------------- --
 
 -- | Default updater consider local best, global best and random components.
-defaultUpdater :: Updater Edge
-defaultUpdater =
+defaultUpdater :: PSOUpdaterWeigths -> Updater Edge
+defaultUpdater PSOUpdaterWeigths {..} =
     sumM
-        [ randomVelocity >>= weighted 2.0,
-          weighted 0.1 localGuideDirection,
-          weighted 0.1 globalGuideDirection
+        [ randomVelocity >>= weighted kE,
+          weighted kL localGuideDirection,
+          weighted kG globalGuideDirection
         ]
 
 -- | Produce random weights for an edge set such that a given
@@ -168,14 +189,20 @@ edgeSizeWeights es = do
     pure $ sortLike weights indices
 
 -- | Generates the initial weights for a particle.
-initialWeights :: Ord a => PSOPure -> Pair (String a) -> Vector Edge -> Random (Vector Weight)
-initialWeights (PSOPure True) _ edges = uniformSN $ length edges
-initialWeights (PSOPure False) strs edges =
+initialWeights ::
+    Ord a =>
+    PSOPure
+    -> PSOInitialDistribution
+    -> Pair (String a)
+    -> Vector Edge
+    -> Random (Vector Weight)
+initialWeights (PSOPure True) _ _ edges = uniformSN $ length edges
+initialWeights (PSOPure False) (PSOInitialDistribution d1 d2 d3 d4) strs edges =
     choice
-        [ (1, uniformSN $ length edges),
-          (3, edgeSizeWeights edges),
-          (3, partitionWeights (evalMeta $ combineS strs) edges),
-          (3, partitionWeights (evalMeta $ greedy strs) edges)
+        [ (d1, uniformSN $ length edges),
+          (d2, edgeSizeWeights edges),
+          (d3, partitionWeights (evalMeta $ combineS strs) edges),
+          (d4, partitionWeights (evalMeta $ greedy strs) edges)
         ]
   where
     combineS s = combine s <:: UseSingletons True
@@ -209,13 +236,15 @@ mcspSwarm strs@(edgeSet -> edges) = do
     PSOParticles particles <- getVar
     usePure <- getVar
     runCombine <- getVar
+    updaterWeights <- getVar
+    initialDistribution <- getVar
 
     let ?eval = objective runCombine strs
     let ?values = edges
-    let initial = initialWeights usePure strs edges
+    let initial = initialWeights usePure initialDistribution strs edges
     pure $
         take iterations
-            <$> particleSwarmOptimization defaultUpdater initial particles
+            <$> particleSwarmOptimization (defaultUpdater updaterWeights) initial particles
   where
     take n (x :| xs) = x :| List.take (n - 1) xs
 
