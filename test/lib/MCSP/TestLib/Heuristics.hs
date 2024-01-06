@@ -8,6 +8,7 @@ module MCSP.TestLib.Heuristics (
 
     -- * Measuring Heuristic input and output
     Measured (..),
+    scoreFrom,
     measure,
 ) where
 
@@ -86,6 +87,10 @@ newtype Lazy a = Lazy a
 instance NFData (Lazy a) where
     rnf _ = ()
 
+-- | Calculates the score for a given string size and number of output blocks.
+scoreFrom :: Int -> Int -> Double
+scoreFrom size blocks = fromMaybe 1 $ (size - blocks) `checkedDiv` (size - 1)
+
 -- | Run the heuristic and returns information about the solution.
 --
 -- >>> import MCSP.TestLib.Heuristics.TH (mkNamed)
@@ -105,7 +110,7 @@ measure (name, heuristic) pair = do
 
     size <- checkedLen "size" pair
     blocks <- checkedLen "blocks" partitions
-    let score = fromMaybe 1 $ (size - blocks) `checkedDiv` (size - 1)
+    let score = scoreFrom size blocks
     let time = fromRational $ toRational timePs
     singles <- checkedLen "singletons" (singletons `both` pair)
     repeats <- checkedLen "repeated" (repeated `both` pair)

@@ -6,14 +6,15 @@ module Args (
 ) where
 
 import Control.Applicative (many, pure, (<$>), (<**>))
-import Control.Monad (fail, forM)
-import Data.Bool (Bool (..), otherwise)
+import Control.Monad (fail, forM, unless)
+import Data.Bool (Bool (..))
 import Data.Either (Either (..))
 import Data.Either.Extra (mapLeft)
 import Data.Eq (Eq (..))
 import Data.Function (const, ($), (.))
 import Data.List (length, words)
 import Data.List.Extra (trim)
+import Data.Maybe (Maybe (..))
 import Data.Monoid ((<>))
 import Data.String qualified as Text (String)
 import Options.Applicative (
@@ -72,7 +73,7 @@ readValueList = do
     forM (words text) $ \word ->
         case readEitherP readP word of
             Right val -> pure val
-            Left error -> fail $ printf "invalid value %s: %s" (show word) error
+            Left error -> fail $ printf "invalid value '%s': %s" word error
 
 readUpdaterWeights :: ReadM PSOUpdaterWeigths
 readUpdaterWeights = do
@@ -91,11 +92,19 @@ readInitialDistribution = do
 data TextInOut = StdInOut | File FilePath
     deriving stock (Show, Read, Eq)
 
-textInOut :: Text.String -> Either Text.String TextInOut
-textInOut text
-    | trim text == "-" = Right StdInOut
-    | isValid text = Right (File text)
-    | otherwise = Left $ printf "invalid path: '%s'" text
+filePath :: ReadM FilePath
+filePath = do
+    path <- str
+    unless (isValid path) $
+        fail (printf "invalid path: '%s'" path)
+    pure path
+
+textInOut :: ReadM TextInOut
+textInOut = do
+    path <- str
+    if trim path == "-"
+        then pure StdInOut
+        else File <$> filePath
 
 withTextInOut :: TextInOut -> IOMode -> (Handle -> IO a) -> IO a
 withTextInOut StdInOut mode exec = case mode of
@@ -108,6 +117,7 @@ withTextInOut (File path) mode exec = withFile path mode exec
 data Arguments = Arguments
     { input :: TextInOut,
       output :: TextInOut,
+      fptPrefix :: Maybe FilePath,
       continue :: Bool,
       intergenic :: Bool,
       exclude :: [Text.String],
@@ -128,13 +138,13 @@ args =
   where
     options = do
         input <-
-            argument (eitherReader textInOut) $
+            argument textInOut $
                 help "Input file to read the database from"
                     <> metavar "INPUT"
                     <> value StdInOut
                     <> showDefaultWith (const "<stdin>")
         output <-
-            option (eitherReader textInOut) $
+            option textInOut $
                 help "Output file to write the measurements as CSV"
                     <> long "output"
                     <> short 'o'
@@ -150,6 +160,12 @@ args =
             switch $
                 help "Assume input has intergenic regions (for the FPT algorithm)"
                     <> long "intergenic"
+        fptPrefix <-
+            option (Just <$> filePath) $
+                help "Prefix for the FPT algorithm output files"
+                    <> long "fpt"
+                    <> metavar "PREFIX"
+                    <> value Nothing
         exclude <-
             many . option str $
                 help "Don't run the specified heuristic"
@@ -160,14 +176,14 @@ args =
             option (PSOIterations <$> auto) $
                 help "Number of iterations to run the PSO heuristic"
                     <> long "pso-iterations"
-                    <> metavar "N_ITER"
+                    <> metavar "INT"
                     <> value (evalMeta getVar)
                     <> showDefaultWith (\(PSOIterations i) -> show i)
         psoParticles <-
             option (PSOParticles <$> auto) $
                 help "Number of particles used in each iteration of the PSO heuristic"
                     <> long "pso-particles"
-                    <> metavar "N_PART"
+                    <> metavar "INT"
                     <> value (evalMeta getVar)
                     <> showDefaultWith (\(PSOParticles n) -> show n)
         psoSeed <-
